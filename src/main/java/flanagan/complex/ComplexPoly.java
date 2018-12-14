@@ -15,7 +15,7 @@
 *   DATE:    February 2002
 *   UPDATED: 22 June 2003, 19 January 2005, 12 May 2005, 11 October 2005, 30 April 2007
 *            22 November 2007, 10-11 August 2008, 22 August 2008, 31 October 2009, 6 November 2009
-*            29 May 2010, 5-6 June 2010, 20 October 2010, 18-21 January 2011
+*            29 May 2010, 5-6 June 2010, 20 October 2010, 18-21 January 2011, 14 April 2012
 *
 *   DOCUMENTATION:
 *   See Michael Thomas Flanagan's Java library on-line web pages:
@@ -23,7 +23,7 @@
 *   http://www.ee.ucl.ac.uk/~mflanaga/java/
 *
 *
-*   Copyright (c) 2002 - 2009
+*   Copyright (c) 2002 - 2012
 *
 *   PERMISSION TO COPY:
 *   Permission to use, copy and modify this software and its documentation for
@@ -292,6 +292,73 @@ public class ComplexPoly{
         }
 
         // METHODS
+        
+        // Return a polynomial as one in which the highest term does not have a zero coefficient
+        // instance method
+        public ComplexPoly reducePoly(){
+            ComplexPoly ccpoly = null;
+            int degh = this.deg;
+            boolean test = true;
+            int counter = this.deg;
+            while(test){
+                    if(this.coeff[counter].isZero()){
+                        counter--;
+                        degh--;
+                        if(counter<0)test = false;
+                    }
+                    else{
+                        test=false;
+                    }
+            }
+            
+            if(this.deg==degh){
+                ccpoly = this.copy();  
+            }
+            else{
+                if(degh>=0){        
+                    ccpoly = new ComplexPoly(degh);
+                    for(int i=0; i<=degh; i++){
+                        ccpoly.resetCoeff(i, this.coeff[i].copy());
+                    }
+                }
+            }
+            return ccpoly;
+        }
+        
+        // Return a polynomial as one in which the highest term does not have a zero coefficient
+        // static method
+        public static ComplexPoly reducePoly(ComplexPoly cpoly){
+            ComplexPoly ccpoly = null;
+            if(cpoly!=null){
+                int degh = cpoly.getDeg();  
+                int degr = degh;
+                boolean test = true;
+                int counter = degr;
+                while(test){
+                    if(cpoly.coeffCopy(counter).isZero()){
+                        counter--;
+                        degr--;
+                        if(counter<0)test = false;
+                    }
+                    else{
+                        test=false;
+                    }
+                }
+        
+                if(degr==degh){
+                    ccpoly = cpoly.copy();  
+                }
+                else{
+                    if(degr>=0){        
+                        ccpoly = new ComplexPoly(degr);
+                        for(int i=0; i<=degr; i++){
+                            ccpoly.resetCoeff(i, cpoly.coeffCopy(i));
+                        }
+                    }
+                }
+            }
+            return ccpoly;
+        }
 
         // Returns a ComplexPoly given the polynomial's roots
         public static ComplexPoly rootsToPoly(Complex[] roots){
@@ -942,20 +1009,25 @@ public class ComplexPoly{
                 Complex[] roots = Complex.oneDarray(this.deg);
 
                 // degree = 0 - no roots
-                if(this.deg==0 && !this.suppressRootsErrorMessages){
-                    System.out.println("degree of the polynomial is zero in the method ComplexPoly.roots");
-                    System.out.println("null returned");
+                if(this.deg==0){
+                    if(!this.suppressRootsErrorMessages){
+                        System.out.println("degree of the polynomial is zero in the method ComplexPoly.roots");
+                        System.out.println("null returned");
+                    }
                     return null;
                 }
+
 
                 // Check for no roots, i.e all coefficients but the first = 0
                 int counter = 0;
                 for(int i=1; i<=this.deg; i++){
                     if(this.coeff[i].isZero())counter++;
                 }
-                if(counter==this.deg && !this.suppressRootsErrorMessages){
-                    System.out.println("polynomial coefficients above the zeroth are all zero in the method ComplexPoly.roots");
-                    System.out.println("null returned");
+                if(counter==this.deg){
+                    if(!this.suppressRootsErrorMessages){
+                        System.out.println("polynomial coefficients above the zeroth are all zero in the method ComplexPoly.roots");
+                        System.out.println("null returned");
+                    }
                     return null;
                 }
 
@@ -969,8 +1041,10 @@ public class ComplexPoly{
                     }
                 }
                 if(nonzerocoeff==1){
-                    System.out.println("all polynomial coefficients except a[" + nonzeroindex + "] are zero in the method ComplexPoly.roots");
-                    System.out.println("all roots returned as zero");
+                    if(!this.suppressRootsErrorMessages){
+                        System.out.println("all polynomial coefficients except a[" + nonzeroindex + "] are zero in the method ComplexPoly.roots");
+                        System.out.println("all roots returned as zero");
+                    }
                     for(int i=0; i<this.deg; i++){
                         roots[i] = Complex.zero();
                     }

@@ -2887,4 +2887,43 @@ public class FileOutput{
                 }
                 return ss;
         }
+
+    // Delete a file
+    public static void deleteFile(String fileName){
+
+        // deletion flag
+        boolean flag = true;
+
+        // Create an instance of File representing the named file
+        File file0 = new File(fileName);
+
+        // Check that the file exists
+        if(!file0.exists()){
+            System.out.println("Method deleteFile: no file or directory of the name " + fileName + " found");
+            flag = false;
+        }
+
+        // Check whether FileName is write protected
+        if(!file0.canWrite()){
+            System.out.println("Method deleteFile: " + fileName + " is write protected and cannot be deleted");
+            flag = false;
+        }
+
+        // Check, if fileName is a directory, that it is empty
+        if(file0.isDirectory()){
+            String[] dirFiles = file0.list();
+            if (dirFiles.length > 0){
+                System.out.println("Method deleteFile: " + fileName + " is a directory which is not empty; no action was taken");
+                flag = false;
+            }
+        }
+
+        // Delete fileName
+        boolean deleteDone = file0.delete();
+
+        if (!deleteDone){
+            System.out.println("Method deleteFile: deletion of the file " + fileName + " failed");
+        }
+    }
+
 }

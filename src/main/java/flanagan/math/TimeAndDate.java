@@ -6,14 +6,14 @@
 *   WRITTEN BY: Dr Michael Thomas Flanagan
 *
 *   DATE:       28 September 2009
-*   AMENDED:    2-3 October 2009
+*   AMENDED:    2-3 October 2009, 18 July 2012
 *
 *   DOCUMENTATION:
 *   See Michael Thomas Flanagan's Java library on-line web pages:
 *   http://www.ee.ucl.ac.uk/~mflanaga/java/
 *   http://www.ee.ucl.ac.uk/~mflanaga/java/TimeAndDate.html
 *
-*   Copyright (c) 2009
+*   Copyright (c) 2009 - 2012
 *
 *   PERMISSION TO COPY:
 *
@@ -40,6 +40,8 @@ package flanagan.math;
 
 import java.util.Calendar;
 
+import flanagan.io.Db;
+
 public class TimeAndDate{
 
     private Calendar cal = Calendar.getInstance();      // instance of abstract class Calendar
@@ -56,6 +58,7 @@ public class TimeAndDate{
     private String[] days = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
     private String[] months = {"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"};
     private int[] monthDays = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+    private int[] monthDaysLeap = {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
     private int hour24 = -1;                            // hour of the day (24 hour clock)
     private String hour12 = null;                       // hour of the day as am or pm (12 hour clock)
@@ -92,6 +95,8 @@ public class TimeAndDate{
     public TimeAndDate(){
 
     }
+    
+    
 
     // Causes the program to wait for nSeconds seconds before continuing (int)
     public void waitFor(int nSeconds){
@@ -2108,6 +2113,108 @@ public class TimeAndDate{
                 }
             }
             return test;
+    }
+    
+    public int monthAsNumber(String month){
+        boolean test = true;
+        int ii = 0;
+        while(test){
+            if(month.equalsIgnoreCase(this.months[ii])){
+                test = false;
+            }
+            else{
+                ii++;
+                if(ii>=12)throw new IllegalArgumentException("Entered month, " + month + ", not recognised");
+            }
+        }
+        return ii+1;
+    }
+    
+    public String monthAsName(int monthNumber){
+        if(monthNumber<1 || monthNumber>12)throw new IllegalArgumentException("The month number, " + monthNumber + ", must be > 0 and < 13");
+        return this.months[monthNumber-1];
+    }
+    
+    
+    public int getDaysInMonth(String month, int yearr){
+        int ret = getDaysInNonLeapMonth(month);
+        if(month.equalsIgnoreCase("February") && this.leapYear(yearr))ret++;
+        return ret;
+    }
+    
+    public int getDaysInMonth(int month, int yearr){       
+        String smonth = this.months[month-1];
+        int ret = getDaysInNonLeapMonth(smonth);
+        if(smonth.equalsIgnoreCase("February") && this.leapYear(yearr))ret++;
+        return ret;
+    }
+    
+    public int getDaysInMonth(String month){
+        int ret = getDaysInNonLeapMonth(month);
+        if(month.equalsIgnoreCase("February")){
+            int yearr = Db.readInt("Enter the year");
+            if(this.leapYear(yearr))ret++;
+        }
+        return ret;
+    }
+    
+      public int getDaysInMonth(int month){       
+        String smonth = this.months[month-1];
+        return getDaysInMonth(smonth);
+    }
+            
+    private int getDaysInNonLeapMonth(String month){  
+        int ret = 0;
+        boolean test = true;
+        int ii = 0;
+        while(test){
+            if(month.equalsIgnoreCase(this.months[ii])){
+                ret = this.monthDays[ii];
+                test = false;
+            }
+            else{
+                ii++;
+                if(ii>=12)throw new IllegalArgumentException("Entered month, " + month + ", not recognised");
+            }
+        }
+        return ret;
+    }
+    
+    public boolean isLessThan(int[] date1, int[] date2){
+        boolean ret = false;
+        return this.isLessThan(date1[0], date1[1], date1[2], date2[0], date2[1], date2[2]);
+    }
+    
+    
+    public boolean isLessThan(int day1, int month1, int year1, int day2, int month2, int year2){
+        boolean ret = false;
+        if(year1==year2){
+            if(month1==month2){
+                if(day1<day2){
+                    ret = true;
+                }
+                else{
+                    ret = false;
+                }
+            }
+            else{
+                if(month1<month2){
+                    ret = true;
+                }
+                else{
+                    ret = false;
+                }
+            }
+        }
+        else{
+            if(year1<year2){
+                ret = true;
+            }
+            else{
+                ret = false;
+            }
+        }
+        return ret;
     }
 }
 

@@ -9,7 +9,7 @@
 *   WRITTEN BY: Dr Michael Thomas Flanagan
 *
 *   DATE:    4 July 2007
-*   AMENDED: 17 april 2008
+*   AMENDED: 17 april 2008, 1-5 December 2011
 *
 *   DOCUMENTATION:
 *   See Michael T Flanagan's Java library on-line web pages:
@@ -40,11 +40,12 @@ package flanagan.circuits;
 
 import flanagan.complex.Complex;
 import flanagan.math.Fmath;
+import flanagan.math.VectorMaths;
 
 public class Phasor{
 
         private double magnitude = 0.0D;            // magnitude of the Phasor
-        private double phaseInDeg = 0.0D;           // phase of the Phasor in degrees
+        private double phaseInDeg = 0.0D;           // phase of the Phasor in radians
         private double phaseInRad = 0.0D;           // phase of the Phasor in degrees
         private Complex rectangular = new Complex(0.0, 0.0);    // rectangular complex equivalent of the Phasor
 
@@ -194,6 +195,22 @@ public class Phasor{
                 Complex cc = new Complex();
                 cc.polar(ph.magnitude, ph.phaseInRad);
                 return cc;
+        }
+        
+        // converts the phasor to VectorMaths vector = instance method
+        public VectorMaths toVectorMaths(){
+            double x = this.magnitude*Math.sin(this.phaseInRad); 
+            double y = this.magnitude*Math.cos(this.phaseInRad); 
+            VectorMaths vec = new VectorMaths(x, y);
+            return vec;
+        }
+        
+        // converts the phasor to VectorMaths vector = instance method
+        public static VectorMaths toVectorMaths(Phasor ph){
+            double x = ph.magnitude*Math.sin(ph.phaseInRad); 
+            double y = ph.magnitude*Math.cos(ph.phaseInRad); 
+            VectorMaths vec = new VectorMaths(x, y);
+            return vec;
         }
 
         // Format a phasor number as a string, 'magnitude''<''phase''deg' - phase in degrees

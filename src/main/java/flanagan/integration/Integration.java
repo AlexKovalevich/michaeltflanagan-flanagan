@@ -9,16 +9,16 @@
 *       an interface, IntegralFunction
 *
 *   WRITTEN BY: Dr Michael Thomas Flanagan
-*
-*   DATE:	 February 2002
-*   UPDATE:  22 June 2003, 16 July 2006, 25 April 2007, 2 May 2007, 4 July 2008, 22 September 2008
+
+*   DATE:       February 2002
+*   UPDATE:     22 June 2003, 16 July 2006, 25 April 2007, 2 May 2007, 4 July 2008, 22 September 2008, 6 November 2012
 *
 *   DOCUMENTATION:
 *   See Michael Thomas Flanagan's Java library on-line web page:
 *   http://www.ee.ucl.ac.uk/~mflanaga/java/Integration.html
 *   http://www.ee.ucl.ac.uk/~mflanaga/java/
 *
-*   Copyright (c) 2002 - 2008 Michael Thomas Flanagan
+*   Copyright (c) 2002 - 2012 Michael Thomas Flanagan
 *
 * PERMISSION TO COPY:
 *
@@ -47,24 +47,30 @@ import flanagan.math.Fmath;
 public class Integration{
 
         private IntegralFunction integralFunc = null;   // Function to be integrated
-        private boolean setFunction = false;        // = true when IntegralFunction set
-        private double lowerLimit = Double.NaN;     // Lower integration limit
-        private double upperLimit = Double.NaN;     // Upper integration limit
-        private boolean setLimits = false;          // = true when limits set
+        private boolean setFunction = false;            // = true when IntegralFunction set
+        private double lowerLimit = Double.NaN;         // Lower integration limit
+        private double upperLimit = Double.NaN;         // Upper integration limit
+        private boolean setLimits = false;              // = true when limits set
 
-        private int glPoints = 0;                   // Number of points in the Gauss-Legendre integration
-        private boolean setGLpoints = false;        // = true when glPoints set
-        private int nIntervals = 0;                 // Number of intervals in the rectangular rule integrations
-        private boolean setIntervals = false;       // = true when nIntervals set
+        private int glPoints = 0;                       // Number of points in the Gauss-Legendre integration
+        private boolean setGLpoints = false;            // = true when glPoints set
+        private int nIntervals = 0;                     // Number of intervals in the rectangular rule integrations
+        private boolean setIntervals = false;           // = true when nIntervals set
 
-        private double integralSum = 0.0D;          // Sum returned by the numerical integration method
-        private boolean setIntegration = false;     // = true when integration performed
-
+        private double integralSum = 0.0D;              // Sum returned by the numerical integration method
+        private double integralMean = 0.0;              // mean returned by Gaussian quadrature
+        private double integralSD = 0.0;                // sd returned by Gaussian quadrature
+        private boolean integrationDone = false;        // = true when integration performed
+        private boolean integrationStatsDone = false;   // = true when integration with mean and sd calculation performed
+        
     	// ArrayLists to hold Gauss-Legendre Coefficients saving repeated calculation
-    	private static ArrayList<Integer> gaussQuadIndex = new ArrayList<Integer>();         // Gauss-Legendre indices
-    	private static ArrayList<double[]> gaussQuadDistArrayList = new ArrayList<double[]>();  // Gauss-Legendre distances
-    	private static ArrayList<double[]> gaussQuadWeightArrayList = new ArrayList<double[]>();// Gauss-Legendre weights
-
+    	private ArrayList<Integer> gaussQuadIndex = new ArrayList<Integer>();               // Gauss-Legendre indices
+    	private ArrayList<double[]> gaussQuadDistArrayList = new ArrayList<double[]>();     // Gauss-Legendre distances
+        private double[] gaussQuadDist = null;                                              // Working array of Gauss-Legendre distances
+    	private ArrayList<double[]> gaussQuadWeightArrayList = new ArrayList<double[]>();   // Gauss-Legendre weights
+        private	double[] gaussQuadWeight = null;                                            // Working array of Gauss-Legendre 
+        private double glPrec = 3e-11;                                                      // Relative precision in the calculation of Gauss-Legendre weights
+ 
     	// Iterative trapezium rule
     	private double requiredAccuracy = 0.0D;     // required accuracy at which iterative trapezium is terminated
     	private double trapeziumAccuracy = 0.0D;    // actual accuracy at which iterative trapezium is terminated as instance variable
@@ -149,10 +155,34 @@ public class Integration{
 
         // Get the sum returned by the numerical integration
         public double getIntegralSum(){
-            if(!this.setIntegration)throw new IllegalArgumentException("No integration has been performed");
+            if(!this.integrationDone)throw new IllegalArgumentException("No integration has been performed");
             return this.integralSum;
         }
+        
+        // Get the continious function mean returned by the numerical integration
+        // Only appies to Gaussian quadrature
+        public double getIntegralMean(){
+            if(!this.integrationStatsDone)throw new IllegalArgumentException("No relevant integration has been performed");
+            return this.integralMean;
+        }
+        
+        // Get the continious function sd returned by the numerical integration
+        // Only appies to Gaussian quadrature
+        public double getIntegralStandardDeviation(){
+            if(!this.integrationStatsDone)throw new IllegalArgumentException("No relevant integration has been performed");
+            return this.integralSD;
+        }
 
+        // Return current Gaussian-Legendre quadrature distances
+        public double[] getGauassQuadDistances(){
+            return this.gaussQuadDist;
+        }
+        
+        // Return current Gaussian-Legendre quadrature weights
+        public double[] getGauassQuadWeights(){
+            return this.gaussQuadWeight;
+        }
+        
     	// GAUSSIAN-LEGENDRE QUADRATURE
 
     	// Numerical integration using n point Gaussian-Legendre quadrature (instance method)
@@ -162,19 +192,15 @@ public class Integration{
     	    if(!this.setLimits)throw new IllegalArgumentException("One limit or both limits not set");
     	    if(!this.setFunction)throw new IllegalArgumentException("No integral function has been set");
 
-        	double[] gaussQuadDist = new double[glPoints];
-        	double[] gaussQuadWeight = new double[glPoints];
-        	double sum=0.0D;
-        	double xplus = 0.5D*(upperLimit + lowerLimit);
-        	double xminus = 0.5D*(upperLimit - lowerLimit);
-        	double dx = 0.0D;
+        	this.gaussQuadDist = new double[this.glPoints];
+        	this.gaussQuadWeight = new double[this.glPoints];
         	boolean test = true;
-        	int k=-1, kn=-1;
+        	int kn=-1;
 
         	// Get Gauss-Legendre coefficients, i.e. the weights and scaled distances
         	// Check if coefficients have been already calculated on an earlier call
         	if(!this.gaussQuadIndex.isEmpty()){
-            		for(k=0; k<this.gaussQuadIndex.size(); k++){
+            		for(int k=0; k<this.gaussQuadIndex.size(); k++){
                 		Integer ki = this.gaussQuadIndex.get(k);
                 		if(ki.intValue()==this.glPoints){
                     			test=false;
@@ -185,24 +211,28 @@ public class Integration{
 
         	if(test){
             		// Calculate and store coefficients
-            		Integration.gaussQuadCoeff(gaussQuadDist, gaussQuadWeight, glPoints);
-            		Integration.gaussQuadIndex.add(new Integer(glPoints));
-            		Integration.gaussQuadDistArrayList.add(gaussQuadDist);
-            		Integration.gaussQuadWeightArrayList.add(gaussQuadWeight);
+            		this.gaussQuadCoeff(this.glPoints);
+            		this.gaussQuadIndex.add(new Integer(this.glPoints));
+            		this.gaussQuadDistArrayList.add(this.gaussQuadDist);
+            		this.gaussQuadWeightArrayList.add(this.gaussQuadWeight);
         	}
         	else{
-        		    // Recover coefficients
-            		gaussQuadDist = gaussQuadDistArrayList.get(kn);
-            		gaussQuadWeight = gaussQuadWeightArrayList.get(kn);
+        		// Recover coefficients
+            		this.gaussQuadDist = this.gaussQuadDistArrayList.get(kn);
+            		this.gaussQuadWeight = this.gaussQuadWeightArrayList.get(kn);
         	}
 
         	// Perform summation
+                double sum=0.0D;
+        	double xplus = 0.5D*(this.upperLimit + this.lowerLimit);
+        	double xminus = 0.5D*(this.upperLimit - this.lowerLimit);
+        	double dx = 0.0D;
         	for(int i=0; i<glPoints; i++){
-            		dx = xminus*gaussQuadDist[i];
-            		sum += gaussQuadWeight[i]*this.integralFunc.function(xplus+dx);
+            		dx = xminus*this.gaussQuadDist[i];
+            		sum += this.gaussQuadWeight[i]*this.integralFunc.function(xplus+dx);
         	}
         	this.integralSum = sum*xminus;      // rescale
-        	this.setIntegration = true;         // integration performed
+        	this.integrationDone = true;        // integration performed
         	return this.integralSum;            // return value
     	}
 
@@ -220,54 +250,165 @@ public class Integration{
     	    Integration intgrtn = new Integration(intFunc, lowerLimit, upperLimit);
     	    return intgrtn.gaussQuad(glPoints);
     	}
+        
+        // Sum, mean and SD of a continuous distribution
+        // Numerical integration using n point Gaussian-Legendre quadrature (instance method)
+    	// All parametes preset
+    	public ArrayList<Double> gaussQuadPlusMeanAndSD(){
+    	    if(!this.setGLpoints)throw new IllegalArgumentException("Number of points not set");
+    	    if(!this.setLimits)throw new IllegalArgumentException("One limit or both limits not set");
+    	    if(!this.setFunction)throw new IllegalArgumentException("No integral function has been set");
 
-    	// Returns the distance (gaussQuadDist) and weight coefficients (gaussQuadCoeff)
+        	this.gaussQuadDist = new double[this.glPoints];
+        	this.gaussQuadWeight = new double[this.glPoints];
+        	double xplus = 0.5D*(this.upperLimit + this.lowerLimit);
+        	double xminus = 0.5D*(this.upperLimit - this.lowerLimit);
+        	boolean test = true;
+        	int kn = -1;
+
+        	// Get Gauss-Legendre coefficients, i.e. the weights and scaled distances
+        	// Check if coefficients have been already calculated on an earlier call
+        	if(!this.gaussQuadIndex.isEmpty()){
+            		for(int k=0; k<this.gaussQuadIndex.size(); k++){
+                		Integer ki = this.gaussQuadIndex.get(k);
+                		if(ki.intValue()==this.glPoints){
+                    			test=false;
+                    			kn = k;
+                		}
+            		}
+        	}
+
+        	if(test){
+            		// Calculate and store coefficients
+            		this.gaussQuadCoeff(this.glPoints);
+            		this.gaussQuadIndex.add(new Integer(this.glPoints));
+            		this.gaussQuadDistArrayList.add(this.gaussQuadDist);
+            		this.gaussQuadWeightArrayList.add(this.gaussQuadWeight);
+        	}
+        	else{
+        		// Recover coefficients
+            		this.gaussQuadDist = this.gaussQuadDistArrayList.get(kn);
+            		this.gaussQuadWeight = this.gaussQuadWeightArrayList.get(kn);
+        	}
+
+        	// Perform summation and mean calculation
+                double sum = 0.0D;
+                double sum0 = 0.0D;
+                double posn = 0.0;
+                double mean = 0.0D;
+                double dx = 0.0D;
+        	for(int i=0; i<glPoints; i++){
+            		dx = xminus*gaussQuadDist[i];
+                        posn = xplus+dx;
+                        sum0 = this.gaussQuadWeight[i]*this.integralFunc.function(posn);
+                        sum += sum0;
+                        mean += sum0*posn;
+        	}
+                this.integralSum = sum*xminus;
+        	this.integralMean = mean/sum;
+                
+                // Perform sd calculation
+                double sd = 0.0;
+        	for(int i=0; i<glPoints; i++){
+                    dx = xminus*this.gaussQuadDist[i];
+                    posn = xplus+dx;
+                    sum0 = this.gaussQuadWeight[i]*this.integralFunc.function(posn);
+                    sd += Fmath.square(posn - this.integralMean)*sum0;
+                }
+                this.integralSD = Math.sqrt(sd/sum);
+                
+                ArrayList<Double> ret = new ArrayList<Double>();
+                ret.add(new Double(this.integralSum));
+                ret.add(new Double(this.integralMean));
+                ret.add(new Double(this.integralSD));
+                
+                this.integrationStatsDone = true;
+                this.integrationDone = true;
+                
+        	return ret;                  
+    	}
+        
+        // Sum, mean and sd of a continuous distribution
+        // Numerical integration using n point Gaussian-Legendre quadrature (instance method)
+        // All parametes except the number of points in the Gauss-Legendre integration preset
+    	public ArrayList<Double> gaussQuadPlusMeanAndSD(int glPoints){
+    	    this.glPoints = glPoints;
+    	    this.setGLpoints = true;
+            return this.gaussQuadPlusMeanAndSD();
+        }
+
+    	// Sum, mean and sd of a continuous distribution
+        // Numerical integration using n point Gaussian-Legendre quadrature (static method)
+        // All parametes provided
+    	public static ArrayList<Double> gaussQuadPlusMeanAndSD(IntegralFunction intFunc, double lowerLimit, double upperLimit, int glPoints){
+    	    Integration intgrtn = new Integration(intFunc, lowerLimit, upperLimit);
+    	    return intgrtn.gaussQuadPlusMeanAndSD(glPoints);
+    	}
+
+
+    	// Calculates the distance (gaussQuadDist) and weight coefficients (gaussQuadCoeff)
     	// for an n point Gauss-Legendre Quadrature.
     	// The Gauss-Legendre distances, gaussQuadDist, are scaled to -1 to 1
-    	// See Numerical Recipes for details
-    	public static void gaussQuadCoeff(double[] gaussQuadDist, double[] gaussQuadWeight, int n){
+    	// See Numerical Recipes for details of this procedure
+    	public void gaussQuadCoeff(int n){
 
-	    	double	z=0.0D, z1=0.0D;
-		    double  pp=0.0D, p1=0.0D, p2=0.0D, p3=0.0D;
-
-	    	double 	eps = 3e-11;	// set required precision
+	    	double approxRoot0=0.0D;
+                double approxRoot1=0.0D;
+		
+                double legendrePoly1=0.0D;
+                double legendrePoly2=0.0D;
+                double legendrePoly3=0.0D;
+                double derivLegendrePoly1=0.0D;
+                
 	    	double	x1 = -1.0D;		// lower limit
 	    	double	x2 = 1.0D;		// upper limit
 
-	    	//  Calculate roots
+	    	// Calculate roots
 	    	// Roots are symmetrical - only half calculated
-	    	int m  = (n+1)/2;
-	    	double	xm = 0.5D*(x2+x1);
-	    	double	xl = 0.5D*(x2-x1);
+	    	int nh = (n+1)/2;
+	    	double xplus = 0.5D*(x2+x1);
+	    	double xminus = 0.5D*(x2-x1);
 
 	    	// Loop for  each root
-	    	for(int i=1; i<=m; i++){
+	    	for(int i=1; i<=nh; i++){
 			// Approximation of ith root
-		    	z = Math.cos(Math.PI*(i-0.25D)/(n+0.5D));
+		    	approxRoot0 = Math.cos(Math.PI*(i-0.25D)/(n+0.5D));
 
 		    	// Refinement on above using Newton's method
 		    	do{
-			    	p1 = 1.0D;
-			    	p2 = 0.0D;
+			    	legendrePoly1 = 1.0D;
+			    	legendrePoly2 = 0.0D;
 
-			    	// Legendre polynomial (p1, evaluated at z, p2 is polynomial of
-			    	//  one order lower) recurrence relationsip
+			    	// Legendre polynomial (legendrePoly1, evaluated at approxRoot0, legendrePoly2 is polynomial one order lower) recurrence relationsip
 			    	for(int j=1; j<=n; j++){
-				    	p3 = p2;
-				    	p2 = p1;
-				    	p1= ((2.0D*j - 1.0D)*z*p2 - (j - 1.0D)*p3)/j;
+				    	legendrePoly3 = legendrePoly2;
+				    	legendrePoly2 = legendrePoly1;
+				    	legendrePoly1= ((2.0D*j - 1.0D)*approxRoot0*legendrePoly2 - (j - 1.0D)*legendrePoly3)/j;
 			    	}
-			    	pp = n*(z*p1 - p2)/(z*z - 1.0D);    // Derivative of p1
-			    	z1 = z;
-			    	z = z1 - p1/pp;			            // Newton's method
-		    	} while(Math.abs(z - z1) > eps);
+			    	derivLegendrePoly1 = n*(approxRoot0*legendrePoly1 - legendrePoly2)/(approxRoot0*approxRoot0 - 1.0D);    // Derivative of legendrePoly1
+			    	approxRoot1 = approxRoot0;
+			    	approxRoot0 = approxRoot1 - legendrePoly1/derivLegendrePoly1;       // Newton's method
+		    	} while(Math.abs(approxRoot0 - approxRoot1) > this.glPrec);
 
-		    	gaussQuadDist[i-1] = xm - xl*z;		    // Scale root to desired interval
-		    	gaussQuadDist[n-i] = xm + xl*z;		    // Symmetric counterpart
-		    	gaussQuadWeight[i-1] = 2.0*xl/((1.0 - z*z)*pp*pp);	// Compute weight
-		    	gaussQuadWeight[n-i] = gaussQuadWeight[i-1];		// Symmetric counterpart
+		    	this.gaussQuadDist[i-1] = xplus - xminus*approxRoot0;                       // Scale root to desired interval
+		    	this.gaussQuadDist[n-i] = xplus + xminus*approxRoot0;                       // Symmetric counterpart
+		    	this.gaussQuadWeight[i-1] = 2.0*xminus/((1.0 - approxRoot0*approxRoot0)*derivLegendrePoly1*derivLegendrePoly1);     // Compute weight
+		    	this.gaussQuadWeight[n-i] = this.gaussQuadWeight[i-1];                      // Symmetric counterpart
 	    	}
     	}
+        
+        // Returns the distance (gaussQuadDist) and weight coefficients (gaussQuadCoeff)
+    	// for an n point Gauss-Legendre Quadrature.
+    	// The Gauss-Legendre distances, gaussQuadDist, are scaled to -1 to 1
+    	// See Numerical Recipes for details
+        //  Static method
+    	public static void gaussQuadCoeff(double[] gaussQuadDist, double[] gaussQuadWeight, int n){
+            Integration intg = new Integration();
+            intg.gaussQuadCoeff(n);
+            gaussQuadDist = intg.getGauassQuadDistances();
+            gaussQuadWeight = intg.getGauassQuadWeights();
+        }
+        
 
     	// TRAPEZIUM METHODS
 
@@ -283,7 +424,7 @@ public class Integration{
         	double	x0 = this.lowerLimit;
         	double 	x1 = this.lowerLimit + interval;
         	double	y0 = this.integralFunc.function(x0);
-        	this.integralSum = 0.0D;
+        	this.integralSum= 0.0D;
 
 		    for(int i=0; i<nIntervals; i++){
 		            // adjust last interval for rounding errors
@@ -299,7 +440,7 @@ public class Integration{
             		y0 = y1;
             		x1 += interval;
         	}
-        	this.setIntegration = true;
+        	this.integrationDone = true;
         	return this.integralSum;
     	}
 
@@ -314,7 +455,7 @@ public class Integration{
     	// Numerical integration using the trapeziodal rule (static method)
     	// all parameters to be provided
     	public static double trapezium(IntegralFunction intFunc, double lowerLimit, double upperLimit, int nIntervals){
-  	        Integration intgrtn = new Integration(intFunc, lowerLimit, upperLimit);
+  	    Integration intgrtn = new Integration(intFunc, lowerLimit, upperLimit);
     	    return intgrtn.trapezium(nIntervals);
     	}
 
@@ -325,25 +466,25 @@ public class Integration{
     	    this.maxIntervals = maxIntervals;
         	this.trapeziumIntervals = 1;
 
-        	double  summ = this.trapezium(this.integralFunc, this.lowerLimit, this.upperLimit, 1);
+        	double  summ = Integration.trapezium(this.integralFunc, this.lowerLimit, this.upperLimit, 1);
         	double oldSumm = summ;
         	int i = 2;
         	for(i=2; i<=this.maxIntervals; i++){
-            		summ = this.trapezium(this.integralFunc, this.lowerLimit, this.upperLimit, i);
+            		summ = Integration.trapezium(this.integralFunc, this.lowerLimit, this.upperLimit, i);
             		this.trapeziumAccuracy = Math.abs((summ - oldSumm)/oldSumm);
             		if(this.trapeziumAccuracy<=this.requiredAccuracy)break;
             		oldSumm = summ;
         	}
 
 		    if(i > this.maxIntervals){
-            		System.out.println("accuracy criterion was not met in Integration.trapezium - current sum was returned as result.");
+            		System.out.println("accuracy criterion was not met in this.trapezium - current sum was returned as result.");
             		this.trapeziumIntervals = this.maxIntervals;
         	}
         	else{
             		this.trapeziumIntervals = i;
         	}
-        	Integration.trapIntervals = this.trapeziumIntervals;
-        	Integration.trapAccuracy = this.trapeziumAccuracy;
+        	trapIntervals = this.trapeziumIntervals;
+        	trapAccuracy = this.trapeziumAccuracy;
         	return summ;
     	}
 
@@ -351,7 +492,7 @@ public class Integration{
     	// until two successive results differ by less than a predtermined accuracy times the penultimate result
     	// All parameters to be provided
     	public static double trapezium(IntegralFunction intFunc, double lowerLimit, double upperLimit, double accuracy, int maxIntervals){
-  	        Integration intgrtn = new Integration(intFunc, lowerLimit, upperLimit);
+  	    Integration intgrtn = new Integration(intFunc, lowerLimit, upperLimit);
     	    return intgrtn.trapezium(accuracy, maxIntervals);
         }
 
@@ -362,7 +503,7 @@ public class Integration{
 
     	// Get the number of intervals at which accuracy was last met in trapezium if using static trapezium call
     	public static int getTrapIntervals(){
-        	return Integration.trapIntervals;
+        	return trapIntervals;
     	}
 
     	// Get the actual accuracy acheived when the iterative trapezium calls were terminated, using the instance method
@@ -372,7 +513,7 @@ public class Integration{
 
     	// Get the actual accuracy acheived when the iterative trapezium calls were terminated, using the static method
     	public static double getTrapAccuracy(){
-        	return Integration.trapAccuracy;
+        	return trapAccuracy;
     	}
 
     	// BACKWARD RECTANGULAR METHODS
@@ -402,7 +543,7 @@ public class Integration{
             		x += interval;
         	}
 
-        	this.setIntegration = true;
+        	this.integrationDone = true;
         	return this.integralSum;
     	}
 
@@ -417,7 +558,7 @@ public class Integration{
     	// Numerical integration using the backward rectangular rule (static method)
     	// all parameters must be provided
     	public static double backward(IntegralFunction intFunc, double lowerLimit, double upperLimit, int nIntervals){
-   	        Integration intgrtn = new Integration(intFunc, lowerLimit, upperLimit);
+   	    Integration intgrtn = new Integration(intFunc, lowerLimit, upperLimit);
     	    return intgrtn.backward(nIntervals);
          }
 
@@ -444,7 +585,7 @@ public class Integration{
             		this.integralSum += y*interval;
             		x += interval;
         	}
-        	this.setIntegration = true;
+        	this.integrationDone = true;
         	return this.integralSum;
     	}
 
@@ -459,12 +600,12 @@ public class Integration{
     	// Numerical integration using the forward rectangular rule (static method)
     	// all parameters provided
     	public static double forward(IntegralFunction integralFunc, double lowerLimit, double upperLimit, int nIntervals){
-   	        Integration intgrtn = new Integration(integralFunc, lowerLimit, upperLimit);
+   	    Integration intgrtn = new Integration(integralFunc, lowerLimit, upperLimit);
     	    return intgrtn.forward(nIntervals);
          }
 
          public static double foreward(IntegralFunction integralFunc, double lowerLimit, double upperLimit, int nIntervals){
-   	        Integration intgrtn = new Integration(integralFunc, lowerLimit, upperLimit);
+   	    Integration intgrtn = new Integration(integralFunc, lowerLimit, upperLimit);
     	    return intgrtn.forward(nIntervals);
          }
 

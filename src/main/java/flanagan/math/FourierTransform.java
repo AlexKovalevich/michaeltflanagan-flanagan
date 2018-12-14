@@ -15,7 +15,7 @@
 *   AUTHOR: Dr Michael Thomas Flanagan
 *   DATE:       20 December 2003
 *   UPDATES:    26 July 2004, 31 August 2004, 15 June 2005, 27 January 2006
-*   UPDATES:    18 February 2006  method correlation correction (thanks to Daniel Mader, Universtät Freiburg -- IMTEK)
+*   UPDATES:    18 February 2006  method correlation correction (thanks to Daniel Mader, University of Freiburg -- IMTEK)
                 7 July 2008
 *
 *   DOCUMENTATION:

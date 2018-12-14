@@ -13,7 +13,7 @@
 *
 *   DATE:	    June 2002
 *   UPDATES:    16 February 2006, 7 March 2006, 31 March 2006, 22 April 2006, 1 July 2007, 9 April 2008
-*               18 October 2008, 16 June 2009, November 2009, 12 January 2010, 14 November 2010
+*               18 October 2008, 16 June 2009, November 2009, 12 January 2010, 14 November 2010, 15-16 July 2011
 *
 *
 *   DOCUMENTATION:
@@ -1249,6 +1249,44 @@ public class ComplexMatrix{
          	}
         	return det;
     	}
+
+        // COFACTOR
+    	// Returns the Matrix of all cofactors
+    	public ComplexMatrix cofactor(){
+    	    Complex[][] cof = Complex.twoDarray(this.nrow, this.ncol);
+    	    for(int i=0; i<this.nrow; i++){
+    	        for(int j=0; j<this.ncol; j++){
+    	            cof[i][j] = this.cofactor(i,j);
+    	        }
+    	    }
+    	    return new ComplexMatrix(cof);
+    	}
+
+    	// Returns the ii,jjth cofactor
+    	public Complex cofactor(int ii, int jj){
+    	    if(ii<0 || ii>=this.nrow)throw new IllegalArgumentException("The entered row index, " + ii + " must lie between 0 and " + (this.nrow-1) + " inclusive");
+    	    if(jj<0 || jj>=this.ncol)throw new IllegalArgumentException("The entered column index, " + jj + " must lie between 0 and " + (this.ncol-1) + " inclusive");
+
+    	    int[] rowi = new int[this.nrow - 1];
+    	    int[] colj = new int[this.ncol - 1];
+    	    int kk = 0;
+    	    for(int i=0; i<this.nrow; i++){
+    	        if(i!=ii){
+    	            rowi[kk]=i;
+    	            kk++;
+    	        }
+    	    }
+    	    kk = 0;
+    	    for(int i=0; i<this.ncol; i++){
+    	        if(i!=jj){
+    	            colj[kk]=i;
+    	            kk++;
+    	        }
+    	    }
+            ComplexMatrix aa = this.getSubMatrix(rowi, colj);
+            Complex aadet = aa.determinant();
+            return aadet.times(Math.pow(-1.0, (ii+jj)));
+        }
 
         // REDUCED ROW ECHELON FORM
         public ComplexMatrix reducedRowEchelonForm() {

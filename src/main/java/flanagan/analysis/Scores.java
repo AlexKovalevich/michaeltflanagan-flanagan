@@ -10,13 +10,14 @@
 *
 *   DATE:       October 2008
 *   AMENDED:    12 October 2008, 1-18 November 2010, 27 November 2010, 3-4 December 2010
+*               7 December 2011, 27 July 2012, 2-8 August 2012, 19-24 September 2012, 21 October 2012 
 *
 *   DOCUMENTATION:
 *   See Michael Thomas Flanagan's Java library on-line web pages:
 *   http://www.ee.ucl.ac.uk/~mflanaga/java/
-*   http://www.ee.ucl.ac.uk/~mflanaga/java/Cronbach.html
+*   http://www.ee.ucl.ac.uk/~mflanaga/java/Scores.html
 *
-*   Copyright (c) 2008-2010 Michael Thomas Flanagan
+*   Copyright (c) 2008-2012 Michael Thomas Flanagan
 *
 *   PERMISSION TO COPY:
 *
@@ -42,10 +43,16 @@ package flanagan.analysis;
 import java.util.*;
 import java.text.*;
 
-import flanagan.math.*;
-import flanagan.io.*;
-import flanagan.analysis.*;
-import flanagan.plot.*;
+import flanagan.math.ArrayMaths;
+import flanagan.math.Conv;
+import flanagan.math.Fmath;
+import flanagan.math.Matrix;
+import flanagan.io.Db;
+import flanagan.io.FileChooser;
+import flanagan.io.FileInput;
+import flanagan.io.FileOutput;
+import flanagan.plot.PlotGraph;
+
 
 
 public class Scores{
@@ -86,6 +93,8 @@ public class Scores{
                                                                                     // etc.
     protected double[][]originalScores0 = null;                                     // scores0 before any 'no response' deletions or replacements
     protected double[][]standardizedScores0 = null;                                 // standardized scores0
+    protected boolean[][] missingScores0 = null;                                    // = false, scores0 response entered
+                                                                                    // = true,  scores0 response missing
 
     protected double[][]scores1 = null;                                             // individual scores -  after any 'no response' deletions or replacements
                                                                                     // arranged as rows of scores for each person
@@ -94,7 +103,18 @@ public class Scores{
                                                                                     // etc.
     protected double[][]originalScores1 = null;                                     // scores1 before any 'no response' deletions or replacements
     protected double[][]standardizedScores1 = null;                                 // standardized scores1
-
+    protected boolean[][] missingRespones1 = null;                                  // = false, scores1 response entered
+                                                                                    // = true,  scores1 response missing
+    protected int readFlag = -1;                                                    // = 0 deprecated read method - no file name entered
+                                                                                    // = 1 deprecated read method - file name entered
+                                                                                    // = 2 format A read method - no file name entered
+                                                                                    // = 3 format A read method - file name entered
+                                                                                    // = 4 format B read method - no file name entered
+                                                                                    // = 5 format B read method - file name entered
+                                                                                    // = 6 format C read method - no file name entered
+                                                                                    // = 7 format C read method - file name entered
+                                                                                    // = 8 format D read method - no file name entered
+                                                                                    // = 9 format D read method - file name entered
     protected boolean dataEntered = false;                                          // = true when scores entered
     protected boolean dataPreprocessed = false;                                     // = true when scores have been preprocessed
 
@@ -102,15 +122,17 @@ public class Scores{
     protected int originalNitems = 0;                                               // original number of items
     protected String[] itemNames = null;                                            // names of the items
     protected String[] originalItemNames = null;                                    // list of item names before any deletions
-    protected boolean itemNamesSet = false;                                         // = true when item names entered
+    protected boolean itemNamesSet = false;                                         // -> true when item names entered
 
     protected int nPersons = 0;                                                     // number of persons, after any deletions
     protected int originalNpersons = 0;                                             // original number of persons
     protected String[] personNames = null;                                          // names of the persons
+    protected String[] originalPersonNames = null;                                  // list of person names before any deletions
+    protected boolean personNamesSet = false;                                       // -> true if person names entered
 
-    protected int nScores = 0;                                                      // total number of scores, after any deletions
-    protected int originalNscores = 0;                                              // original total number of scores
-
+    protected int nScores = 0;                                                      // total number of scores, after any deletions, for each item
+    protected int originalNscores = 0;                                              // original total number of scores for each item
+    
     protected String otherFalse = null;                                             // false value for dichotomous data if one of the default values
     protected String otherTrue = null;                                              // true value for dichotomous data if one of the default values
                                                                                     // default values: a numeral, true (ignoring case), false (ignoring case), yes (ignoring case), no (ignoring case)
@@ -119,7 +141,10 @@ public class Scores{
     protected double[] dichotomousPercentage = null;                                // percentage of responses in an item that are dichotomous
     protected boolean dichotomousOverall = false;                                   // true if all the data is dichotomous
     protected boolean dichotomousCheckDone = false;                                 // true if check for dichotomous data performed
-
+    protected double dichotTrue = +1.0;                                             // decimal value of dichotomous true, e.g. of a 'yes' response
+    protected double dichotFalse = -1.0;                                            // decimal value of dichotomous false, e.g. of a 'no' response
+    protected boolean dichotSet = false;                                            // = true if data declared as dichotomous 
+    
     protected boolean letterToNumeralSet = true;                                    // = true if user set the letter to numeral option allowing alphabetic response input
 
     protected boolean ignoreNoResponseRequests = false;                             // = true - requests for 'no resonse' options are not displayed
@@ -129,6 +154,7 @@ public class Scores{
 
     protected double personDeletionPercentage = 100.0;                              // percentage of no responses allowed within a person's responses before the person is deleted
     protected boolean personDeletionPercentageSet = false;                          // = true when this percentage is reset
+    protected ArrayList<String> almrDeletedPersons = new ArrayList<String>();       // names of 'missing response' deleted persons
 
     protected int replacementOption = 3;                                            // option flag for a missing response if deletion not carried out
                                                                                     // option = 1 - score replaced by zero
@@ -148,6 +174,7 @@ public class Scores{
     protected int nDeletedItems = 0;                                                // number of deleted items
     protected int[] deletedItemsIndices = null;                                     // indices of the deleted items
     protected int[] itemIndices = null;                                             // indices of items in original data before deletions
+    protected ArrayList<String> almrDeletedItems = new ArrayList<String>();         // names of 'missing response' deleted items
 
     protected boolean[] deletedPersons = null;                                      // = true if person corresponding to the deletedItems array index has been deleted, false otherwise
                                                                                     //   person deleted if no response in all items,then deleted irrespective of missing response option choice
@@ -355,7 +382,7 @@ public class Scores{
                                                                                     // = 2;     column/s of identical elements found
                                                                                     // = 3;     row/s and column/s of identical elements found
 
-    // CONSTRUCTOR
+    // CONSTRUCTORS
     public Scores(){
     }
 
@@ -375,7 +402,7 @@ public class Scores{
         }
     }
 
-    // MISSING RESPONSE
+    // MISSING RESPONSES
     // Set percentage of no responses allowed within a person's responses before deletion of the person performed
     public void setPersonDeletionPercentage(double perCent){
         this.personDeletionPercentage = perCent;
@@ -440,7 +467,12 @@ public class Scores{
             // Check whether any person has offered no responses at all
             // If so - delete person irrespective of replacementOption choice
             this.nDeletedPersons = 0;
-
+            
+            this.missingScores0 = new boolean[this.nItems][this.nPersons];
+            for(int i=0; i<this.nItems; i++){
+                for(int j=0;j<this.nPersons; j++)this.missingScores0[i][j] = false;
+            }
+            
             for(int j=0;j<this.nPersons; j++){
                 int nIndNaN = 0;
                 this.deletedPersons[j] = false;
@@ -480,12 +512,17 @@ public class Scores{
                     }
                 }
                 double[][] scoreTemp = new double[this.nItems][this.nPersons - nDeletedPersons];
+                boolean[][] missingTemp = new boolean[this.nItems][this.nPersons - nDeletedPersons];
+                String[] nameTemp = new String[this.nPersons-this.nDeletedItems];
                 this.personIndices = new int[this.nPersons - nDeletedPersons];
                 counter = 0;
                 for(int i=0; i<this.nPersons; i++){
+                    nameTemp[i] = this.personNames[i];
                     if(!this.deletedPersons[i]){
+                        almrDeletedPersons.add(this.personNames[i]);
                         for(int j=0;j<this.nItems; j++){
                             scoreTemp[j][counter] = this.scores0[j][i];
+                            missingTemp[j][counter] = this.missingScores0[j][i];
                         }
                         this.personIndices[counter] = i;
                         counter++;
@@ -494,6 +531,9 @@ public class Scores{
                 this.nPersons = this.nPersons - this.nDeletedPersons;
                 this.nScores = this.nPersons*this.nItems;
                 this.scores0 = scoreTemp;
+                this.missingScores0 = missingTemp;
+                this.personNames = nameTemp;
+                this.scores1 = this.transpose(this.scores0);
             }
             if(this.nDeletedPersons==0){
                 this.personIndices = new int[this.nPersons];
@@ -544,14 +584,17 @@ public class Scores{
 
                 if(this.nItems-this.nDeletedItems<=1)throw new IllegalArgumentException("You have deleted " + nDeletedItems + " items leaving "  + (this.nItems-this.nDeletedItems) + " items and hence no possibility calculation of alpha") ;
                 double[][] scoreTemp = new double[this.nItems-this.nDeletedItems][this.nPersons];
+                boolean[][] missingTemp = new boolean[this.nItems-this.nDeletedItems][this.nPersons];
                 String[] nameTemp = new String[this.nItems-this.nDeletedItems];
                 this.itemIndices = new int[this.nItems-this.nDeletedItems];
                 counter = 0;
                 for(int i=0; i<this.nItems; i++){
                     if(!this.deletedItems[i]){
+                        almrDeletedItems.add(this.itemNames[i]);
                         nameTemp[counter] = this.itemNames[i];
                         for(int j=0; j<this.nPersons; j++){
                             scoreTemp[counter][j] = this.scores0[i][j];
+                            missingTemp[counter][j] = this.missingScores0[i][j];
                         }
                         this.itemIndices[counter] = i;
                         counter++;
@@ -560,7 +603,8 @@ public class Scores{
                 this.nItems = this.nItems - this.nDeletedItems;
                 this.nScores = this.nPersons*this.nItems;
                 this.scores0 = scoreTemp;
-                this.scores1 = this.transpose0to1(this.scores0);
+                this.missingScores0 = missingTemp;
+                this.scores1 = this.transpose(this.scores0);
                 this.itemNames = nameTemp;
             }
             if(this.nDeletedItems==0){
@@ -575,11 +619,13 @@ public class Scores{
             int newNaNn = 0;
             for(int i=0; i<this.nPersons; i++){
                 for(int j=0; j<this.nItems; j++){
-                    if(!Double.isNaN(scores0[j][i])){
+                    if(Double.isNaN(scores0[j][i])){
+                        this.missingScores0[j][i] = true; 
                         newNaNn++;
                     }
                 }
             }
+
             //Check for non-deleted 'no responses' and handle as dictated by replacementOption choice
             if(newNaNn>0){
                 // current item means and total means
@@ -625,7 +671,12 @@ public class Scores{
                             for(int i=0; i<this.nItems; i++){
                                 for(int j=0; j<this.nPersons; j++){
                                     if(Double.isNaN(scores0[i][j])){
-                                        scores0[i][j]  = 0.0;
+                                        if(this.dichotSet){
+                                            scores0[i][j]  =  this.dichotFalse;
+                                        }
+                                        else{
+                                            scores0[i][j]  = 0.0;
+                                        }
                                         this.replacementIndices[rcounter] = this.itemNames[i] + ", " + (j+1) + ";";
                                         rcounter++;
                                     }
@@ -687,8 +738,164 @@ public class Scores{
                 this.nReplacements = rcounter--;
             }
         }
-        this.scores1 = this.transpose0to1(this.scores0);
+        this.scores1 = this.transpose(this.scores0);
+        
+        
         this.noResponseHandlingSet = true;
+        if(this.dichotSet)this.resetDichotomousMissingValues();
+    }
+    
+    // Reset dichotomous missing values if they are set above as means
+    public void resetDichotomousMissingValues(){
+  
+        if(!this.dataEntered)throw new IllegalArgumentException("No data has been entered");
+        if(!this.noResponseHandlingSet)this.noResponseHandling();
+        
+        if(this.nReplacements>0){
+            switch(this.replacementOption){
+                case 2: double[][] tscores = this.transpose(this.scores0);
+                         boolean[][] tmiss = this.transpose(this.missingScores0);
+                         for(int i=0; i<this.nPersons; i++){
+                            double max1 = Fmath.maximum(tscores[i]);
+                            double min1 = Fmath.minimum(tscores[i]);
+                            double test2 = (max1 + min1)/2.0;
+                            for(int j=0; j<this.nItems; j++){
+                                if(tmiss[i][j]){
+                                    if(tscores[i][j]>=test2){
+                                        tscores[i][j] = max1;
+                                    }
+                                    else{
+                                        tscores[i][j] = min1;
+                                    }
+                                }
+                            }
+                        }
+                        this.scores0 = this.transpose(tscores);
+                        break;
+                case 3: for(int i=0; i<this.nItems; i++){
+                            double max1 = Fmath.maximum(this.scores0[i]);
+                            double min1 = Fmath.minimum(this.scores0[i]);
+                            double test3 = (max1 + min1)/2.0;
+                            
+                            for(int j=0; j<this.nPersons; j++){
+                                if(this.missingScores0[i][j]){
+                                    if(this.scores0[i][j]>=test3){
+                                        this.scores0[i][j] = max1;
+                                    }
+                                    else{
+                                        this.scores0[i][j] = min1;
+                                    }
+                                }
+                            }
+                        }
+                        break;
+                case 4: double max0 = Fmath.maximum(this.scores0[0]);
+                        double min0 = Fmath.minimum(this.scores0[0]);
+                        for(int i=1; i<this.nItems; i++){
+                            double max1 = Fmath.maximum(this.scores0[i]);
+                            double min1 = Fmath.minimum(this.scores0[i]);
+                            if(max1>max0)max0 = max1;
+                            if(min1<min0)min0 = min1;                
+                        }
+                        double test4 = (max0 + min0)/2.0;
+                        for(int i=0; i<this.nItems; i++){
+                            for(int j=0; j<this.nPersons; j++){
+                                if(this.missingScores0[i][j]){
+                                    if(this.scores0[i][j]>=test4){
+                                        this.scores0[i][j] = max0;
+                                    }
+                                    else{
+                                        this.scores0[i][j] = min0;
+                                    }
+                                }
+                            }
+                        }
+                        break;
+            }
+        }           
+        
+        this.scores1 = this.transpose(this.scores0);
+        this.dichotomousOverall = true;
+    }
+    
+    // Count of appearence of different responses
+    private void frequencyCount(){
+        ArrayList<Object> freq = new ArrayList<Object>();
+        boolean[][] freqCheck = new boolean[this.nItems][this.nPersons];
+        for(int i=0; i<this.nItems; i++){
+            for(int j=0; j<this.nPersons; j++){
+                if(scores0[i][j]!=scores0[i][j]){
+                    freqCheck[i][j] = false;
+                }
+                else{
+                    freqCheck[i][j] = true;
+                }
+            }
+        } 
+       
+        int ii = 0;
+        for(int i=0; i<this.nItems; i++){
+            for(int j=0; j<this.nPersons; j++){
+                ii=0;
+                if(freqCheck[i][j]){
+                    freqCheck[i][j] = false;
+                    ii++;
+                    for(int k=0; k<this.nItems; k++){
+                        for(int l=0; l<this.nPersons; l++){
+                            if(freqCheck[k][l]){
+                                if(scores0[k][l]==scores0[i][j]){
+                                    ii++;
+                                    freqCheck[k][l] = false;
+                                }
+                            }
+                        }
+                    }
+                    freq.add(new Double(scores0[i][j]));
+                    freq.add(new Integer(ii));
+                }   
+            }
+        }
+        int n = freq.size()/2;
+        if(n>0){
+            double[] sepResp = new double[n];
+            int[] sepFreq = new int[n];
+            int jj=0;
+            for(int i=0; i<n; i++){
+                sepResp[i] = (Double)freq.get(jj++);
+                sepFreq[i] = (Integer)freq.get(jj++);
+            }
+            ArrayMaths am = new ArrayMaths(sepFreq);
+            am = am.descendingSort();
+            int[] origIndices = am.originalIndices(); 
+            double[] oSepResp = new double[n];
+            int[] oSepFreq = new int[n];
+            for(int i=0; i<n; i++){
+                oSepResp[i] = sepResp[origIndices[i]];
+                oSepFreq[i] = sepFreq[origIndices[i]];
+            }
+            if(oSepResp[0]<oSepResp[1]){
+                double holds = oSepResp[0];
+                oSepResp[0] = oSepResp[1];
+                oSepResp[1] = holds;
+            }
+            double[] repl = new double[n];
+            repl[0] = this.dichotTrue;
+            repl[1] = this.dichotFalse;
+            for(int i=2; i<n; i++){
+                repl[i] = Double.NaN;
+                this.nNaN += oSepFreq[i];
+                this.nReplacements += oSepFreq[i];
+            }
+            for(int m=0; m<n; m++){
+                for(int i=0; i<this.nItems; i++){
+                    for(int j=0; j<this.nPersons; j++){
+                        if(this.scores0[i][j]==oSepResp[m]){
+                            this.scores0[i][j] = repl[m];
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // Check that all 'no response' options are set
@@ -732,11 +939,11 @@ public class Scores{
                     if(!this.replacementOptionSet){
                         String message0 = "There are missing responses in this data set";
                         String message1 = "\nYou have not set the option flag for replacing a missing score";
-                        String message2 = "\n  option = 1 - score replaced by zero";
-                        String message3 = "\n  option = 2 - score replaced by person's mean";
-                        String message4 = "\n  option = 3 - score replaced by item mean (default option)";
-                        String message5 = "\n  option = 4 - score replaced by overall mean";
-                        String message6 = "\n  option = 5 - user supplied score for each 'no response'";
+                        String message2 = "\n  option = 1 - score replaced by zero or lower dichotomous pair";
+                        String message3 = "\n  option = 2 - score replaced by person's mean or rounded mean";
+                        String message4 = "\n  option = 3 - score replaced by item mean or rounded mean (default option)";
+                        String message5 = "\n  option = 4 - score replaced by overall mean or rounded mean";
+                        String message6 = "\n  option = 5 - user supplied score for each 'missing response'";
                         String message7 = "\nEnter the required value and click OK ";
                         String message8 = "\nor simply click OK for default value";
                         String message9 = message0 + message1 + message2 + message3 + message4 + message5 + message6 + message7 + message8;
@@ -819,23 +1026,328 @@ public class Scores{
 
     // ENTER SCORES
     // 1.   ENTER AS ROWS OF INDIVIDUAL SCORES FOR EACH ITEM
+    
     // Read scores from a text file as a matrix with rows of scores for each item
     // File selected using a dialog window
+    // Title
+    // Number of items
+    // Number of persons
+    // Person names
+    // Item name precedes the scores
+    // e.g. item name [0], scores0[0][0] to scores0[0][nPersons-1] =  scores for each person in turn for the first item
+    //      item name [1], scores0[1][0] to scores0[1][nPersons-1] =  scores for each person in turn for the second item
+    // etc.
+    // scores may be represented by a number, yes, Yes, YES, no, No, NO, true, True, TRUE, false, False, FALSE or a letter(if a letter to numeral conversion as beeen set - see letterToNumeral())
+    // 'no responses' may be represented by any one word text except those used to represent a response
+    public void readScoresAsRowPerItemA(){
+        this.readFlag = 2;
+        this.readScoresAsRowPerItemCore();
+    }
+    
+    // Read scores from a text file as a matrix with rows of scores for each item
+    // File name entered as argument
+    // Title
+    // Number of items
+    // Number of persons
+    // Person names
+    // Item name precedes the scores
+    // e.g. item name [0], scores0[0][0] to scores0[0][nPersons-1] =  scores for each person in turn for the first item
+    //      item name [1], scores0[1][0] to scores0[1][nPersons-1] =  scores for each person in turn for the second item
+    // etc.
+    // scores may be represented by a number, yes, Yes, YES, no, No, NO, true, True, TRUE, false, False, FALSE or a letter(if a letter to numeral conversion as beeen set - see letterToNumeral())
+    // 'no responses' may be represented by any one word text except those used to represent a response
+    public void readScoresAsRowPerItemA(String filename){
+        this.readFlag = 3;
+        this.inputFilename = filename;
+        this.readScoresAsRowPerItemCore();
+    }
+    
+    // Read scores from a text file as a matrix with rows of scores for each item
+    // File selected using a dialog window
+    // Title
+    // Number of items
+    // Number of persons
+    // Item names
+    // Person names
+    // e.g. scores0[0][0] to scores0[0][nPersons-1] =  scores for each person in turn for the first item
+    //      scores0[1][0] to scores0[1][nPersons-1] =  scores for each person in turn for the second item
+    // etc.
+    // scores may be represented by a number, yes, Yes, YES, no, No, NO, true, True, TRUE, false, False, FALSE or a letter(if a letter to numeral conversion as beeen set - see letterToNumeral())
+    // 'no responses' may be represented by any one word text except those used to represent a response
+    public void readScoresAsRowPerItemB(){
+        this.readFlag = 4;
+        this.readScoresAsRowPerItemCore();
+    }
+    
+    // Read scores from a text file as a matrix with rows of scores for each item
+    // File name entered as argument
+    // Title
+    // Number of items
+    // Number of persons
+    // Item names
+    // Person names
+    // e.g. scores0[0][0] to scores0[0][nPersons-1] =  scores for each person in turn for the first item
+    //      scores0[1][0] to scores0[1][nPersons-1] =  scores for each person in turn for the second item
+    // etc.
+    // scores may be represented by a number, yes, Yes, YES, no, No, NO, true, True, TRUE, false, False, FALSE or a letter(if a letter to numeral conversion as beeen set - see letterToNumeral())
+    // 'no responses' may be represented by any one word text except those used to represent a response
+    public void readScoresAsRowPerItemB(String filename){
+        this.readFlag = 5;
+        this.inputFilename = filename;
+        this.readScoresAsRowPerItemCore();
+    }   
+    
+    // Read scores from a text file as a matrix with rows of scores for each item
+    // File selected using a dialog window
+    // Scores only   -   entered with separators
+    // e.g. scores0[0][0] to scores0[0][nPersons-1] =  scores for each person in turn for the first item
+    //      scores0[1][0] to scores0[1][nPersons-1] =  scores for each person in turn for the second item
+    // etc.
+    // scores may be represented by a number, yes, Yes, YES, no, No, NO, true, True, TRUE, false, False, FALSE or a letter(if a letter to numeral conversion as beeen set - see letterToNumeral())
+    // 'no responses' may be represented by any one word text except those used to represent a response
+    public void readScoresAsRowPerItemC(){
+        this.readFlag = 6;
+        this.readScoresOnlyAsRowPerItemCore();
+    }
+    
+    // Read scores from a text file as a matrix with rows of scores for each item
+    // File name entered as argument
+    // Scores only   - with separators
+    // e.g. scores0[0][0] to scores0[0][nPersons-1] =  scores for each person in turn for the first item
+    //      scores0[1][0] to scores0[1][nPersons-1] =  scores for each person in turn for the second item
+    // etc.
+    // scores may be represented by a number, yes, Yes, YES, no, No, NO, true, True, TRUE, false, False, FALSE or a letter(if a letter to numeral conversion as beeen set - see letterToNumeral())
+    // 'no responses' may be represented by any one word text except those used to represent a response
+    public void readScoresAsRowPerItemC(String filename){
+        this.readFlag = 7;
+        this.inputFilename = filename;
+        this.readScoresOnlyAsRowPerItemCore();
+    }
+    
+    // Read scores from a text file as a matrix with rows of scores for each item
+    // File selected using a dialog window
+    // Scores only   -   entered with separators
+    // e.g. scores0[0][0] to scores0[0][nPersons-1] =  scores for each person in turn for the first item
+    //      scores0[1][0] to scores0[1][nPersons-1] =  scores for each person in turn for the second item
+    // etc.
+    // scores may be represented by 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, y, Y, n, N or a letter (if a letter to numeral conversion as beeen set - see letterToNumeral())
+    // NO SEPARATORS
+    // 'no responses' may be represented by any single character except those used to represent a response
+    public void readScoresAsRowPerItemD(){
+        this.readFlag = 8;
+        this.readScoresOnlyAsRowPerItemCore();
+    }
+    
+    // Read scores from a text file as a matrix with rows of scores for each item
+    // File name entered as argument
+    // Single character scores only   - with NO separators
+    // e.g. scores0[0][0] to scores0[0][nPersons-1] =  scores for each person in turn for the first item
+    //      scores0[1][0] to scores0[1][nPersons-1] =  scores for each person in turn for the second item
+    // etc.
+    // scores may be represented by 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, y, Y, n, N or a letter (if a letter to numeral conversion as beeen set - see letterToNumeral())
+    // NO SEPARATORS
+    // 'no responses' may be represented by any single character except those used to represent a response
+    public void readScoresAsRowPerItemD(String filename){
+        this.readFlag = 9;
+        this.inputFilename = filename;
+        this.readScoresOnlyAsRowPerItemCore();
+    }
+    
+    // ORIGINAL READ FROM FILE AND NOW A DEPRECATED METHOD
+    // Read scores from a text file as a matrix with rows of scores for each item
+    // File selected using a dialog window
+    // Title
+    // Number of items
+    // Number of persons
+    // Person names
+    // No item names entered
     // e.g. scores0[0][0] to scores0[0][nPersons-1] =  scores for each person in turn for the first item
     //      scores0[1][0] to scores0[1][nPersons-1] =  scores for each person in turn for the second item
     // etc.
     // scores may be represented by a number, yes, Yes, YES, no, No, NO, true, True, TRUE, false, False, FALSE or a letter(if a letter to numeral conversion as beeen set - see letterToNumeral())
     // 'no responses' may be represented by any one word text except those used to represent a response
     public void readScoresAsRowPerItem(){
-        //Select file
-        int lineNumber = 1;
-        FileChooser fin = new FileChooser();
-
-        // Read in file name
-        this.inputFilename = fin.selectFile();
-        if(fin.eol())lineNumber++;
-
+        this.readFlag = 0;
+        this.readScoresAsRowPerItemCore();
+    }
+    
+    // ORIGINAL READ FROM FILE AND NOW A DEPRECATED METHOD
+    // Read scores from a text file as a matrix with rows of scores for each item
+    // File name entered as argument
+    // Title
+    // Number of items
+    // Number of persons
+    // Person names
+    // No item names entered
+    // e.g. scores0[0][0] to scores0[0][nPersons-1] =  scores for each person in turn for the first item
+    //      scores0[1][0] to scores0[1][nPersons-1] =  scores for each person in turn for the second item
+    // etc.
+    // scores may be represented by a number, yes, Yes, YES, no, No, NO, true, True, TRUE, false, False, FALSE or a letter(if a letter to numeral conversion as beeen set - see letterToNumeral())
+    // 'no responses' may be represented by any one word text except those used to represent a response    
+    public void readScoresAsRowPerItem(String filename){
+        this.readFlag = 1;
+        this.inputFilename = filename;
+        this.readScoresAsRowPerItemCore();
+    }
+    
+    // Core method for reading scores as rows of scores for each item
+    // Files with title etc details
+    protected void readScoresAsRowPerItemCore(){
+       
+        if(this.readFlag==0 || this.readFlag==2 || this.readFlag==4){
+            //Select file
+            FileChooser fin0 = new FileChooser();
+            // Read in file name
+            this.inputFilename = fin0.selectFile();
+            fin0.close();
+        }
+        // Open input file
+        FileInput fin = new FileInput(this.inputFilename);
+        
         // Set title
+        this.setTitle0(fin);
+
+        // Read in number of items
+        int lineNumber = 1;
+        this.nItems = fin.readInt();
+        if(fin.eol())lineNumber++;
+        this.itemNames = new String[this.nItems];
+
+        // Read in number of persons
+        this.nPersons = fin.readInt();
+        if(fin.eol())lineNumber++;
+        this.nScores = this.nItems*this.nPersons;
+
+         if(this.readFlag==4 || this.readFlag==5){
+            // Read in item names
+            this.itemNames = new String[this.nItems+1];
+            for(int i=0; i<this.nItems; i++){
+                this.itemNames[i] = fin.readWord();
+                if(fin.eol())lineNumber++;
+            }
+            this.itemNames[this.nItems] = "total";
+            this.originalItemNames = (String[])this.itemNames.clone();
+            this.itemNamesSet = true;
+        }       
+        // Read in person names
+        this.personNames = new String[this.nPersons+1];
+        for(int i=0; i<this.nPersons; i++){
+            this.personNames[i] = fin.readWord();
+            if(fin.eol())lineNumber++;
+        }
+        this.personNames[this.nPersons] = "total";
+        this.originalPersonNames = (String[])this.personNames.clone();
+        this.personNamesSet = true;
+
+        // Read in data to a String matrix
+        String[][] scores = new String[this.nItems][this.nPersons];
+        for(int i=0; i<this.nItems; i++){
+            int wordsPerLine = 1;
+            if(this.readFlag==2 || this.readFlag==3)this.itemNames[i] = fin.readWord();
+            for(int j=0; j<this.nPersons; j++){
+                scores[i][j] = fin.readWord();
+                if(fin.eol()){
+                    if(wordsPerLine!=this.nPersons)throw new IllegalArgumentException("Line " + lineNumber + ": the number of scores in this row, " + wordsPerLine + ", does not equal the total number of persons, " + this.nPersons);
+                    lineNumber++;
+                }
+                else{
+                    wordsPerLine++;
+                }
+            }
+        }
+        
+        if(this.readFlag==2 || this.readFlag==3)this.itemNamesSet = true;
+        fin.close();
+
+        // Item names
+        if(this.readFlag==0 || this.readFlag==1)this.defaultItemNames();
+        
+        // Store entered data
+        this.storeData((Object)scores, 1, 0);
+    }
+    
+    // Core method for reading scores as rows of scores for each item
+    // Files with scores only
+    protected void readScoresOnlyAsRowPerItemCore(){
+        
+        if(this.readFlag==6 || this.readFlag==8){
+            //Select file
+            FileChooser fin0 = new FileChooser();
+            // Read in file name
+            this.inputFilename = fin0.selectFile();
+            fin0.close();
+        }
+        // Open input file
+        FileInput fin = new FileInput(this.inputFilename);
+        
+        // Set title
+        this.setTitle1();
+        
+        // Set number of items
+        this.nItems = fin.numberOfLines();
+        
+        // Read in scores
+        ArrayList<ArrayList<String>> hold0 = new ArrayList<ArrayList<String>>();
+        if(this.readFlag==6 || this.readFlag==7){
+            for(int i=0; i<this.nItems; i++){
+                boolean test0 = true;
+                ArrayList<String> hold1 = new ArrayList<String>();
+                while(test0){           
+                    hold1.add(fin.readWord());              
+                    if(fin.eol()){
+                        test0 = false;
+                        int wordsPerLine = hold1.size();
+                        if(i==0){
+                            this.nPersons = wordsPerLine;
+                            this.originalData = new String[this.nItems][this.nPersons];
+                        }
+                        else{
+                            if(wordsPerLine!=this.nPersons)throw new IllegalArgumentException("Line " + i + ": the number of scores in this row, " + wordsPerLine + ", does not equal the total number of persons, " + this.nPersons + ", calculated from the first row");
+                        }   
+                        hold0.add(hold1);
+                    }
+                }
+            }
+        }
+        else{
+            for(int i=0; i<this.nItems; i++){
+                ArrayList<String> hold1 = new ArrayList<String>();
+                String line0 = fin.readLine();
+                int wordsPerLine = line0.length();
+                if(i==0){
+                    this.nPersons = wordsPerLine;
+                }
+                else{
+                    if(wordsPerLine!=this.nPersons)throw new IllegalArgumentException("Line " + i + ": the number of scores in this row, " + wordsPerLine + ", does not equal the total number of persons, " + this.nPersons + ", calculated from the first row");
+                }
+                for(int j=0;j<this.nPersons; j++){
+                    hold1.add(String.valueOf(line0.charAt(j)));
+                }
+                hold0.add(hold1);
+            }
+        }
+        String[][] scores = new String[this.nItems][this.nPersons];
+        ArrayList<String> hold3 = new  ArrayList<String>();
+        for(int i=0; i<this.nItems; i++){
+            hold3 = hold0.get(i);
+            for(int j=0; j<this.nPersons; j++){
+                scores[i][j] = hold3.get(j);
+            }
+        }
+        
+        // Person names
+        this.defaultPersonNames();       
+
+        // Item names
+        this.defaultItemNames();
+        
+        // Store entered data
+        this.storeData((Object)scores, 1, 0);
+    }
+    
+    
+    // Set title for read from file methods
+    protected void setTitle0(FileInput fin){
         this.title = new String[3];
         this.titleLines = 3;
         this.title[0] = fin.readLine();
@@ -844,129 +1356,26 @@ public class Scores{
         String day = DateFormat.getDateInstance().format(d);
         String tim = DateFormat.getTimeInstance().format(d);
         this.title[2] = "Program execution initiated at " + tim + " on " + day;
-
-        // Read in number of items
-        this.nItems = fin.readInt();
-        if(fin.eol())lineNumber++;
-
-        // Read in number of persons
-        this.nPersons = fin.readInt();
-        if(fin.eol())lineNumber++;
-        this.nScores = this.nItems*this.nPersons;
-
-        // Read in person names
-        this.itemNames = new String[this.nItems+1];
-        this.personNames = new String[this.nPersons+1];
-        for(int i=0; i<this.nItems; i++){
-            this.itemNames[i] = fin.readWord();
-            if(fin.eol())lineNumber++;
-        }
-        this.itemNames[this.nItems] = "total";
-        this.originalItemNames = this.itemNames;
-        this.itemNamesSet = true;
-
-        // Read in data to a String matrix
-        String[][] scores = new String[this.nItems][this.nPersons];
-        for(int i=0; i<this.nItems; i++){
-            int wordsPerLine = 1;
-            for(int j=0; j<this.nPersons; j++){
-                scores[i][j] = fin.readWord();
-                if(fin.eol()){
-                    if(wordsPerLine!=this.nPersons)throw new IllegalArgumentException("Line " + lineNumber + ": the number of scores in this row, " + wordsPerLine + ", does not equal the total number of persons, " + this.nPersons);
-                    lineNumber++;
-                }
-                else{
-                    wordsPerLine++;
-                }
-            }
-        }
-        fin.close();
-
-        // Store entered data
-        this.originalData = (Object)scores;
-        this.originalDataType = 1;
-        this.originalDataOrder = 0;
-        this.dataEntered = true;
     }
-
-
-    // Read scores from a text file as a matrix with rows of scores for each item
-    // File name entered as argument
-    // e.g. scores0[0][0] to scores0[0][nPersons-1] =  scores for each person in turn for the first item
-    //      scores0[1][0] to scores0[1][nPersons-1] =  scores for each person in turn for the second item
-    // etc.
-    // scores may be represented by a number, yes, Yes, YES, no, No, NO, true, True, TRUE, false, False, FALSE or a letter(if a letter to numeral conversion as beeen set - see letterToNumeral())
-    // 'no responses' may be represented by any one word text except those used to represent a response
-    public void readScoresAsRowPerItem(String filename){
-
-        //Select file and read in data
-        int lineNumber = 1;
-        this.inputFilename = filename;
-        FileInput fin = new FileInput(filename);
-        if(fin.eol())lineNumber++;
-
-        // Set title
-        this.title = new String[3];
-        this.titleLines = 3;
-        this.title[0] = fin.readLine();
-        this.title[1] = "Data read from file: " + filename;
+    
+    // Set title for enter from program methods
+    protected void setTitle1(){
+        this.title = new String[2];
+        this.title[0] = "Untitled Scores Analysis";
         Date d = new Date();
         String day = DateFormat.getDateInstance().format(d);
         String tim = DateFormat.getTimeInstance().format(d);
-        this.title[2] = "Program execution initiated at " + tim + " on " + day;
-
-        // Read in number of items
-        this.nItems = fin.readInt();
-        if(fin.eol())lineNumber++;
-        this.itemNames = new String[this.nItems+1];
-        for(int i=0; i<this.nItems; i++){
-            this.itemNames[i] = "item " + i;
-            System.out.println(itemNames[i]);
-        }
-
-        // Read in number of persons
-        this.nPersons = fin.readInt();
-        if(fin.eol())lineNumber++;
-        this.personNames = new String[this.nPersons];
-        this.nScores = this.nItems*this.nPersons;
-
-        // Read in person names
-        for(int i=0; i<this.nPersons; i++){
-            this.personNames[i] = fin.readWord();
-            if(fin.eol())lineNumber++;
-
-        }
-        this.itemNames[this.nItems] = "total";
-        this.originalItemNames = this.itemNames;
-        this.itemNamesSet = true;
-
-        // Read in data to a String matrix
-        String[][] scores = new String[this.nItems][this.nPersons];
-        for(int i=0; i<this.nItems; i++){
-            int wordsPerLine = 1;
-            for(int j=0; j<this.nPersons; j++){
-                scores[i][j] = fin.readWord();
-                System.out.println("w " + i + " " + j + " " + scores[i][j] + " " + lineNumber);
-                if(fin.eol()){
-                    if(wordsPerLine!=this.nPersons)throw new IllegalArgumentException("Line " + lineNumber + ": the number of scores in this row, " + wordsPerLine + ", does not equal the total number of persons, " + this.nPersons);
-                    lineNumber++;
-                }
-                else{
-                    wordsPerLine++;
-                }
-
-            }
-        }
-        fin.close();
-
-        // Store entered data
-        this.originalData = (Object)scores;
-        this.originalDataType = 1;
-        this.originalDataOrder = 0;
+        this.title[1] = "Program execution initiated at " + tim + " on " + day;
+    }
+    
+    // Store the read or entered data
+    protected void storeData(Object oscores, int dataType, int dataOrder){
+        this.originalData = oscores;
+        this.originalDataType = dataType;
+        this.originalDataOrder = dataOrder;
         this.dataEntered = true;
     }
-
-
+    
     // Enter scores as a matrix with rows of scores for each item - matrix of scores entered as String[][]
     // e.g. scores0[0][0] to scores0[0][nPersons-1] =  scores for each person in turn for the first item
     //      scores0[1][0] to scores0[1][nPersons-1] =  scores for each person in turn for the second item
@@ -980,20 +1389,16 @@ public class Scores{
         this.nScores = this.nItems*this.nPersons;
 
         // Set title
-        if(this.title==null){
-            this.title = new String[2];
-            this.title[0] = "Untitled Scores Analysis";
-            Date d = new Date();
-            String day = DateFormat.getDateInstance().format(d);
-            String tim = DateFormat.getTimeInstance().format(d);
-            this.title[1] = "Program execution initiated at " + tim + " on " + day;
-        }
+        if(this.title==null)this.setTitle1();
+        
+        // Person names
+        this.defaultPersonNames();
+        
+        // item names
+        this.defaultItemNames();
 
         // Store entered data
-        this.originalData = (Object)Conv.copy(scores);
-        this.originalDataType = 1;
-        this.originalDataOrder = 0;
-        this.dataEntered = true;
+        this.storeData((Object)Conv.copy(scores), 1, 0);
     }
 
 
@@ -1010,20 +1415,16 @@ public class Scores{
         this.nScores = this.nItems*this.nPersons;
 
         // Set title
-        if(this.title==null){
-            this.title = new String[2];
-            this.title[0] = "Untitled";
-            Date d = new Date();
-            String day = DateFormat.getDateInstance().format(d);
-            String tim = DateFormat.getTimeInstance().format(d);
-            this.title[1] = "Program execution initiated at " + tim + " on " + day;
-        }
+        if(this.title==null)this.setTitle1();
+        
+        // Person names
+        this.defaultPersonNames();
+        
+        // item names
+        this.defaultItemNames();
 
         // Store entered data
-        this.originalData = (Object)Conv.copy(scores);
-        this.originalDataType = 2;
-        this.originalDataOrder = 0;
-        this.dataEntered = true;
+        this.storeData((Object)Conv.copy(scores), 2, 0);
     }
 
 
@@ -1041,23 +1442,18 @@ public class Scores{
         this.nScores = this.nItems*this.nPersons;
 
         // Set title
-        if(this.title==null){
-            this.title = new String[2];
-            this.title[0] = "Untitled Scores Analysis";
-            Date d = new Date();
-            String day = DateFormat.getDateInstance().format(d);
-            String tim = DateFormat.getTimeInstance().format(d);
-            this.title[1] = "Program execution initiated at " + tim + " on " + day;
-        }
+        if(this.title==null)this.setTitle1();
+        
+        // Person names
+        this.defaultPersonNames();
+        
+        // item names
+        this.defaultItemNames();
 
         // Store entered data
+        this.storeData((Object)Conv.copy(scores), 3, 0);
         this.originalData = (Object)scores.copy();
-        this.originalDataType = 3;
-        this.originalDataOrder = 0;
-        this.dataEntered = true;
     }
-
-
 
     // Enter scores as a matrix with rows of scores for each item - matrix of scores entered as float[][]
     // e.g. scores0[0][0] to scores0[0][nPersons-1] =  scores for each person in turn for the first item
@@ -1072,22 +1468,17 @@ public class Scores{
         this.nScores = this.nItems*this.nPersons;
 
         // Set title
-        if(this.title==null){
-            this.title = new String[2];
-            this.title[0] = "Untitled Scores Analysis";
-            Date d = new Date();
-            String day = DateFormat.getDateInstance().format(d);
-            String tim = DateFormat.getTimeInstance().format(d);
-            this.title[1] = "Program execution initiated at " + tim + " on " + day;
-        }
+        if(this.title==null)this.setTitle1();
+        
+        // Person names
+        this.defaultPersonNames();
+        
+        // item names
+        this.defaultItemNames();
 
         // Store entered data
-        this.originalData = (Object)Conv.copy(scores);
-        this.originalDataType = 4;
-        this.originalDataOrder = 0;
-        this.dataEntered = true;
+        this.storeData((Object)Conv.copy(scores), 4, 0);
     }
-
 
     // Enter scores as a matrix with rows of scores for each item   -  matrix of scores entered as int[][]
     // e.g. scores0[0][0] to scores0[0][nPersons-1] =  scores for each person in turn for the first item
@@ -1102,20 +1493,16 @@ public class Scores{
         this.nScores = this.nItems*this.nPersons;
 
         // Set title
-        if(this.title==null){
-            this.title = new String[2];
-            this.title[0] = "Untitled Scores Analysis";
-            Date d = new Date();
-            String day = DateFormat.getDateInstance().format(d);
-            String tim = DateFormat.getTimeInstance().format(d);
-            this.title[1] = "Program execution initiated at " + tim + " on " + day;
-        }
+        if(this.title==null)this.setTitle1();
+        
+        // Person names
+        this.defaultPersonNames();
+        
+        // item names
+        this.defaultItemNames();
 
         // Store entered data
-        this.originalData = (Object)Conv.copy(scores);
-        this.originalDataType = 5;
-        this.originalDataOrder = 0;
-        this.dataEntered = true;
+        this.storeData((Object)Conv.copy(scores), 5, 0);;
     }
 
     // Enter scores as a matrix with rows of scores for each item   -  matrix of scores entered as char[][]
@@ -1132,22 +1519,17 @@ public class Scores{
         this.nScores = this.nItems*this.nPersons;
 
         // Set title
-        if(this.title==null){
-            this.title = new String[2];
-            this.title[0] = "Untitled Scores Analysis";
-            Date d = new Date();
-            String day = DateFormat.getDateInstance().format(d);
-            String tim = DateFormat.getTimeInstance().format(d);
-            this.title[1] = "Program execution initiated at " + tim + " on " + day;
-        }
+        if(this.title==null)this.setTitle1();
+        
+        // Person names
+        this.defaultPersonNames();
+        
+        // item names
+        this.defaultItemNames();
 
         // Store entered data
-        this.originalData = (Object)Conv.copy(scores);
-        this.originalDataType = 6;
-        this.originalDataOrder = 0;
-        this.dataEntered = true;
+        this.storeData((Object)Conv.copy(scores), 6, 0);
     }
-
 
     // Enter scores as a matrix with rows of scores for each item - scores either true  or false  -  matrix of scores entered as boolean[][]
     // e.g. scores0[0][0] to scores0[0][nPersons-1] =  scores for each person in turn for the first item
@@ -1161,129 +1543,205 @@ public class Scores{
         this.nPersons = scores[0].length;
         this.nScores = this.nItems*this.nPersons;
         this.dichotomous = new boolean[this.nItems];
-        this.dichotomousPercentage = new double[this.nItems];
-        for(int i=0; i<this.nItems; i++){
-            this.dichotomous[i]=true;
-            this.dichotomousPercentage[i]=100.0;
-        }
-        this.dichotomousOverall = true;
-        this.dichotomousCheckDone = true;
 
         // Set title
-        if(this.title==null){
-            this.title = new String[2];
-            this.title[0] = "Untitled Scores Analysis";
-            Date d = new Date();
-            String day = DateFormat.getDateInstance().format(d);
-            String tim = DateFormat.getTimeInstance().format(d);
-            this.title[1] = "Program execution initiated at " + tim + " on " + day;
-        }
+        if(this.title==null)this.setTitle1();
+        
+        // Person names
+        this.defaultPersonNames();
+        
+        // item names
+        this.defaultItemNames();
 
         // Store entered data
-        this.originalData = (Object)Conv.copy(scores);
-        this.originalDataType = 7;
-        this.originalDataOrder = 0;
-        this.dataEntered = true;
+        this.storeData((Object)Conv.copy(scores), 7, 0);
     }
 
 
-    // 2.   ENTER AS ROWS OF SCORES FOR EACH PERSON
+    // 2.   ENTER AS ROWS OF SCORES FOR EataACH PERSON
+       
     // Read scores from a text file as a matrix with rows of scores for each person
     // File selected using a dialog window
+    // Title
+    // Number of items
+    // Number of persons
+    // Item names
+    // Person name precedes the scores
+    // e.g. person name [0], scores0[0][0] to scores0[0][nPersons-1] =  scores for each item in turn for the first person
+    //      person name [1], scores0[1][0] to scores0[1][nPersons-1] =  scores for each item in turn for the second person
+    // etc.
+    // scores may be represented by a number, yes, Yes, YES, no, No, NO, true, True, TRUE, false, False, FALSE or a letter(if a letter to numeral conversion as beeen set - see letterToNumeral())
+    // 'no responses' may be represented by any one word text except those used to represent a response
+    public void readScoresAsRowPerPersonA(){
+        this.readFlag = 2;
+        this.readScoresAsRowPerPersonCore();
+    }
+    
+    // Read scores from a text file as a matrix with rows of scores for each person
+    // File name entered as argument
+    // Title
+    // Number of items
+    // Number of persons
+    // Item names
+    // Person name precedes the scores
+    // e.g. person name [0], scores0[0][0] to scores0[0][nPersons-1] =  scores for each item in turn for the first person
+    //      person name [1], scores0[1][0] to scores0[1][nPersons-1] =  scores for each item in turn for the second person
+    // etc.
+    // scores may be represented by a number, yes, Yes, YES, no, No, NO, true, True, TRUE, false, False, FALSE or a letter(if a letter to numeral conversion as beeen set - see letterToNumeral())
+    // 'no responses' may be represented by any one word text except those used to represent a response
+    public void readScoresAsRowPerPersonA(String filename){
+        this.readFlag = 3;
+        this.inputFilename = filename;
+        this.readScoresAsRowPerPersonCore();
+    }
+    
+    // Read scores from a text file as a matrix with rows of scores for each person
+    // File selected using a dialog window
+    // Title
+    // Number of items
+    // Number of persons
+    // Item names
+    // Person names
+    // e.g. person name [0], scores0[0][0] to scores0[0][nPersons-1] =  scores for each item in turn for the first person
+    //      person name [1], scores0[1][0] to scores0[1][nPersons-1] =  scores for each item in turn for the second person
+    // etc.
+    // scores may be represented by a number, yes, Yes, YES, no, No, NO, true, True, TRUE, false, False, FALSE or a letter(if a letter to numeral conversion as beeen set - see letterToNumeral())
+    // 'no responses' may be represented by any one word text except those used to represent a response
+    public void readScoresAsRowPerPersonB(){
+        this.readFlag = 4;
+        this.readScoresAsRowPerPersonCore();
+    }
+    
+    // Read scores from a text file as a matrix with rows of scores for each person
+    // File name entered as argument
+    // Title
+    // Number of items
+    // Number of persons
+    // Item names
+    // Person names
+    // e.g. person name [0], scores0[0][0] to scores0[0][nPersons-1] =  scores for each item in turn for the first person
+    //      person name [1], scores0[1][0] to scores0[1][nPersons-1] =  scores for each item in turn for the second person
+    // etc.
+    // scores may be represented by a number, yes, Yes, YES, no, No, NO, true, True, TRUE, false, False, FALSE or a letter(if a letter to numeral conversion as beeen set - see letterToNumeral())
+    // 'no responses' may be represented by any one word text except those used to represent a response
+    public void readScoresAsRowPerPersonB(String filename){
+        this.readFlag = 5;
+        this.inputFilename = filename;
+        this.readScoresAsRowPerPersonCore();
+    }   
+
+    // Read scores from a text file as a matrix with rows of scores for each person
+    // File selected using a dialog window
+    // Scores only   - with separators
+    // e.g. person name [0], scores0[0][0] to scores0[0][nPersons-1] =  scores for each item in turn for the first person
+    //      person name [1], scores0[1][0] to scores0[1][nPersons-1] =  scores for each item in turn for the second person
+    // etc.
+    // scores may be represented by a number, yes, Yes, YES, no, No, NO, true, True, TRUE, false, False, FALSE or a letter(if a letter to numeral conversion as beeen set - see letterToNumeral())
+    // 'no responses' may be represented by any one word text except those used to represent a response
+    public void readScoresAsRowPerPersonC(){
+        this.readFlag = 6;
+        this.readScoresOnlyAsRowPerPersonCore();
+    }
+    
+    // Read scores from a text file as a matrix with rows of scores for each person
+    // File name entered as argument
+    // Scores only   - with separators
+    // e.g. person name [0], scores0[0][0] to scores0[0][nPersons-1] =  scores for each item in turn for the first person
+    //      person name [1], scores0[1][0] to scores0[1][nPersons-1] =  scores for each item in turn for the second person
+    // etc.
+    // scores may be represented by a number, yes, Yes, YES, no, No, NO, true, True, TRUE, false, False, FALSE or a letter(if a letter to numeral conversion as beeen set - see letterToNumeral())
+    // 'no responses' may be represented by any one word text except those used to represent a response
+    public void readScoresAsRowPerPersonC(String filename){
+        this.readFlag = 7;
+        this.inputFilename = filename;
+        this.readScoresOnlyAsRowPerPersonCore();
+    }
+    
+    // Read scores from a text file as a matrix with rows of scores for each person
+    // File selected using a dialog window
+    // Scores only   -   entered with separators
+    // e.g. person name [0], scores0[0][0] to scores0[0][nPersons-1] =  scores for each item in turn for the first person
+    //      person name [1], scores0[1][0] to scores0[1][nPersons-1] =  scores for each item in turn for the second person
+    // etc.
+    // scores may be represented by 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, y, Y, n, N or a letter (if a letter to numeral conversion as beeen set - see letterToNumeral())
+    // NO SEPARATORS
+    // 'no responses' may be represented by any single character except those used to represent a response
+    public void readScoresAsRowPerPersonD(){
+        this.readFlag = 8;
+        this.readScoresOnlyAsRowPerPersonCore();
+    }
+    
+    // Read scores from a text file as a matrix with rows of scores for each person
+    // File name entered as argument
+    // Single character scores only   -   with NO separators
+    // e.g. person name [0], scores0[0][0] to scores0[0][nPersons-1] =  scores for each item in turn for the first person
+    //      person name [1], scores0[1][0] to scores0[1][nPersons-1] =  scores for each item in turn for the second person
+    // etc.
+    // scores may be represented by 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, y, Y, n, N or a letter (if a letter to numeral conversion as beeen set - see letterToNumeral())
+    // NO SEPARATORS
+    // 'no responses' may be represented by any single character except those used to represent a response
+    public void readScoresAsRowPerPersonD(String filename){
+        this.readFlag = 9;
+        this.inputFilename = filename;
+        this.readScoresOnlyAsRowPerPersonCore();
+    }
+    
+    // ORIGINAL READ FROM FILE AND NOW A DEPRECATED METHOD
+    // Read scores from a text file as a matrix with rows of scores for each person
+    // File selected using a dialog window
+    // Title
+    // Number of items
+    // Number of persons
+    // Item names
+    // No person names entered
     // e.g. scores1[0][0] to scores1[0][nItems-1] =  scores for each item in turn for the first person
     //      scores1[1][0] to scores1[1][nItems-1] =  scores for each item in turn for the second person
     // etc.
     // scores may be represented by a number, yes, Yes, YES, no, No, NO, true, True, TRUE, false, False, FALSE or a letter(if a letter to numeral conversion as beeen set - see letterToNumeral())
     // 'no responses' may be represented by any one word text except those used to represent a response
-   public void readScoresAsRowPerPerson(){
-        //Select file
-        int lineNumber = 1;
-        FileChooser fin = new FileChooser();
-
-        // Read in file name
-        this.inputFilename = fin.selectFile();
-        if(fin.eol())lineNumber++;
-
-        // Set title
-        this.title = new String[3];
-        this.titleLines = 3;
-        this.title[0] = "Title: " + fin.readLine();
-        this.title[1] = "Data read from file: " + this.inputFilename;
-        Date d = new Date();
-        String day = DateFormat.getDateInstance().format(d);
-        String tim = DateFormat.getTimeInstance().format(d);
-        this.title[2] = "Program execution initiated at " + tim + " on " + day;
-
-        // Read in number of items
-        this.nItems = fin.readInt();
-        if(fin.eol())lineNumber++;
-
-        // Read in number of persons
-        this.nPersons = fin.readInt();
-        if(fin.eol())lineNumber++;
-        this.nScores = this.nItems*this.nPersons;
-
-        // Read in item names
-        this.itemNames = new String[this.nItems+1];
-        for(int i=0; i<this.nItems; i++){
-            this.itemNames[i] = fin.readWord();
-            if(fin.eol())lineNumber++;
-        }
-        this.itemNames[this.nItems] = "total";
-        this.originalItemNames = this.itemNames;
-        this.itemNamesSet = true;
-
-        // Read in data to a String matrix
-        String[][] scores = new String[this.nPersons][this.nItems];
-        for(int i=0; i<this.nPersons; i++){
-            int wordsPerLine = 1;
-            for(int j=0; j<this.nItems; j++){
-                scores[i][j] = fin.readWord();
-                if(fin.eol()){
-                    if(wordsPerLine!=this.nItems)throw new IllegalArgumentException("Line " + lineNumber + ": the number of scores in this row, " + wordsPerLine + ", does not equal the total number of items, " + this.nItems);
-                    lineNumber++;
-                }
-                else{
-                    wordsPerLine++;
-                }
-            }
-        }
-        fin.close();
-
-        // Store entered data
-        this.originalData = (Object)scores;
-        this.originalDataType = 1;
-        this.originalDataOrder = 1;
-        this.dataEntered = true;
+    public void readScoresAsRowPerPerson(){
+        this.readFlag = 0;
+       this.readScoresAsRowPerPersonCore();
     }
-
-
+   
+    // ORIGINAL READ FROM FILE AND NOW A DEPRECATED METHOD
     // Read scores from a text file as a matrix with rows of scores for each person
     // File name entered as argument
+    // Title
+    // Number of items
+    // Number of persons
+    // Item names
+    // No person names entered
     // e.g. scores1[0][0] to scores1[0][nItems-1] =  scores for each item in turn for the first person
     //      scores1[1][0] to scores1[1][nItems-1] =  scores for each item in turn for the second person
     // etc.
     // scores may be represented by a number, yes, Yes, YES, no, No, NO, true, True, TRUE, false, False, FALSE or a letter(if a letter to numeral conversion as beeen set - see letterToNumeral())
     // 'no responses' may be represented by any one word text except those used to represent a response
     public void readScoresAsRowPerPerson(String filename){
-
-        //Select file and read in data
-        int lineNumber = 1;
+        this.readFlag = 1;
         this.inputFilename = filename;
-        FileInput fin = new FileInput(filename);
-        if(fin.eol())lineNumber++;
+        this.readScoresAsRowPerPersonCore();
+    }
 
+    // Core method for reading scores as rows of scores for each person
+    protected void readScoresAsRowPerPersonCore(){   
+       
+        if(this.readFlag==0 || this.readFlag==2 || this.readFlag==4){
+            //Select file
+            FileChooser fin0 = new FileChooser();
+            // Read in file name
+            this.inputFilename = fin0.selectFile();
+            fin0.close();
+        }
+        // Open input file
+        FileInput fin = new FileInput(this.inputFilename);
+        
+        
         // Set title
-        this.title = new String[3];
-        this.titleLines = 3;
-        this.title[0] = "Title: " + fin.readLine();
-        this.title[1] = "Data read from file: " + filename;
-        Date d = new Date();
-        String day = DateFormat.getDateInstance().format(d);
-        String tim = DateFormat.getTimeInstance().format(d);
-        this.title[2] = "Program execution initiated at " + tim + " on " + day;
+        this.setTitle0(fin);
 
         // Read in number of items
+        int lineNumber = 1;
         this.nItems = fin.readInt();
         if(fin.eol())lineNumber++;
 
@@ -1301,11 +1759,25 @@ public class Scores{
         this.itemNames[this.nItems] = "total";
         this.originalItemNames = this.itemNames;
         this.itemNamesSet = true;
+        
+         if(this.readFlag==4 || this.readFlag==5){
+            // Read in person names
+            this.personNames = new String[this.nPersons+1];
+            for(int i=0; i<this.nPersons; i++){
+                this.personNames[i] = fin.readWord();
+                if(fin.eol())lineNumber++;
+            }
+            this.personNames[this.nPersons] = "total";
+            this.originalPersonNames = (String[])this.personNames.clone();
+            this.personNamesSet = true;
+        }
 
         // Read in data to a String matrix
         String[][] scores = new String[this.nPersons][this.nItems];
+        this.personNames = new String[this.nPersons];
         for(int i=0; i<this.nPersons; i++){
             int wordsPerLine = 1;
+            if(this.readFlag==2 || this.readFlag==3)this.personNames[i] = fin.readWord();
             for(int j=0; j<this.nItems; j++){
                 scores[i][j] = fin.readWord();
                 if(fin.eol()){
@@ -1315,18 +1787,101 @@ public class Scores{
                 else{
                     wordsPerLine++;
                 }
-
             }
         }
+        if(this.readFlag==2 || this.readFlag==3)this.personNamesSet = true;
         fin.close();
 
+        // Person names
+        if(this.readFlag==0 || this.readFlag==1)this.defaultPersonNames();
+        
         // Store entered data
-        this.originalData = (Object)scores;
-        this.originalDataType = 1;
-        this.originalDataOrder = 1;
-        this.dataEntered = true;
+        this.storeData((Object)scores, 1, 1);
+        
     }
+    
+    // Core method for reading scores as rows of scores for each person
+    // Files with scores only
+    protected void readScoresOnlyAsRowPerPersonCore(){
+        
+        if(this.readFlag==6 || this.readFlag==8){
+            //Select file
+            FileChooser fin0 = new FileChooser();
+            // Read in file name
+            this.inputFilename = fin0.selectFile();
+            fin0.close();
+        }
+        // Open input file
+        FileInput fin = new FileInput(this.inputFilename);
+        
+        // Set title
+        this.setTitle1();
+        
+        // Set number of items
+        this.nPersons = fin.numberOfLines();
+        
+        // Read in scores
+        ArrayList<ArrayList<String>> hold0 = new ArrayList<ArrayList<String>>();
+        if(this.readFlag==6 || this.readFlag==7){
+            for(int i=0; i<this.nPersons; i++){
+                boolean test0 = true;
+                ArrayList<String> hold1 = new ArrayList<String>();
+                while(test0){    
+                    
+                    hold1.add(fin.readWord());              
+                    if(fin.eol()){
+                        test0 = false;
+                        int wordsPerLine = hold1.size();
+                        if(i==0){
+                            this.nItems = wordsPerLine;
+                            this.originalData = new String[this.nPersons][this.nItems];   //CCCCCCCCCCCCCCCCCCCCCCCCCCCC
+                        }
+                        else{
+                            if(wordsPerLine!=this.nItems)throw new IllegalArgumentException("Line " + i + ": the number of scores in this row, " + wordsPerLine + ", does not equal the total number of persons, " + this.nPersons + ", calculated from the first row (line 0)");
+                        }   
+                        hold0.add(hold1);
+                    }
+                }
+            }
+        }
+        else{
+            for(int i=0; i<this.nPersons; i++){
+                ArrayList<String> hold1 = new ArrayList<String>();
+                String line0 = fin.readLine();
+                
+                int wordsPerLine = line0.length();
+                if(i==0){
+                    this.nItems = wordsPerLine;
+                }
+                else{
+                    if(wordsPerLine!=this.nItems)throw new IllegalArgumentException("Line " + i + ": the number of scores in this row, " + wordsPerLine + ", does not equal the total number of persons, " + this.nPersons + ", calculated from the first row");
+                }
+                for(int j=0;j<this.nItems; j++){
+                    hold1.add(String.valueOf(line0.charAt(j)));
+                }
+                hold0.add(hold1);
+            }
+        }
+        String[][] scores = new String[this.nPersons][this.nItems];
+        ArrayList<String> hold3 = new  ArrayList<String>();
+        for(int i=0; i<this.nPersons; i++){
+            hold3 = hold0.get(i);
+            for(int j=0; j<this.nItems; j++){
+                scores[i][j] = hold3.get(j);
+            }
+        }
+        
+        // Person names
+        this.defaultPersonNames();       
 
+        // Item names
+        this.defaultItemNames();
+        
+        // Store entered data
+        this.storeData((Object)scores, 1, 1);
+    }
+    
+   
 
     // Enter scores as a matrix with rows of scores for each person - matrix of scores entered as String[][]
     // e.g. scores1[0][0] to scores1[0][nItems-1] =  scores for each item in turn for the first person
@@ -1341,29 +1896,25 @@ public class Scores{
         this.nItems = scores[0].length;
         this.nScores = this.nItems*this.nPersons;
 
-       // Set title
-        if(this.title==null){
-            this.title = new String[2];
-            this.title[0] = "Untitled Scores Analysis";
-            Date d = new Date();
-            String day = DateFormat.getDateInstance().format(d);
-            String tim = DateFormat.getTimeInstance().format(d);
-            this.title[1] = "Program execution initiated at " + tim + " on " + day;
-        }
+
+        // Set title
+        if(this.title==null)this.setTitle1();
 
         // Store entered data
-        this.originalData = (Object)Conv.copy(scores);
-        this.originalDataType = 1;
-        this.originalDataOrder = 1;
-        this.dataEntered = true;
+        this.storeData((Object)Conv.copy(scores), 1, 1);
+        
+        // Person names
+        this.defaultPersonNames();
+        
+        // item names
+        this.defaultItemNames();
+        
     }
 
     // A mistaken title retained for compatibility
     public void enterScoresAsRowPerIperson(String[][] scores){
         this.enterScoresAsRowPerPerson(scores);
     }
-
-
 
     // Enter scores as a matrix with rows of scores for each person - matrix of scores entered as double[][]
     // e.g. scores1[0][0] to scores1[0][nItems-1] =  scores for each item in turn for the first person
@@ -1378,20 +1929,16 @@ public class Scores{
         this.nScores = this.nItems*this.nPersons;
 
         // Set title
-        if(this.title==null){
-            this.title = new String[2];
-            this.title[0] = "Untitled Scores Analysis";
-            Date d = new Date();
-            String day = DateFormat.getDateInstance().format(d);
-            String tim = DateFormat.getTimeInstance().format(d);
-            this.title[1] = "Program execution initiated at " + tim + " on " + day;
-        }
+        if(this.title==null)this.setTitle1();
 
         // Store entered data
-        this.originalData = (Object)Conv.copy(scores);
-        this.originalDataType = 2;
-        this.originalDataOrder = 1;
-        this.dataEntered = true;
+        this.storeData((Object)Conv.copy(scores), 2, 1);
+   
+        // Person names
+        this.defaultPersonNames();
+        
+        // item names
+        this.defaultItemNames();
     }
 
 
@@ -1409,20 +1956,17 @@ public class Scores{
         this.nScores = this.nItems*this.nPersons;
 
         // Set title
-        if(this.title==null){
-            this.title = new String[2];
-            this.title[0] = "Untitled Scores Analysis";
-            Date d = new Date();
-            String day = DateFormat.getDateInstance().format(d);
-            String tim = DateFormat.getTimeInstance().format(d);
-            this.title[1] = "Program execution initiated at " + tim + " on " + day;
-        }
+        if(this.title==null)this.setTitle1();
 
         // Store entered data
-        this.originalData = (Object)scores.copy();
-        this.originalDataType = 3;
-        this.originalDataOrder = 1;
-        this.dataEntered = true;
+        this.storeData((Object)Conv.copy(scores), 3, 1);
+        
+        // Person names
+        this.defaultPersonNames();
+        
+        // item names
+        this.defaultItemNames();
+
     }
 
     // Enter scores as a matrix with rows of scores for each person - matrix of scores entered as float[][]
@@ -1438,20 +1982,16 @@ public class Scores{
         this.nScores = this.nItems*this.nPersons;
 
         // Set title
-        if(this.title==null){
-            this.title = new String[2];
-            this.title[0] = "Untitled Scores Analysis";
-            Date d = new Date();
-            String day = DateFormat.getDateInstance().format(d);
-            String tim = DateFormat.getTimeInstance().format(d);
-            this.title[1] = "Program execution initiated at " + tim + " on " + day;
-        }
+        if(this.title==null)this.setTitle1();
 
         // Store entered data
-        this.originalData = (Object)Conv.copy(scores);
-        this.originalDataType = 4;
-        this.originalDataOrder = 1;
-        this.dataEntered = true;
+        this.storeData((Object)Conv.copy(scores), 4, 1);
+        
+        // Person names
+        this.defaultPersonNames();
+        
+        // item names
+        this.defaultItemNames();
     }
 
 
@@ -1466,22 +2006,18 @@ public class Scores{
         this.nPersons = scores.length;
         this.nItems = scores[0].length;
         this.nScores = this.nItems*this.nPersons;
-
+        
         // Set title
-        if(this.title==null){
-            this.title = new String[2];
-            this.title[0] = "Untitled Scores Analysis";
-            Date d = new Date();
-            String day = DateFormat.getDateInstance().format(d);
-            String tim = DateFormat.getTimeInstance().format(d);
-            this.title[1] = "Program execution initiated at " + tim + " on " + day;
-        }
+        if(this.title==null)this.setTitle1();
 
         // Store entered data
-        this.originalData = (Object)Conv.copy(scores);
-        this.originalDataType = 5;
-        this.originalDataOrder = 1;
-        this.dataEntered = true;
+        this.storeData((Object)Conv.copy(scores), 5, 1);
+        
+        // Person names
+        this.defaultPersonNames();
+        
+        // item names
+        this.defaultItemNames();
     }
 
 
@@ -1497,22 +2033,18 @@ public class Scores{
         this.nPersons = scores.length;
         this.nItems = scores[0].length;
         this.nScores = this.nItems*this.nPersons;
-
+        
         // Set title
-        if(this.title==null){
-            this.title = new String[2];
-            this.title[0] = "Untitled Scores Analysis";
-            Date d = new Date();
-            String day = DateFormat.getDateInstance().format(d);
-            String tim = DateFormat.getTimeInstance().format(d);
-            this.title[1] = "Program execution initiated at " + tim + " on " + day;
-        }
+        if(this.title==null)this.setTitle1();
 
         // Store entered data
-        this.originalData = (Object)Conv.copy(scores);
-        this.originalDataType = 6;
-        this.originalDataOrder = 1;
-        this.dataEntered = true;
+       this.storeData((Object)Conv.copy(scores), 6, 1);
+        
+        // Person names
+        this.defaultPersonNames();
+        
+        // item names
+        this.defaultItemNames();
     }
 
 
@@ -1527,32 +2059,22 @@ public class Scores{
         this.nPersons = scores.length;
         this.nItems = scores[0].length;
         this.nScores = this.nItems*this.nPersons;
-        this.dichotomous = new boolean[this.nItems];
-        this.dichotomousPercentage = new double[this.nItems];
-        for(int i=0; i<this.nItems; i++){
-            this.dichotomous[i]=true;
-            this.dichotomousPercentage[i]=100.0;
-        }
-        this.dichotomousOverall = true;
-        this.dichotomousCheckDone = true;
 
         // Set title
-        if(this.title==null){
-            this.title = new String[2];
-            this.title[0] = "Untitled Scores Analysis";
-            Date d = new Date();
-            String day = DateFormat.getDateInstance().format(d);
-            String tim = DateFormat.getTimeInstance().format(d);
-            this.title[1] = "Program execution initiated at " + tim + " on " + day;
-        }
+        if(this.title==null)this.setTitle1();
 
         // Store entered data
-        this.originalData = (Object)Conv.copy(scores);
-        this.originalDataType = 7;
-        this.originalDataOrder = 1;
-        this.dataEntered = true;
+        this.storeData((Object)Conv.copy(scores), 7, 1);
+        
+        // Person names
+        this.defaultPersonNames();
+        
+        // item names
+        this.defaultItemNames();
     }
 
+    // ENTER NAMES
+    
     // Enter item names, i.e. one word item titles
     // default values are item1, item2, item3 etc.
     public void enterItemNames(String[] itemNames){
@@ -1560,12 +2082,48 @@ public class Scores{
         this.itemNames = new String[len+1];
         for(int i=0; i<len; i++)this.itemNames[i] = itemNames[i];
         this.itemNames[len]="total";
+        this.originalItemNames = (String[])this.itemNames.clone();
         this.itemNamesSet = true;
     }
+            
+    // Enter default item names
+    private void defaultItemNames(){
+         if(!this.itemNamesSet){
+            this.itemNames = new String[this.nItems+1];
+            for(int i=0; i<this.nItems; i++)this.itemNames[i] = "item"+i;
+            this.itemNames[this.nItems] = "total";
+            this.originalItemNames = (String[])this.itemNames.clone();
+        }
+        
+    }
+    
+    // Enter person names, i.e. one word person titles
+    // default values are person1, person2, person3 etc.
+    public void enterPersonNames(String[] personNames){
+        int len = personNames.length;
+        this.personNames = new String[len+1];
+        for(int i=0; i<len; i++)this.personNames[i] = personNames[i];
+        this.personNames[len]="total";
+        this.originalPersonNames = (String[])this.personNames.clone();
+        this.personNamesSet = true;
+    }
+    
+    // Enter default person names
+    private void defaultPersonNames(){  
+        if(!this.personNamesSet){
+            this.personNames = new String[this.nPersons+1];
+            for(int i=0; i<this.nPersons; i++)this.personNames[i] = "person"+i;
+            this.personNames[this.nPersons]="total";
+            this.originalPersonNames = (String[])this.personNames.clone();
+        }
+    }
 
-    //  Allow alphabetic responses, i.e. A, B, C, to be converted to numerical responses, i.e. 1, 2, 3, 4
-    //  This is the default option (17 November 2010)
-    // Need only be called to restore after suspensin - see immediately below
+
+    //  LETTER NUMERAL TRANSFORMATIONS
+    
+    // Allow alphabetic responses, i.e. A, B, C, to be converted to numerical responses, i.e. 1, 2, 3, 4
+    // This is the default option (17 November 2010)
+    // Need only be called to restore after suspension - see immediately below
     public void letterToNumeral(){
         this.letterToNumeralSet = true;
     }
@@ -1575,18 +2133,105 @@ public class Scores{
         this.letterToNumeralSet = false;
     }
 
+    //  DICHOTOMOUS DATA
+    // Declare data as dichotomous
+    public void declareDataDichotomous(){
+        this.dichotSet = true;
+    }
+    
     //  Allow other dichotomous data pairs than the default pairs,
     //  i.e. other than a numeral, (true, True, TRUE; false, Flase, FALSE), (Y, y, yes, Yes, YES;  N, n, no, No, NO)
+    public void additionalDichotomousPairs(String falseSign, String trueSign){
+        this.otherFalse = falseSign;
+        this.otherTrue = trueSign;
+        this.otherDichotomousDataSet = true;
+    }
+    
     public void otherDichotomousData(String falseSign, String trueSign){
         this.otherFalse = falseSign;
         this.otherTrue = trueSign;
         this.otherDichotomousDataSet = true;
     }
+    
+    // Reset dichotomous data 'false' and 'no' numerical value
+    // default value = -1;
+    public void resetDichotomousNoFalse(double dichotFalse){
+        this.dichotFalse = dichotFalse;
+    }
+    
+    // Reset dichotomous data 'true' and 'yes' numerical value
+    // default value = +1;
+    public void resetDichotomousYesTrue(double dichotTrue){
+        this.dichotTrue = dichotTrue;
+    }
+    
+    // Return dichotomous data 'false' and 'no' numerical value
+    // default value = -1;
+    public double getDichotomousNoFalse(){
+        return this.dichotFalse;
+    }
+    
+    // Return dichotomous data 'true'and 'yes' numerical value
+    // default value = +1;
+    public double getDichotomousYesTrue(){
+        return this.dichotTrue;
+    }
+    
 
+    // Check which of the original items are dichotomous
+    protected double[] checkWhetherRawItemsDichotomous(){
+
+        if(!this.dichotomousCheckDone){
+            this.dichotomous = new boolean[this.nItems];
+            this.dichotomousPercentage = new double[this.nItems];
+            int nDich = 0;
+            for(int k=0; k<this.nItems; k++){
+                this.dichotomousPercentage[k] = this.checkWhetherDichotomous(this.scores0[k]);
+                if(this.dichotomousPercentage[k]==100.0){
+                    this.dichotomous[k]=true;
+                    nDich++;
+                }
+            }
+            if(nDich==this.nItems)this.dichotomousOverall = true;
+
+            this.dichotomousCheckDone = false;
+        }
+        return this.dichotomousPercentage;
+    }
+
+    // Check wheteher an array of data is dichotomous
+    // returns percetage responses that are dichotomous
+    protected double checkWhetherDichotomous(double[] array){
+
+        int n = array.length;
+        double[] responseMatching = new double[n];
+        boolean[] matchingCheck = new boolean[n];
+
+        for(int i=0; i<n; i++){
+            responseMatching[i] = 0.0;
+            matchingCheck[i] = false;
+        }
+
+        for(int i=0; i<n; i++){
+            responseMatching[i] = 0;
+            for(int j=0; j<n; j++){
+                if(array[i]==array[j] && !matchingCheck[j]){
+                    responseMatching[i] += 1.0;
+                    matchingCheck[j] = true;
+                }
+            }
+        }
+
+        ArrayMaths am0 = new ArrayMaths(responseMatching);
+        ArrayMaths am1 = am0.sort();
+        double[] sorted = am1.array();
+        double max = (sorted[n-1] + sorted[n-2])*100.0/((double)n);
+        return max;
+    }
 
     // SCORE MATRIX TRANSPOSTIONS
-    // Transpose scores0 to scores1 - double[][]
-    protected double[][] transpose0to1(double[][]scores00){
+    // Transpose scores - double[][]
+    protected double[][] transpose(double[][]scores00){
         int n0 = scores00.length;
         int n1 = scores00[0].length;
         double[][] scores11 = new double[n1][n0];
@@ -1598,8 +2243,8 @@ public class Scores{
         return scores11;
     }
 
-    // Transpose scores0 to scores1 - String[][]
-    protected String[][] transpose0to1(String[][]scores00){
+    // Transpose scores - String[][]
+    protected String[][] transpose(String[][]scores00){
         int n0 = scores00.length;
         int n1 = scores00[0].length;
         String[][] scores11 = new String[n1][n0];
@@ -1610,44 +2255,18 @@ public class Scores{
         }
         return scores11;
     }
-
-     // Transpose scores1 to scores0 - double[][]
-    protected double[][] transpose1to0(double[][]scores11){
-        int n0 = scores11.length;
-        int n1 = scores11[0].length;
-        double[][] scores00 = new double[n1][n0];
+    
+     // Transpose scores - boolean[][]
+    protected boolean[][] transpose(boolean[][]scores00){
+        int n0 = scores00.length;
+        int n1 = scores00[0].length;
+        boolean[][] scores11 = new boolean[n1][n0];
         for(int i=0; i<n0; i++){
             for(int j=0; j<n1; j++){
-                scores00[j][i] = scores11[i][j];
+                scores11[j][i] = scores00[i][j];
             }
         }
-        return scores00;
-    }
-
-    // Transpose scores1 to scores0 - String[][]
-    protected String[][] transpose1to0(String[][]scores11){
-        int n0 = scores11.length;
-        int n1 = scores11[0].length;
-        String[][] scores00 = new String[n1][n0];
-        for(int i=0; i<n0; i++){
-            for(int j=0; j<n1; j++){
-                scores00[j][i] = scores11[i][j];
-            }
-        }
-        return scores00;
-    }
-
-    // Transpose scores1 to scores0 - boolean[][]
-    protected boolean[][] transpose1to0(boolean[][]scores11){
-        int n0 = scores11.length;
-        int n1 = scores11[0].length;
-        boolean[][] scores00 = new boolean[n1][n0];
-        for(int i=0; i<n0; i++){
-            for(int j=0; j<n1; j++){
-                scores00[j][i] = scores11[i][j];
-            }
-        }
-        return scores00;
+        return scores11;
     }
 
 
@@ -1721,6 +2340,7 @@ public class Scores{
 
 
     // TRIM SCORES ELEMENTS
+    
     // Trim all elements of leading and trailing spaces
     protected void trimScores(String[][] scores){
         int n = scores.length;
@@ -1734,12 +2354,13 @@ public class Scores{
 
 
     // PREPROCESS DATA
+    
     // Delete persons and items if required
     // Make substititions for any  non-deleted 'no responses'
     // Assign data to scores1 array and orginal scores array
     // Calculate standardized data
     // Call calculation of means, sums and variances
-    protected void preprocessData(){
+    public void preprocessData(){
 
         if(!this.dataPreprocessed){
             if(!this.dataEntered)throw new IllegalArgumentException("No data has been entered");
@@ -1756,21 +2377,10 @@ public class Scores{
             this.itemIndices = new int[this.nItems];
             for(int i=0; i<this.nItems; i++)this.itemIndices[i] = i;
 
-
             // instance variable initialization
             this.nNaN = 0;
             this.nDeletedPersons = 0;
             this.nDeletedItems = 0;
-
-            // Title names
-            if(this.itemNamesSet){
-                if((this.nItems+1)!=this.itemNames.length)throw new IllegalArgumentException("The number of item names, " + this.itemNames.length + ", does not equal the number of items, " + this.nItems);
-            }
-            else{
-                this.itemNames = new String[this.nItems+1];
-                for(int i=0; i<this.nItems; i++)this.itemNames[i] = "item" + i;
-                this.itemNames[this.nItems] = "total";
-            }
 
             // Recover entered data as String, double or boolean arrays and transpose entered scores1 format to scores0 format
             String[][] holdingArrayS = null;
@@ -1783,7 +2393,7 @@ public class Scores{
                         this.checkLengths(holdingArrayS);
                         // transpose to scores0 format
                         if(this.originalDataOrder==1){
-                            holdingArrayS = this.transpose1to0(holdingArrayS);
+                            holdingArrayS = this.transpose(holdingArrayS);
                         }
                         this.trimScores(holdingArrayS);
                         break;
@@ -1791,7 +2401,7 @@ public class Scores{
                         this.checkLengths(holdingArrayD);
                         // transpose to scores0 format
                         if(this.originalDataOrder==1){
-                            holdingArrayD = this.transpose1to0(holdingArrayD);
+                            holdingArrayD = this.transpose(holdingArrayD);
                         }
                         holdingArrayS = this.dataToString(holdingArrayD);
                         break;
@@ -1799,7 +2409,7 @@ public class Scores{
                         this.checkLengths(holdingArrayD);
                         // transpose to scores0 format
                         if(this.originalDataOrder==1){
-                            holdingArrayD = this.transpose1to0(holdingArrayD);
+                            holdingArrayD = this.transpose(holdingArrayD);
                         }
                         holdingArrayS = this.dataToString(holdingArrayD);
                         break;
@@ -1815,7 +2425,7 @@ public class Scores{
                         }
                         // transpose to scores0 format
                         if(this.originalDataOrder==1){
-                            holdingArrayD = this.transpose1to0(holdingArrayD);
+                            holdingArrayD = this.transpose(holdingArrayD);
                         }
                         holdingArrayS = this.dataToString(holdingArrayD);
                         break;
@@ -1831,7 +2441,7 @@ public class Scores{
                         }
                         // transpose to scores0 format
                         if(this.originalDataOrder==1){
-                            holdingArrayD = this.transpose1to0(holdingArrayD);
+                            holdingArrayD = this.transpose(holdingArrayD);
                         }
                         holdingArrayS = this.dataToString(holdingArrayD);
                         break;
@@ -1848,7 +2458,7 @@ public class Scores{
                         }
                         // transpose to scores0 format
                         if(this.originalDataOrder==1){
-                            holdingArrayS = this.transpose1to0(holdingArrayS);
+                            holdingArrayS = this.transpose(holdingArrayS);
                         }
                         this.trimScores(holdingArrayS);
                         break;
@@ -1856,7 +2466,7 @@ public class Scores{
                         this.checkLengths(holdingArrayB);
                         // transpose to scores0 format
                         if(this.originalDataOrder==1){
-                            holdingArrayB = this.transpose1to0(holdingArrayB);
+                            holdingArrayB = this.transpose(holdingArrayB);
                         }
                         holdingArrayS = this.dataToString(holdingArrayB);
                         break;
@@ -1877,11 +2487,11 @@ public class Scores{
                         for(int j=0; j<this.nPersons; j++){
                             char elem = holdingArrayS[i][j].charAt(0);
                             if((elem=='y' || elem=='Y') && holdingArrayS[i][j].length()==1){
-                                holdingArrayS[i][j] = "1";
+                                holdingArrayS[i][j] = String.valueOf(dichotTrue);
                             }
                             else{
                                 if((elem=='n' || elem=='N') && holdingArrayS[i][j].length()==1){
-                                    holdingArrayS[i][j] = "-1";
+                                    holdingArrayS[i][j] = String.valueOf(dichotFalse);;
                                 }
                             }
                         }
@@ -1916,12 +2526,12 @@ public class Scores{
                                 boolean elementSet = false;
                                 if(this.otherDichotomousDataSet){
                                         if(holdingArrayS[i][j].equalsIgnoreCase(this.otherTrue)){
-                                            this.scores0[i][j]=1;
+                                            this.scores0[i][j]=this.dichotTrue;
                                             elementSet = true;
                                         }
                                         else{
                                             if(holdingArrayS[i][j].equalsIgnoreCase(this.otherFalse)){
-                                                this.scores0[i][j]=-1;
+                                                this.scores0[i][j]=this.dichotFalse;
                                                 elementSet = true;
                                             }
                                             else{
@@ -1932,12 +2542,12 @@ public class Scores{
                                 }
                                 if(!elementSet){
                                     if(holdingArrayS[i][j].equalsIgnoreCase("yes") || holdingArrayS[i][j].equalsIgnoreCase("y") || holdingArrayS[i][j].equalsIgnoreCase("true")){
-                                        this.scores0[i][j]=1;
+                                        this.scores0[i][j]=this.dichotTrue;
                                         elementSet = true;
                                     }
                                     else{
                                         if(holdingArrayS[i][j].equalsIgnoreCase("no") || holdingArrayS[i][j].equalsIgnoreCase("n") || holdingArrayS[i][j].equalsIgnoreCase("false")){
-                                            this.scores0[i][j]=-1;
+                                            this.scores0[i][j]=this.dichotFalse;
                                             elementSet = true;
                                         }
                                     }
@@ -1972,16 +2582,17 @@ public class Scores{
                 case 7: for(int i=0; i<this.nItems; i++){
                             for(int j=0; j<this.nPersons; j++){
                                 if(holdingArrayB[i][j]){
-                                    this.scores0[i][j] = 1.0;
+                                    this.scores0[i][j] = this.dichotTrue;
                                 }
                                 else{
-                                    this.scores0[i][j] = 0.0;
+                                    this.scores0[i][j] = this.dichotFalse;
                                 }
                             }
                         }
                         break;
 
             }
+            
 
             // Check maximum precision of entered data
             int maxPrec = 0;
@@ -1996,7 +2607,7 @@ public class Scores{
 
             // assign original scores to instance variable
             this.originalScores0 = Conv.copy(scores0);
-            this.originalScores1 = this.transpose0to1(scores0);
+            this.originalScores1 = this.transpose(scores0);
             this.originalNitems = this.nItems;
             this.originalNpersons = this.nPersons;
             this.originalNscores = this.originalNitems*this.originalNpersons;
@@ -2004,9 +2615,10 @@ public class Scores{
             // Handle no responses
             // Check for and carry out item deletion
             // check for and carry out no response replacement
+            if(this.dichotSet)this.frequencyCount();
             if(this.nNaN>0){
                 this.noResponseHandling();
-                this.scores1 = this.transpose0to1(this.scores0);
+                this.scores1 = this.transpose(this.scores0);
             }
 
 
@@ -2028,7 +2640,7 @@ public class Scores{
                 Stat st = new Stat(this.scores0[i]);
                 this.standardizedScores0[i] = st.standardize();
             }
-            this.standardizedScores1 = this.transpose0to1(this.standardizedScores0);
+            this.standardizedScores1 = this.transpose(this.standardizedScores0);
 
             // Check for row or column containing identical elements
             this.checkForIdenticalElements();
@@ -2094,7 +2706,9 @@ public class Scores{
             return sdata;
     }
 
+    
     // RETURN RESPONSES
+    
     // Return responses as entered
     public Object originalResponses(){
         return originalScores();
@@ -2218,6 +2832,23 @@ public class Scores{
         return this.replacementIndices;
     }
 
+    // RETURN NAMES
+    
+    //  Get person names
+    public String[] personNames(){
+        if(!this.dataEntered)throw new IllegalArgumentException("no data has been entered");
+        String[] ret = new String[this.nPersons];
+        for(int i=0; i<this.nPersons; i++)ret[i] = this.personNames[i];
+        return ret;
+    }
+
+    public String[] originalPersonNames(){
+        if(!this.dataEntered)throw new IllegalArgumentException("no data has been entered");
+        String[] ret = new String[this.originalNpersons];
+        for(int i=0; i<this.originalNpersons; i++)ret[i] = this.originalPersonNames[i];
+        return ret;
+    }
+    
     //  Get item names
     public String[] itemNames(){
         if(!this.dataEntered)throw new IllegalArgumentException("no data has been entered");
@@ -2232,7 +2863,6 @@ public class Scores{
         for(int i=0; i<this.originalNitems; i++)ret[i] = this.originalItemNames[i];
         return ret;
     }
-
 
     //  Get index for a given item name
     public int itemIndex(String itemName){
@@ -2261,6 +2891,7 @@ public class Scores{
 
 
     // SUMS, MEANS, VARIANCES, STANDARD DEVIATION, MEDIANS, MAXIMA AND MINIMA
+    
     // Calculate item and person sums, means, variances, standard deviations, mimima and maxima
     // plus same for total responses
     protected void meansAndVariances(){
@@ -2295,8 +2926,9 @@ public class Scores{
             this.rawItemMaxima[i] = am0.maximum_as_double();
             this.rawItemRanges[i] = this.rawItemMaxima[i] - this.rawItemMinima[i];
             this.rawItemTotals[i] = am0.sum_as_double();
-            Stat ams0 = am0.sort();
-            this.rawItemMedians[i] = ams0.median_as_double();
+            ArrayMaths ams0 = am0.sort();
+            Stat ss = new Stat(ams0.array());
+            this.rawItemMedians[i] = ss.median_as_double();
             this.rawItemMomentSkewness[i] = am0.momentSkewness_as_double();
             this.rawItemMedianSkewness[i] = am0.medianSkewness_as_double();
             this.rawItemQuartileSkewness[i] = am0.quartileSkewness_as_double();
@@ -2442,9 +3074,10 @@ public class Scores{
             this.standardizedItemMinima[i] = ams0.minimum_as_double();
             this.standardizedItemMaxima[i] = ams0.maximum_as_double();
             this.standardizedItemRanges[i] = this.standardizedItemMaxima[i] - this.standardizedItemMinima[i];
-            this.standardizedItemTotals[i] = 0.0;
-            Stat amss0 = ams0.sort();
-            this.standardizedItemMedians[i] = amss0.median_as_double();
+            this.standardizedItemTotals[i] = 0.0;            
+            ArrayMaths amss0 = ams0.sort();
+            Stat ss = new Stat(amss0.array());           
+            this.standardizedItemMedians[i] = ss.median_as_double();
             this.standardizedItemMomentSkewness[i] = ams0.momentSkewness_as_double();
             this.standardizedItemMedianSkewness[i] = ams0.medianSkewness_as_double();
             this.standardizedItemQuartileSkewness[i] = ams0.quartileSkewness_as_double();
@@ -2614,7 +3247,8 @@ public class Scores{
         for(int i=1; i<this.nItems; i++){
             am = am.concatenate(this.scores0[i]);
         }
-        Stat ams = am.toStat();
+        
+        Stat ams = new Stat(am.array());
         if(this.nFactorOption){
             ams.setDenominatorToN();
         }
@@ -2633,7 +3267,7 @@ public class Scores{
         for(int i=1; i<this.nItems; i++){
             amm = amm.concatenate(this.standardizedScores0[i]);
         }
-        Stat amss = amm.toStat();
+        Stat amss = new Stat(amm.array());
         if(this.nFactorOption){
             amss.setDenominatorToN();
         }
@@ -4549,63 +5183,8 @@ public class Scores{
         return this.standardizedCorrelationCoefficient(index);
     }
 
-
-    // Check which of the original items are dichotomous
-    protected double[] checkWhetherRawItemsDichotomous(){
-
-        if(!this.dichotomousCheckDone){
-            this.dichotomous = new boolean[this.nItems];
-            this.dichotomousPercentage = new double[this.nItems];
-            int nDich = 0;
-            for(int k=0; k<this.nItems; k++){
-                this.dichotomousPercentage[k] = this.checkWhetherDichotomous(this.scores0[k]);
-                if(this.dichotomousPercentage[k]==100.0){
-                    this.dichotomous[k]=true;
-                    nDich++;
-                }
-            }
-            if(nDich==this.nItems)this.dichotomousOverall = true;
-
-            this.dichotomousCheckDone = false;
-        }
-        return this.dichotomousPercentage;
-    }
-
-    // Check wheteher an array of data is dichotomous
-    // returns percetage responses that are dichotomous
-    protected double checkWhetherDichotomous(double[] array){
-
-        int n = array.length;
-        double[] responseMatching = new double[n];
-        boolean[] matchingCheck = new boolean[n];
-
-        for(int i=0; i<n; i++){
-            responseMatching[i] = 0.0;
-            matchingCheck[i] = false;
-        }
-
-        for(int i=0; i<n; i++){
-            responseMatching[i] = 0;
-            for(int j=0; j<n; j++){
-                if(array[i]==array[j] && !matchingCheck[j]){
-                    responseMatching[i] += 1.0;
-                    matchingCheck[j] = true;
-                }
-            }
-        }
-
-        ArrayMaths am0 = new ArrayMaths(responseMatching);
-        ArrayMaths am1 = am0.sort();
-        double[] sorted = am1.array();
-        double max = (sorted[n-1] + sorted[n-2])*100.0/((double)n);
-        return max;
-    }
-
-
-
-
-
     // DELETION OF AN ITEM
+
     // Delete an item - item name supplied
     public double[][] deleteItem(String name){
         int index = this.itemIndex(name);
@@ -4624,11 +5203,12 @@ public class Scores{
                 jj++;
             }
         }
-        return this.transpose0to1(array1);
+        return this.transpose(array1);
     }
 
 
     // SCATTER PLOTS
+    
     // Plot of item - item responses  -  raw data
     public void rawItemItemPlot(String itemName1, String itemName2){
         int index1 = this.itemIndex(itemName1);
@@ -4781,6 +5361,7 @@ public class Scores{
         return this.inputFilename;
     }
 
+    
     // OUTPUT THE PROCESSED DATA
 
     // Output the processed date in the same item/person/row/column format as entered data
@@ -4831,7 +5412,7 @@ public class Scores{
         this.outputProcessedDataAlternate(this.outputFilename);
     }
 
-        // Output the processed date in the same item/person/row/column format as entered data
+     // Output the processed date as the alternative item/person/row/column format to that of the entered data
     // input file name via method argument list
     public void outputProcessedDataAlternate(String filename){
         int orderChoice = 0;
@@ -4942,18 +5523,19 @@ public class Scores{
     // Output processed data as a text file
     private void outputText(int orderChoice){
 
-
         FileOutput fout = new FileOutput(this.outputFilename);
 
         fout.println(title[0]);
-        fout.println((this.nItems));
-        fout.println(this.nPersons);
-        for(int i=0; i<this.nItems; i++){
-            fout.printtab(this.itemNames[i]);
-        }
+        fout.println("Number of items =   " + this.nItems);
+        fout.println("Number of persons = " + this.nPersons);
+        
         fout.println();
         if(orderChoice==0){
+            fout.printtab("     ");
+            for(int i=0; i<this.nPersons; i++)fout.printtab(this.personNames[i]); 
+            fout.println();
             for(int i=0; i<this.nItems; i++){
+                fout.printtab(this.itemNames[i]);
                 for(int j=0; j<this.nPersons; j++){
                     fout.printtab(Fmath.truncate(this.scores0[i][j], this.trunc));
                 }
@@ -4961,7 +5543,11 @@ public class Scores{
             }
         }
         else{
+            fout.printtab("     ");
+            for(int i=0; i<this.nItems; i++)fout.printtab(this.itemNames[i]);
+            fout.println();
             for(int j=0; j<this.nPersons; j++){
+                fout.printtab(this.personNames[j]);
                 for(int i=0; i<this.nItems; i++){
                     fout.printtab(Fmath.truncate(this.scores1[j][i], trunc));
                 }
@@ -4972,37 +5558,14 @@ public class Scores{
     }
 
 
-    // Output processed data as a text file
+    // Output processed data as a Excel fiendly text file
     private void outputExcel(int orderChoice){
-
-        FileOutput fout = new FileOutput(this.outputFilename);
-        fout.println(title[0]);
-        fout.println((this.nItems));
-        fout.println(this.nPersons);
-        for(int i=0; i<this.nItems; i++){
-            fout.printtab(this.itemNames[i]);
-        }
-        fout.println();
-        if(orderChoice==0){
-            for(int i=0; i<this.nItems; i++){
-                for(int j=0; j<this.nPersons; j++){
-                    fout.printtab(Fmath.truncate(this.scores0[i][j], this.trunc));
-                }
-                fout.println();
-            }
-        }
-        else{
-            for(int j=0; j<this.nPersons; j++){
-                for(int i=0; i<this.nItems; i++){
-                    fout.printtab(Fmath.truncate(this.scores1[j][i], this.trunc));
-                }
-                fout.println();
-            }
-        }
-        fout.close();
+           this.outputText(orderChoice);
     }
 
+    
     // CONVERSIONS
+    
     // Convert to PCA
     public PCA toPCA(){
         PCA pca = new PCA();

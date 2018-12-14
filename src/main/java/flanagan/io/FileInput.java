@@ -11,14 +11,14 @@
 *   DATE:       July 2002
 *   REVISED:    25 July 2004, 11 June 2005, 13 September 2005, 30 November 2005, 1 July 2006
 *               20 September 2006, 27 June 2007, 21-23 July 2007, 26 February 2008, 4 April 2008
-*               7 July 2008, 8 July 2008, 2 February 2009, 13 November 2010, 13 December 2010
+*               7 July 2008, 8 July 2008, 2 February 2009, 13 November 2010, 13 December 2010, 20 May 2012
 *
 *   DOCUMENTATION:
 *   See Michael Thomas Flanagan's Java library on-line web page:
 *   http://www.ee.ucl.ac.uk/~mflanaga/java/FileInput.html
 *   http://www.ee.ucl.ac.uk/~mflanaga/java/
 *
-*   Copyright (c) 2002 - 2010 Michael Thomas Flanagan
+*   Copyright (c) 2002 - 2012 Michael Thomas Flanagan
 *
 *   PERMISSION TO COPY:
 *   Permission to use, copy and modify this software and its documentation for
@@ -72,6 +72,7 @@ public class FileInput{
         // constructor for instances of this class
         public FileInput(String pathName){
                 this.pathName = pathName;
+                this.fileName = pathName;
                 int posSlash = pathName.indexOf("//");
                 int posBackSlash = pathName.indexOf("\\");
                 if(posSlash!=-1 || posBackSlash!=-1){
@@ -725,5 +726,42 @@ public class FileInput{
             return nLines;
         }
 
+    // Delete a file
+    public static void deleteFile(String fileName){
+
+        // deletion flag
+        boolean flag = true;
+
+        // Create an instance of File representing the named file
+        File file0 = new File(fileName);
+
+        // Check that the file exists
+        if(!file0.exists()){
+            System.out.println("Method deleteFile: no file or directory of the name " + fileName + " found");
+            flag = false;
+        }
+
+        // Check whether FileName is write protected
+        if(!file0.canWrite()){
+            System.out.println("Method deleteFile: " + fileName + " is write protected and cannot be deleted");
+            flag = false;
+        }
+
+        // Check, if fileName is a directory, that it is empty
+        if(file0.isDirectory()){
+            String[] dirFiles = file0.list();
+            if (dirFiles.length > 0){
+                System.out.println("Method deleteFile: " + fileName + " is a directory which is not empty; no action was taken");
+                flag = false;
+            }
+        }
+
+        // Delete fileName
+        boolean deleteDone = file0.delete();
+
+        if (!deleteDone){
+            System.out.println("Method deleteFile: deletion of the file " + fileName + " failed");
+        }
+    }
 
 }

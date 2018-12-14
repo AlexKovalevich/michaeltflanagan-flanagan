@@ -11,7 +11,7 @@
 *   WRITTEN BY: Dr Michael Thomas Flanagan
 *
 *   DATE:	26 December 2009 (Stripped down version of CubicSpline: May 2002 - 31 October 2009)
-*   UPDATE: 14  January 2010
+*   UPDATE:     14 January 2010, 12 September 2012 
 *
 *   DOCUMENTATION:
 *   See Michael Thomas Flanagan's Java library on-line web page:
@@ -81,6 +81,7 @@ public class CubicSplineFast{
             		this.x[i]=x[i];
             		this.y[i]=y[i];
         	}
+                this.calcDeriv();
     	}
 
     	// Returns a new CubicSplineFast setting array lengths to n and all array values to zero with natural spline default

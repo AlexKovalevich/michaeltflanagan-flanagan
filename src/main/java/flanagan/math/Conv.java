@@ -4,19 +4,19 @@
 *   USAGE:  Methods for:
 *       Recasting variable type with exception throwing not present in standard java recasts
 *       Conversion of physical entities from one set of units to another
-*       Copying of an object
+*       For copy methods now see Copy.java - those already in Conv will be retained for compatibility purposes (10 April 2012)
 *
 *   WRITTEN BY: Dr Michael Thomas Flanagan
 *
 *   DATE:    April 2008
-*   AMENDED: September 2009, 9-20 January 2011
+*   AMENDED: September 2009, 9-20 January 2011, 6-11 April 2012
 *
 *   DOCUMENTATION:
 *   See Michael Thomas Flanagan's Java library on-line web pages:
 *   http://www.ee.ucl.ac.uk/~mflanaga/java/
 *   http://www.ee.ucl.ac.uk/~mflanaga/java/Conv.html
 *
-*   Copyright (c) 2011
+*   Copyright (c) 2008 - 2012
 *
 *   PERMISSION TO COPY:
 *   Permission to use, copy and modify this software and its documentation for
@@ -38,9 +38,8 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectOutputStream;
 import java.io.ObjectInputStream;
+import java.util.StringTokenizer;
 
-import flanagan.math.Fmath;
-import flanagan.math.Polynomial;
 import flanagan.complex.Complex;
 import flanagan.complex.ComplexPoly;
 import flanagan.analysis.ErrorProp;
@@ -50,10 +49,7 @@ import flanagan.circuits.Phasor;
 
 public class Conv{
 
-    private static  int type = -1;      // 0 double, 1 Double, 2 long, 3 Long, 4 float, 5 Float, 6 int, 7 Integer, 8 short, 9 Short, 10 byte, 11 Byte
-                                // 12 BigDecimal, 13 BigInteger, 14 Complex, 15 Phasor, 16 char, 17 Character, 18 String
-    private static  String[] typeName = {"double", "Double", "long", "Long", "float", "Float", "int", "Integer", "short", "Short", "byte", "Byte", "BigDecimal", "BigInteger", "Complex", "Phasor", "char", "Character", "String"};
-
+   
     private static  double max_float_as_double  = (double)Float.MAX_VALUE;
     private static  double max_long_as_double   = (double)Long.MAX_VALUE;
     private static  double max_long_as_float    = (float)Long.MAX_VALUE;
@@ -73,6 +69,7 @@ public class Conv{
     private static boolean suppressMessage = false;    // if true lack of precision messages are suppressed
     private static boolean suppressMessageAM = false;  // for use with ArrayMaths - allows suppression for all instances of ArrayMaths
 
+  
     // CONSTRUCTORS
     public Conv(){
     }
@@ -100,6 +97,14 @@ public class Conv{
 
     // RECAST
     // double and Double -> . . .
+   public static Double convert_double_to_Double(double x){
+        return new Double(x);
+    }
+   
+    public static double convert_Double_to_double(Double xx){
+        return xx.doubleValue();
+    }
+        
     public static float convert_double_to_float(double x){
         if(x>max_float_as_double)throw new IllegalArgumentException("double is too large to be recast as float");
         if(!suppressMessage)System.out.println("Class Conv: method convert_double_to_float: possible loss of precision");
@@ -246,10 +251,26 @@ public class Conv{
     public static BigInteger convert_Double_to_BigInteger(Double xx){
         double x = xx.doubleValue();
         if(!Fmath.isInteger(x))throw new IllegalArgumentException("double is not, arithmetically, an integer");
-        return new BigInteger(Double.toString(x));
+        return new BigInteger(Double.toString(x).trim());
+    }
+    
+    public static String convert_double_to_String(double x){
+        return Double.toString(x).trim();
+    }
+    
+    public static String convert_Double_to_String(Double x){
+        return (Double.toString(x.doubleValue())).trim();
     }
 
     // float and Float -> . . .
+    public static Float convert_float_to_Float(float x){
+        return new Float(x);
+    }
+   
+    public static float convert_Float_to_float(Float xx){
+        return xx.floatValue();
+    }
+    
     public static double convert_float_to_double(float x){
         return (new Float(x)).doubleValue();
     }
@@ -380,17 +401,32 @@ public class Conv{
 
     public static BigInteger convert_double_to_BigInteger(float x){
         if(!Fmath.isInteger(x))throw new IllegalArgumentException("float is not, arithmetically, an integer");
-        return new BigInteger(Float.toString(x));
+        return new BigInteger(Float.toString(x).trim());
     }
 
     public static BigInteger convert_Float_to_BigInteger(Float xx){
         double x = xx.doubleValue();
         if(!Fmath.isInteger(x))throw new IllegalArgumentException("Float is not, arithmetically, an integer");
-        return new BigInteger(Double.toString(x));
+        return new BigInteger(Double.toString(x).trim());
     }
 
+    public static String convert_float_to_String(float x){
+        return Float.toString(x).trim();
+    }
+    
+    public static String convert_Float_to_String(Float x){
+        return (Float.toString(x.floatValue())).trim();
+    }
 
     // long and Long -> . . .
+    public static Long convert_long_to_Long(long x){
+        return new Long(x);
+    }
+   
+    public static long convert_Long_to_long(Long xx){
+        return xx.longValue();
+    }
+    
     public static double convert_long_to_double(long x){
         if(!suppressMessage)System.out.println("Class Conv: method convert_long_to_double: possible loss of precision");
         return (new Long(x)).doubleValue();
@@ -502,19 +538,35 @@ public class Conv{
     }
 
     public static BigDecimal convert_Long_to_BigDecimal(Long xx){
-        return new BigDecimal(xx.toString());
+        return new BigDecimal(xx.toString().trim());
     }
 
     public static BigInteger convert_long_to_BigInteger(long x){
-        return new BigInteger(Long.toString(x));
+        return new BigInteger(Long.toString(x).trim());
     }
 
     public static BigInteger convert_Long_to_BigInteger(Long xx){
         double x = xx.doubleValue();
-        return new BigInteger(xx.toString());
+        return new BigInteger(xx.toString().trim());
+    }
+    
+    public static String convert_long_to_String(long x){
+        return Long.toString(x).trim();
+    }
+    
+    public static String convert_Long_to_String(Long x){
+        return (Long.toString(x.longValue())).trim();
     }
 
     // int and Integer -> . . .
+    public static Integer convert_int_to_Integer(int x){
+        return new Integer(x);
+    }
+   
+    public static int convert_Integer_to_int(Integer xx){
+        return xx.intValue();
+    }
+    
     public static double convert_int_to_double(int x){
         return (new Integer(x)).doubleValue();
     }
@@ -616,18 +668,40 @@ public class Conv{
     }
 
     public static BigDecimal convert_Integer_to_BigDecimal(Integer xx){
-        return new BigDecimal(xx.toString());
+        return new BigDecimal(xx.toString().trim());
     }
 
     public static BigInteger convert_int_to_BigInteger(int x){
-        return new BigInteger(Long.toString(x));
+        return new BigInteger(Long.toString(x).trim());
     }
 
     public static BigInteger convert_Integer_to_BigInteger(Integer xx){
-        return new BigInteger(xx.toString());
+        return new BigInteger(xx.toString().trim());
     }
+    
+    public static String convert_int_to_String(int x){
+        return Integer.toString(x).trim();
+    }
+    
+    public static String convert_Integer_to_String(Integer x){
+        return (Integer.toString(x.intValue())).trim();
+    }
+    
+    public static char convert_int_to_char(int x){
+        return (char)x;
+    }
+    
+    
 
     // short and Short -> . . .
+    public static Short convert_short_to_Short(short x){
+        return new Short(x);
+    }
+   
+    public static short convert_Short_to_short(Short xx){
+        return xx.shortValue();
+    }    
+    
     public static double convert_short_to_double(short x){
         return (new Short(x)).doubleValue();
     }
@@ -715,22 +789,39 @@ public class Conv{
     }
 
     public static BigDecimal convert_short_to_BigDecimal(short x){
-        return new BigDecimal((new Short(x)).toString());
+        return new BigDecimal((new Short(x)).toString().trim());
     }
 
     public static BigDecimal convert_Short_to_BigDecimal(Short xx){
-        return new BigDecimal(xx.toString());
+        return new BigDecimal(xx.toString().trim());
     }
 
     public static BigInteger convert_short_to_BigInteger(short x){
-        return new BigInteger(Short.toString(x));
+        return new BigInteger(Short.toString(x).trim());
     }
 
     public static BigInteger convert_Short_to_BigInteger(Short xx){
-        return new BigInteger(xx.toString());
+        return new BigInteger(xx.toString().trim());
+    }
+    
+    public static String convert_short_to_String(short x){
+        return Short.toString(x).trim();
+    }
+    
+    public static String convert_Short_to_String(Short x){
+        return (Short.toString(x.shortValue())).trim();
     }
 
+    
     // byte and Byte -> . . .
+    public static Byte convert_byte_to_Byte(byte x){
+        return new Byte(x);
+    }
+   
+    public static byte convert_Byte_to_byte(Byte xx){
+        return xx.byteValue();
+    }    
+    
     public static double convert_byte_to_double(byte x){
         return (new Byte(x)).doubleValue();
     }
@@ -812,22 +903,29 @@ public class Conv{
     }
 
     public static BigDecimal convert_byte_to_BigDecimal(byte x){
-        return new BigDecimal((new Byte(x)).toString());
+        return new BigDecimal((new Byte(x)).toString().trim());
     }
 
     public static BigDecimal convert_Byte_to_BigDecimal(Byte xx){
-        return new BigDecimal(xx.toString());
+        return new BigDecimal(xx.toString().trim());
     }
 
     public static BigInteger convert_byte_to_BigInteger(byte x){
-        return new BigInteger(Byte.toString(x));
+        return new BigInteger(Byte.toString(x).trim());
     }
 
     public static BigInteger convert_Byte_to_BigInteger(Byte xx){
-        return new BigInteger(xx.toString());
+        return new BigInteger(xx.toString().trim());
     }
 
-
+    public static String convert_byte_to_String(byte x){
+        return Byte.toString(x).trim();
+    }
+    
+    public static String convert_Byte_to_String(Byte x){
+        return (Byte.toString(x.byteValue())).trim();
+    }
+    
     // BigDecimal -> . . .
     public static double convert_BigDecimal_to_double(BigDecimal xx){
         double x = xx.doubleValue();
@@ -922,7 +1020,7 @@ public class Conv{
     }
 
     public static BigInteger convert_BigDecimal_to_BigInteger(BigDecimal xx){
-        String ss = xx.toString();
+        String ss = xx.toString().trim();
         int posDot = ss.indexOf('.');
         int posExp = ss.indexOf('E');
         String tt = null;
@@ -960,7 +1058,10 @@ public class Conv{
         }
     }
 
-
+    public static String convert_BigDecimal_to_String(BigDecimal x){
+        return  x.toEngineeringString().trim();
+    }
+    
 
     // BigInteger -> . . .
     public static double convert_BigInteger_to_double(BigInteger xx){
@@ -1051,18 +1152,273 @@ public class Conv{
         return new BigDecimal(xx);
     }
 
+    public static String convert_BigInteger_to_String(BigInteger x){
+        return  x.toString().trim();
+    }
+        
     // Complex -> Phasor
     public static Phasor convert_Complex_to_Phasor(Complex xx){
         double mag = xx.abs();
         double phase = xx.argDeg();
         return new Phasor(mag, phase);
     }
+    
+    public static String convert_Complex_to_String(Complex x){
+        return  x.toString().trim();
+    }
 
     // Phasor -> Complex
     public static Complex convert_Phasor_to_Complex(Phasor xx){
         return xx.toComplex();
     }
+    
+    public static String convert_Phasor_to_String(Phasor x){
+        return  x.toString().trim();
+    }
+    
+    // char and Character -> . . .        
+    public static double convert_char_to_double(char x){
+        int xx = (int)x;
+        return Conv.convert_int_to_double(xx);
+    }
+    
+    public static Double convert_char_to_Double(char x){
+        int xx = (int)x;
+        return Conv.convert_int_to_Double(xx);
+    }
+    
+    public static double convert_Character_to_double(Character x){
+        int xx = Character.getNumericValue(x);
+        return Conv.convert_int_to_double(xx);
+    }
+    
+    public static Double convert_Character_to_Double(Character x){
+        int xx = Character.getNumericValue(x);
+        return Conv.convert_int_to_Double(xx);
+    }
+    
+    public static float convert_char_to_float(char x){
+        int xx = (int)x;
+        return Conv.convert_int_to_float(xx);
+    }
+    
+    public static Float convert_char_to_Float(char x){
+        int xx = (int)x;
+        return Conv.convert_int_to_Float(xx);
+    }
+    
+    public static float convert_Character_to_float(Character x){
+        int xx = Character.getNumericValue(x);
+        return Conv.convert_int_to_float(xx);
+    }
+    
+    public static Float convert_Character_to_Float(Character x){
+        int xx = Character.getNumericValue(x);
+        return Conv.convert_int_to_Float(xx);
+    }
+      
+    public static long convert_char_to_long(char x){
+        int xx = (int)x;
+        return Conv.convert_int_to_long(xx);
+    }
+    
+    public static Long convert_char_to_Long(char x){
+        int xx = (int)x;
+        return Conv.convert_int_to_Long(xx);
+    }
+    
+    public static long convert_Character_to_long(Character x){
+        int xx = Character.getNumericValue(x);
+        return Conv.convert_int_to_long(xx);
+    }
+    
+    public static Long convert_Character_to_Long(Character x){
+        int xx = Character.getNumericValue(x);
+        return Conv.convert_int_to_Long(xx);
+    }
+    
+    public static int convert_char_to_int(char x){
+        return (int)x;
+    }
+    
+    public static Integer convert_char_to_Integer(char x){
+        return new Integer((int)x);
+    }
+    
+    public static int convert_Character_to_int(Character x){
+        return Character.getNumericValue(x);
+    }
+    
+    public static Integer convert_Character_to_Integer(Character x){
+        int xx = Character.getNumericValue(x);
+        return new Integer(xx);
+    }
+    
+    public static short convert_char_to_short(char x){
+        int xx = (int)x;
+        return Conv.convert_int_to_short(xx);
+    }
+    
+    public static Short convert_char_to_Short(char x){
+        int xx = (int)x;
+        return Conv.convert_int_to_Short(xx);
+    }
+    
+    public static short convert_Character_to_short(Character x){
+        int xx = Character.getNumericValue(x);
+        return Conv.convert_int_to_short(xx);
+    }
+    
+    public static Short convert_Character_to_Short(Character x){
+        int xx = Character.getNumericValue(x);
+        return Conv.convert_int_to_Short(xx);
+    }
+    
+    public static byte convert_char_to_byte(char x){
+        int xx = (int)x;
+        return Conv.convert_int_to_byte(xx);
+    }
+    
+    public static Byte convert_char_to_Byte(char x){
+        int xx = (int)x;
+        return Conv.convert_int_to_Byte(xx);
+    }
+    
+    public static byte convert_Character_to_byte(Character x){
+        int xx = Character.getNumericValue(x);
+        return Conv.convert_int_to_byte(xx);
+    }
+    
+    public static Byte convert_Character_to_Byte(Character x){
+        int xx = Character.getNumericValue(x);
+        return Conv.convert_int_to_Byte(xx);
+    }
+    
+        public static String convert_char_to_String(char x){
+        return Character.toString(x).trim();
+    }
+        
+    public static String convert_Character_to_String(Character x){
+        return x.toString().trim();
+    } 
+    
+    public static Character convert_char_to_Character(char x){
+        return new Character(x);
+    }
+       
+    public static char convert_Character_to_char(Character x){
+        return x.charValue();
+    }
+    
+    public static BigDecimal convert_char_to_BigDecimal(char x){
+        return new BigDecimal((Conv.convert_char_to_String(x).trim()));
+    }
+    
+    public static BigDecimal convert_Character_to_BigDecimal(Character x){
+        return new BigDecimal((Conv.convert_Character_to_String(x)).trim());
+    }
+    
+    public static BigInteger convert_char_to_BigInteger(char x){
+        return new BigInteger((Conv.convert_char_to_String(x)).trim());
+    }
+    
+    public static BigInteger convert_Character_to_BigInteger(Character x){
+        return new BigInteger((Conv.convert_char_to_String(x)).trim());
+    }
+    
 
+    
+ 
+    
+    // String -> . . .
+    public static double convert_String_to_double(String x){
+        return  Double.parseDouble(x.trim());
+    }
+    
+    public static Double convert_String_to_Double(String x){
+        return  Double.valueOf(x.trim());
+    }
+
+    public static float convert_String_to_float(String x){
+        return  Float.parseFloat(x.trim());
+    }
+    
+    public static Float convert_String_to_Float(String x){
+        return  Float.valueOf(x.trim());
+    }
+    
+    public static long convert_String_to_long(String x){
+        return  Long.parseLong(x.trim());
+    }
+    
+    public static Long convert_String_to_Long(String x){
+        return  Long.valueOf(x.trim());
+    }
+    
+    public static int convert_String_to_int(String x){
+        return  Integer.parseInt(x.trim());
+    }
+    
+    public static Integer convert_String_to_Integer(String x){
+        return  Integer.valueOf(x.trim());
+    }
+    
+    public static short convert_String_to_short(String x){
+        return Short.parseShort(x.trim());
+    }
+    
+    public static Short convert_String_to_Short(String x){
+        return  Short.valueOf(x.trim());
+    }
+    
+    public static byte convert_String_to_byte(String x){
+        return Byte.parseByte(x.trim());
+    }
+    
+    public static Byte convert_String_to_Byte(String x){
+        return Byte.valueOf(x.trim());
+    }
+    
+    public static BigDecimal convert_String_to_BigDecimal(String x){
+        return new BigDecimal(x.trim());
+    }
+    
+    public static BigInteger convert_String_to_BigInteger(String x){
+        return new BigInteger(x.trim());
+    }
+
+    
+    // String conversion to title case
+    public static String toTitleCase(String str){
+            
+            StringTokenizer strT = new StringTokenizer(str);
+            String strTitle = "";
+            int nTokens = strT.countTokens();
+            String[] tokens = new String[nTokens];
+            int[] initV = new int[nTokens];
+            int[] lengthV = new int[nTokens];
+            int[] endV = new int[nTokens];
+            int[] nSpaces = new int[nTokens];
+            for(int i=0; i<nTokens; i++){
+                tokens[i] = strT.nextToken();
+                lengthV[i] = tokens[i].length();
+                initV[i] = str.indexOf(tokens[i]);
+                endV[i] = initV[i] + lengthV[i];
+                tokens[i] = tokens[i].substring(0,1).toUpperCase() + tokens[i].substring(1).toLowerCase();
+            }
+            for(int i=1; i<nTokens; i++){
+                nSpaces[i-1] = initV[i] - endV[i-1]; 
+            }
+            nSpaces[nTokens-1] = str.length() - endV[nTokens-1] - 1;
+            if(initV[0]>0)for(int j=0; j<initV[0]; j++)strTitle += " ";
+            for(int i=0; i<nTokens; i++){
+                strTitle += tokens[i];
+                for(int j=0; j<nSpaces[i]; j++)strTitle += " ";
+            }
+            return strTitle;
+    }
+
+    
     // COPY
 
         // COPY A ONE DIMENSIONAL ARRAY OF double
@@ -1108,6 +1464,8 @@ public class Conv{
             }
             return copy;
         }
+        
+
 
         // COPY A TWO DIMENSIONAL ARRAY OF double
         public static double[][] copy(double[][] array){
@@ -1532,6 +1890,75 @@ public class Conv{
             }
             return copy;
         }
+        
+        
+        
+        // COPY A ONE DIMENSIONAL ARRAY OF char
+        public static Character[] copy(Character[] array){
+            if(array==null)return null;
+            int n = array.length;
+            Character[] copy = new Character[n];
+            for(int i=0; i<n; i++){
+                copy[i] = array[i];
+            }
+            return copy;
+        }
+
+        // COPY A TWO DIMENSIONAL ARRAY OF char
+        public static Character[][] copy(Character[][] array){
+            if(array==null)return null;
+            int n = array.length;
+            Character[][] copy = new Character[n][];
+            for(int i=0; i<n; i++){
+                int m = array[i].length;
+                copy[i] = new Character[m];
+                for(int j=0; j<m; j++){
+                    copy[i][j] = array[i][j];
+                }
+            }
+            return copy;
+        }
+        
+        // COPY A THREE DIMENSIONAL ARRAY OF Character
+        public static Character[][][] copy(Character[][][] array){
+            if(array==null)return null;
+            int n = array.length;
+            Character[][][] copy = new Character[n][][];
+            for(int i=0; i<n; i++){
+                int m = array[i].length;
+                copy[i] = new Character[m][];
+                for(int j=0; j<m; j++){
+                    int l = array[i][j].length;
+                    copy[i][j] = new Character[l];
+                    for(int k=0; k<l;k++)copy[i][j][k] = array[i][j][k];
+                }
+            }
+            return copy;
+        }
+        
+        // COPY A FOUR DIMENSIONAL ARRAY OF Character
+        public static Character[][][][] copy(Character[][][][] array){
+            if(array==null)return null;
+            int n = array.length;
+            Character[][][][] copy = new Character[n][][][];
+            for(int i=0; i<n; i++){
+                int m = array[i].length;
+                copy[i] = new Character[m][][];
+                for(int j=0; j<m; j++){
+                    int l = array[i][j].length;
+                    copy[i][j] = new Character[l][];
+                    for(int k=0; k<l;k++){
+                        int ll = array[i][j][k].length;
+                        copy[i][j][k] = new Character[ll];
+                        for(int kk=0; kk<ll;kk++){
+                            copy[i][j][k][kk] = array[i][j][k][kk];
+                        }
+                    }
+                }
+            }
+            return copy;
+        }
+
 
         // COPY A ONE DIMENSIONAL ARRAY OF Complex
         public static Complex[] copy(Complex[] array){
@@ -2918,5 +3345,5 @@ public class Conv{
 
             return ms;
         }
-
 }
+    

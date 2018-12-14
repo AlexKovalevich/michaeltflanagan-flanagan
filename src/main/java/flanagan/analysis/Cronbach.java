@@ -12,14 +12,14 @@
 *   WRITTEN BY: Dr Michael Thomas Flanagan
 *
 *   DATE:       July and Agust 2008
-*   AMENDED:    22 August 2008, 29 August 2008, 1-8 October 2008, 1-4 November 2010
+*   AMENDED:    22 August 2008, 29 August 2008, 1-8 October 2008, 1-4 November 2010, 12 December 2011
 *
 *   DOCUMENTATION:
 *   See Michael Thomas Flanagan's Java library on-line web pages:
 *   http://www.ee.ucl.ac.uk/~mflanaga/java/
 *   http://www.ee.ucl.ac.uk/~mflanaga/java/Cronbach.html
 *
-*   Copyright (c) 2008 Michael Thomas Flanagan
+*   Copyright (c) 2008 - 2011 Michael Thomas Flanagan
 *
 *   PERMISSION TO COPY:
 *

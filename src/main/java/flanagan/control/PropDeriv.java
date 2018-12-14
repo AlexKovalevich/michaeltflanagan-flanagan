@@ -11,7 +11,7 @@
 *
 *       Created: August 2002
 *       Updated: 17 April 2003, 2 May 2005, 2 July 2006, 6 April 2008, 30 October 2009, 7 November 2009
-*                24 May 2010
+*                24 May 2010, 13 April 2012
 *
 *
 *       DOCUMENTATION:
@@ -57,13 +57,34 @@ public class PropDeriv extends BlackBox{
         super.addDeadTimeExtras();
 
     }
+    
+    // Constructor - kp proportional gain, kd derivative gain
+    public PropDeriv(double kp, double kd){
+        super("PropDeriv");
+        super.sNumerDeg = 1;
+        super.sDenomDeg = 0;
+        this.kp = kp;
+        this.kd = kd;
+        this.td=kd/this.kp;
+        super.setSnumer(new ComplexPoly(new Complex(this.kp, 0.0D), new Complex(this.kd, 0.0D)));
+        super.setSdenom(new ComplexPoly(1.0D));
+        super.setZtransformMethod(1);
+        super.addDeadTimeExtras();
+
+    }
 
     // Set the proportional gain
     public void setKp(double kp){
         this.kp = kp;
-        super.sNumer.resetCoeff(0, new Complex(this.kp, 0.0D));
-        if(super.sZeros==null)super.sZeros = Complex.oneDarray(1);
-        super.sZeros[0].reset(-this.kp/this.kd, 0.0D);
+        if(super.sNumerDeg!=1){
+            super.setSnumer(new ComplexPoly(new Complex(this.kp, 0.0D), new Complex(this.kd, 0.0D)));
+            super.setSdenom(new ComplexPoly(1.0D));
+        }
+        else{
+            super.sNumer.resetCoeff(0, new Complex(this.kp, 0.0D));
+            if(super.sZeros==null)super.sZeros = Complex.oneDarray(1);
+            super.sZeros[0].reset(-this.kp/this.kd, 0.0D);
+        }
         super.addDeadTimeExtras();
     }
 
@@ -71,9 +92,15 @@ public class PropDeriv extends BlackBox{
     public void setKd(double kd){
         this.kd=kd;
         this.td=kd/this.kp;
-        super.sNumer.resetCoeff(1, new Complex(this.kd, 0.0D));
-        if(super.sZeros==null)super.sZeros = Complex.oneDarray(1);
-        super.sZeros[0].reset(-this.kp/this.kd, 0.0D);
+        if(super.sNumerDeg!=1){
+            super.setSnumer(new ComplexPoly(new Complex(this.kp, 0.0D), new Complex(this.kd, 0.0D)));
+            super.setSdenom(new ComplexPoly(1.0D));
+        }
+        else{
+            super.sNumer.resetCoeff(1, new Complex(this.kd, 0.0D));
+            if(super.sZeros==null)super.sZeros = Complex.oneDarray(1);
+            super.sZeros[0].reset(-this.kp/this.kd, 0.0D);
+        }
         super.addDeadTimeExtras();
     }
 
@@ -81,9 +108,15 @@ public class PropDeriv extends BlackBox{
     public void setTd(double td){
         this.td=td;
         this.kd=this.td*this.kp;
-        if(super.sZeros==null)super.sZeros = Complex.oneDarray(1);
-        super.sNumer.resetCoeff(1, new Complex(this.kd, 0.0D));
-        super.sZeros[0].reset(-this.kp/this.kd, 0.0D);
+        if(super.sNumerDeg!=1){
+            super.setSnumer(new ComplexPoly(new Complex(this.kp, 0.0D), new Complex(this.kd, 0.0D)));
+            super.setSdenom(new ComplexPoly(1.0D));
+        }
+        else{
+            if(super.sZeros==null)super.sZeros = Complex.oneDarray(1);
+            super.sNumer.resetCoeff(1, new Complex(this.kd, 0.0D));
+            super.sZeros[0].reset(-this.kp/this.kd, 0.0D);
+        }
         super.addDeadTimeExtras();
     }
 

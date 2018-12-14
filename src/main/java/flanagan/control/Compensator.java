@@ -11,7 +11,7 @@
 *       Author:  Michael Thomas Flanagan.
 *
 *       Created: 14 May 2005
-*       Updates: 13 April 2006, 1 July 2006, 6 April 2008, 2 December 2008, 2-7 November 2009
+*       Updates: 13 April 2006, 1 July 2006, 6 April 2008, 2 December 2008, 2-7 November 2009, 14-15 April 2012
 *
 *
 *       DOCUMENTATION:
@@ -19,7 +19,7 @@
 *       http://www.ee.ucl.ac.uk/~mflanaga/java/Compensator.html
 *       http://www.ee.ucl.ac.uk/~mflanaga/java/
 *
-*       Copyright (c) 2002 - 2009  Michael Thomas Flanagan
+*       Copyright (c) 2002 - 2012  Michael Thomas Flanagan
 *
 * PERMISSION TO COPY:
 *
@@ -93,26 +93,62 @@ public class Compensator extends BlackBox{
 
     public void setK(double kk){
         this.kConst = kk;
-        Complex co = new Complex(this.aConst*this.kConst, 0.0);
-        super.sNumer.resetCoeff(0, co);
-        co = new Complex(this.kConst, 0.0);
-        super.sNumer.resetCoeff(1, co);
+        if(this.sNumerDeg!=1 || this.sDenomDeg!=1){
+            Complex[] num = Complex.oneDarray(2);
+            num[0].reset(this.aConst*this.kConst, 0.0D);
+            num[1].reset(this.kConst, 0.0D);
+            super.sNumer.resetPoly(num);
+            Complex[] den = Complex.oneDarray(2);
+            den[0].reset(this.bConst, 0.0D);
+            den[1].reset(1.0D, 0.0D);
+            super.sDenom.resetPoly(den);
+        }
+        else{
+            Complex co = new Complex(this.aConst*this.kConst, 0.0);
+            super.sNumer.resetCoeff(0, co);
+            co = new Complex(this.kConst, 0.0);
+            super.sNumer.resetCoeff(1, co);
+        }
         this.calcPolesZerosS();
         super.addDeadTimeExtras();
     }
 
     public void setA(double aa){
         this.aConst = aa;
-        Complex co = new Complex(this.aConst*this.kConst, 0.0);
-        super.sNumer.resetCoeff(0, co);
+        if(this.sNumerDeg!=1 || this.sDenomDeg!=1){
+            Complex[] num = Complex.oneDarray(2);
+            num[0].reset(this.aConst*this.kConst, 0.0D);
+            num[1].reset(this.kConst, 0.0D);
+            super.sNumer.resetPoly(num);
+            Complex[] den = Complex.oneDarray(2);
+            den[0].reset(this.bConst, 0.0D);
+            den[1].reset(1.0D, 0.0D);
+            super.sDenom.resetPoly(den);
+        }
+        else{
+            Complex co = new Complex(this.aConst*this.kConst, 0.0);
+            super.sNumer.resetCoeff(0, co);
+        }
         this.calcPolesZerosS();
         super.addDeadTimeExtras();
     }
 
     public void setB(double bb){
         this.bConst = bb;
-        Complex co = new Complex(this.bConst, 0.0);
-        super.sDenom.resetCoeff(0, co);
+        if(this.sNumerDeg!=1 || this.sDenomDeg!=1){
+            Complex[] num = Complex.oneDarray(2);
+            num[0].reset(this.aConst*this.kConst, 0.0D);
+            num[1].reset(this.kConst, 0.0D);
+            super.sNumer.resetPoly(num);
+            Complex[] den = Complex.oneDarray(2);
+            den[0].reset(this.bConst, 0.0D);
+            den[1].reset(1.0D, 0.0D);
+            super.sDenom.resetPoly(den);
+        }
+        else{
+            Complex co = new Complex(this.bConst, 0.0);
+            super.sDenom.resetCoeff(0, co);
+        }
         this.calcPolesZerosS();
         super.addDeadTimeExtras();
     }

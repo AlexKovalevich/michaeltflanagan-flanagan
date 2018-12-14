@@ -10,7 +10,7 @@
 *       Author:  Michael Thomas Flanagan.
 *
 *       Created: October 2009
-*       Updates: 2-7 November 2009, 24 May 2010
+*       Updates: 2-7 November 2009, 24 May 2010, 27 April 2012
 *
 *
 *       DOCUMENTATION:
@@ -48,9 +48,9 @@ public class Transducer extends BlackBox{
 
     private double tGain  = 1.0D;  // transducer gain
     private double tConst = 0.0D;  // transducer time constant
-    private double aConst = 1.0D;  // a constant in equivalent first order process
+    private double aConst = 0.0D;  // a constant in equivalent first order process
     private double bConst = 1.0D;  // b constant in equivalent first order process
-    private double cConst = 0.0D;  // c constant in equivalent first order process
+    private double cConst = 1.0D;  // c constant in equivalent first order process
 
     // Constructor
     // gain set to 1; time constant set to 0
@@ -58,7 +58,7 @@ public class Transducer extends BlackBox{
         super("Transducer");
         super.sPoles = Complex.oneDarray(1);
         super.setSnumer(new ComplexPoly(1.0D));
-        super.setSdenom(new ComplexPoly(1.0D, 1.0D));
+        super.setSdenom(new ComplexPoly(1.0D, 0.0D));
         super.setZtransformMethod(1);
         super.addDeadTimeExtras();
     }
@@ -94,41 +94,111 @@ public class Transducer extends BlackBox{
         super.setZtransformMethod(1);
         super.addDeadTimeExtras();
     }
+    
     // Set coefficients
-    public void setCoeff(double tGain, double tConst){
-        this.tGain = tGain;
-        this.tConst = tConst;
-        this.aConst = tConst;
-        this.bConst = 1.0;
-        this.cConst = tGain;
-        Complex[] num = Complex.oneDarray(1);
-        num[0].reset(this.cConst, 0.0);
-        super.sNumer.resetPoly(num);
-        Complex[] den = Complex.oneDarray(2);
-        den[0].reset(this.bConst, 0.0);
-        den[1].reset(this.aConst, 0.0);
-        super.sDenom.resetPoly(den);
+    public void setCoeff(double ttGain, double tConstt){
+        
+        if(this.aConst==0.0){
+            if(this.bConst==0.0){
+                this.aConst = tConstt;
+                this.bConst = 1.0;
+            }
+            else{
+                this.aConst = tConstt*this.bConst;
+            }
+        }
+        else{
+            if(this.bConst==0.0){
+                this.aConst = tConstt;
+                this.bConst = 1.0;
+            }
+            else{
+                this.aConst = this.aConst*tConstt/this.tConst;
+            }
+        }
+        this.tConst = tConstt;
+        if(this.cConst==0.0){
+            if(this.bConst==0.0){
+                this.cConst = ttGain;
+                this.bConst = 1.0;
+            }
+            else{
+                this.cConst = ttGain*this.bConst;
+            }
+        }
+        else{
+            if(this.bConst==0.0){
+                this.cConst = ttGain;
+                this.bConst = 1.0;
+            }
+            else{
+                this.cConst = this.cConst*ttGain/this.tConst;
+            }
+        }
+        this.tGain = ttGain;
+        super.sPoles = Complex.oneDarray(1);
+        super.setSnumer(new ComplexPoly(this.cConst));
+        super.setSdenom(new ComplexPoly(this.bConst, this.aConst));
         this.calcPolesZerosS();
         super.addDeadTimeExtras();
     }
 
-    public void setTimeConstant(double tConst){
-        this.tConst = tConst;
-        this.aConst = tConst;
-        Complex co = new Complex(this.aConst, 0.0);
-        super.sDenom.resetCoeff(1, co);
+    public void setTimeConstant(double tConstt){
+        
+        if(this.aConst==0.0){
+            if(this.bConst==0.0){
+                this.aConst = tConstt;
+                this.bConst = 1.0;
+            }
+            else{
+                this.aConst = tConstt*this.bConst;
+            }
+        }
+        else{
+            if(this.bConst==0.0){
+                this.aConst = tConstt;
+                this.bConst = 1.0;
+            }
+            else{
+                this.aConst = this.aConst*tConstt/this.tConst;
+            }
+        }
+        this.tConst = tConstt;
+        super.sPoles = Complex.oneDarray(1);
+        super.setSnumer(new ComplexPoly(this.cConst));
+        super.setSdenom(new ComplexPoly(this.bConst, this.aConst));
         this.calcPolesZerosS();
         super.addDeadTimeExtras();
     }
 
-    public void setGain(double tGain){
-        this.tGain = tGain;
-        this.cConst = tGain;
-        Complex co = new Complex(this.cConst, 0.0);
-        super.sNumer.resetCoeff(0, co);
+    public void setGain(double ttGain){
+       
+        if(this.cConst==0.0){
+            if(this.bConst==0.0){
+                this.cConst = ttGain;
+                this.bConst = 1.0;
+            }
+            else{
+                this.cConst = ttGain*this.bConst;
+            }
+        }
+        else{
+            if(this.bConst==0.0){
+                this.cConst = ttGain;
+                this.bConst = 1.0;
+            }
+            else{
+                this.cConst = this.cConst*ttGain/this.tGain;
+            }
+        }
+        this.tGain = ttGain;
+        super.sPoles = Complex.oneDarray(1);
+        super.setSnumer(new ComplexPoly(this.cConst));
+        super.setSdenom(new ComplexPoly(this.bConst, this.aConst));
         this.calcPolesZerosS();
         super.addDeadTimeExtras();
     }
+    
 
     // Get coefficients
     public double getGain(){

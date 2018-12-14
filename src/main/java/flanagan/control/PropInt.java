@@ -11,7 +11,7 @@
 *
 *       Created: August 2002
 *       Updated: 17 April 2003, 3 May 2005, 2 July 2006, 27 February 2008, 6 April 2008, 7 November 2009
-*                24 May 2010
+*                24 May 2010, 13 April 2012
 *
 *       DOCUMENTATION:
 *       See Michael T Flanagan's JAVA library on-line web page:
@@ -52,11 +52,30 @@ public class PropInt extends BlackBox{
         super.setZtransformMethod(1);
         super.addDeadTimeExtras();
     }
+    
+    // Constructor - kp proportional gain, ki integral gain
+    public PropInt(double kp, double ki){
+        super("PropInt");
+        this.kp = kp;
+        this.ki = ki;
+        this.ti=this.kp/ki;
+        super.setSnumer(new ComplexPoly(new Complex(ki, 0.0), new Complex(kp, 0.0)));
+        super.setSdenom(new ComplexPoly(0.0D, 1.0D));
+        super.setZtransformMethod(1);
+        super.addDeadTimeExtras();
+    }
 
     // Set the proportional gain
     public void setKp(double kp){
-        super.sNumer.resetCoeff(1, new Complex(kp, 0.0));
-        super.calcPolesZerosS();
+        this.kp = kp;
+        if(super.sNumerDeg!=1){
+            super.setSnumer(new ComplexPoly(new Complex(ki, 0.0), new Complex(kp, 0.0)));
+        super.setSdenom(new ComplexPoly(0.0D, 1.0D));
+        }
+        else{
+            super.sNumer.resetCoeff(1, new Complex(kp, 0.0));
+            super.calcPolesZerosS();
+        }
         super.addDeadTimeExtras();
     }
 
@@ -64,8 +83,14 @@ public class PropInt extends BlackBox{
     public void setKi(double ki){
         this.ki=ki;
         this.ti=this.kp/ki;
-        super.sNumer.resetCoeff(0, new Complex(ki, 0.0));
-        super.calcPolesZerosS();
+        if(super.sNumerDeg!=1){
+            super.setSnumer(new ComplexPoly(new Complex(ki, 0.0), new Complex(kp, 0.0)));
+        super.setSdenom(new ComplexPoly(0.0D, 1.0D));
+        }
+        else{
+            super.sNumer.resetCoeff(0, new Complex(ki, 0.0));
+            super.calcPolesZerosS();
+        }
         super.addDeadTimeExtras();
     }
 
@@ -74,8 +99,14 @@ public class PropInt extends BlackBox{
     public void setTi(double ti){
         this.ti=ti;
         this.ki=this.kp/ti;
-        super.sNumer.resetCoeff(0, new Complex(ki, 0.0));
-        super.calcPolesZerosS();
+        if(super.sNumerDeg!=1){
+            super.setSnumer(new ComplexPoly(new Complex(ki, 0.0), new Complex(kp, 0.0)));
+        super.setSdenom(new ComplexPoly(0.0D, 1.0D));
+        }
+        else{
+            super.sNumer.resetCoeff(0, new Complex(ki, 0.0));
+            super.calcPolesZerosS();
+        }
         super.addDeadTimeExtras();
     }
 

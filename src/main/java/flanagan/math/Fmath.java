@@ -13,7 +13,7 @@
 *   AMENDED: 6 January 2006, 12 April 2006, 5 May 2006, 28 July 2006, 27 December 2006,
 *            29 March 2007, 29 April 2007, 2,9,15 & 26 June 2007, 20 October 2007, 4-6 December 2007
 *            27 February 2008, 25 April 2008, 26 April 2008, 13 May 2008, 25/26 May 2008, 3-7 July 2008
-*            11 November 2010, 9-18 January 2011
+*            11 November 2010, 9-18 January 2011, 13 August 2011, 27 July 2012, 13 September 2012, 27 October 2012
 *
 *   DOCUMENTATION:
 *   See Michael Thomas Flanagan's Java library on-line web pages:
@@ -67,6 +67,8 @@ public class Fmath{
         public static final double M_NEUTRON = 1.6749271613e-27;        /*      kg              */
         public static final double EPSILON_0 = 8.854187817e-12;         /*      F m^-1          */
         public static final double MU_0 = Math.PI*4e-7;                 /*      H m^-1 (N A^-2) */
+        public static final double ETA_0 = MU_0*C_LIGHT;                /*      Ohms            */
+
 
         // MATHEMATICAL CONSTANTS
         public static final double EULER_CONSTANT_GAMMA = 0.5772156649015627;
@@ -165,6 +167,60 @@ public class Fmath{
         public static float log10(float a, int b){
             return (float) (Math.log((double)a)/Math.log((double)b));
         }
+        
+        // Logit to base e of a double number
+        public static double logit(double p){
+            if(p<0)throw new IllegalArgumentException("the argument, p = " + p + ", must be greater or equal to zero and less than or equal to unity"); 
+            if(p>1)throw new IllegalArgumentException("the argument, p = " + p + ", must be greater or equal to zero and less than or equal to unity");  
+            return Math.log(p/(1.0 - p));
+        }
+        
+        // Logit to base e of a float number
+        public static float logit(float p){
+            if(p<0)throw new IllegalArgumentException("the argument, p = " + p + ", must be greater or equal to zero and less than or equal to unity"); 
+            if(p>1)throw new IllegalArgumentException("the argument, p = " + p + ", must be greater or equal to zero and less than or equal to unity");  
+            return (float) Math.log(p/(1.0F - p));
+        }
+        
+        // Logit to base 10 of a double number
+        public static double logit10(double p){
+            if(p<0)throw new IllegalArgumentException("the argument, p = " + p + ", must be greater or equal to zero and less than or equal to unity"); 
+            if(p>1)throw new IllegalArgumentException("the argument, p = " + p + ", must be greater or equal to zero and less than or equal to unity");  
+            return Math.log10(p/(1.0 - p));
+        }
+        
+        // Logit to base 10 of a float number
+        public static float logit10(float p){
+            if(p<0)throw new IllegalArgumentException("the argument, p = " + p + ", must be greater or equal to zero and less than or equal to unity"); 
+            if(p>1)throw new IllegalArgumentException("the argument, p = " + p + ", must be greater or equal to zero and less than or equal to unity");  
+            return (float) Math.log10(p/(1.0 - p));
+        }
+        
+        
+        // Antilogit to base e of a double number
+        public static double antilogit(double xx){
+            double hold = Math.exp(xx);
+            return hold/(1.0 + hold);
+        }
+        
+        // Antilogit to base e of a float number
+        public static float antilogit(float xx){
+            float hold = (float)Math.exp(xx);
+            return hold/(1.0F + hold);
+        }
+        
+        // Antilogit to base 10 of a double number
+        public static double antilogit10(double xx){
+            double hold = Math.pow(10.0, xx);
+            return hold/(1.0 + hold);
+        }
+        
+        // Antilogit to base 10 of a float number
+        public static float antilogit10(float xx){
+            float hold = (float)Math.pow(10.0F, xx);
+            return hold/(1.0F + hold);
+        }
+                
 
         // SQUARES
         // Square of a double number
@@ -830,6 +886,46 @@ public class Fmath{
         }
         return xTruncated.trim();
     }
+    
+    // Returns false if xx is infinite or NaN
+    // xx is double
+     public static boolean isFinite(double xx){
+         boolean ret = true;
+         if(xx!=xx){
+             ret = false;
+         }
+         else{
+             if(xx==Double.POSITIVE_INFINITY){
+                 ret = false;
+            }
+            else{
+                 if(xx==Double.NEGATIVE_INFINITY){
+                    ret = false;
+                 }
+             }
+         }
+         return ret;
+     }
+     
+     // Returns false if xx is infinite or NaN
+     // xx is float
+     public static boolean isFinite(float xx){
+         boolean ret = true;
+         if(xx!=xx){
+             ret = false;
+         }
+         else{
+             if(xx==Double.POSITIVE_INFINITY){
+                 ret = false;
+            }
+            else{
+                 if(xx==Double.NEGATIVE_INFINITY){
+                    ret = false;
+                 }
+             }
+         }
+         return ret;
+     }
 
         // Returns true if x is infinite, i.e. is equal to either plus or minus infinity
         // x is double

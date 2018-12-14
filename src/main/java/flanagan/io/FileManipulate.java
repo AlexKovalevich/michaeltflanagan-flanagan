@@ -1,22 +1,20 @@
 /*
-*   Class   FileInputAsChar
+*   Class   FileManipulate
 *
 *   This class contains easy to use methods for reading in a file
 *   character by character, including non-print characters, e.g. line return character
 *   as a character (char), a wrapper class character (Character) or as the ISO code int equivalent (int)
 *   and, consequently, of editing the file, e.g returning a file of a designated line length
-*   or a file of a single line 
-*
-*   THIS IS A DEPRECATED FILE - REPLACED BY FileManipulate
+*   or a file of a single line
 *
 *   WRITTEN BY: Dr Michael Thomas Flanagan
 *
-*   DATE:       13 September 2005
-*   DEPRECATED: 20 May 2012
+*   DATE:       20 May 2012 (Incorporates FileInputAsChar [13 September 2005])
+*   REVISED:
 *
 *   DOCUMENTATION:
 *   See Michael Thomas Flanagan's Java library on-line web page:
-*   http://www.ee.ucl.ac.uk/~mflanaga/java/FileInputAsChar.html
+*   http://www.ee.ucl.ac.uk/~mflanaga/java/FileManipulate.html
 *   http://www.ee.ucl.ac.uk/~mflanaga/java/
 *
 *   Copyright (c) 2005 - 2012
@@ -36,9 +34,8 @@
 package flanagan.io;
 
 import java.io.*;
-import flanagan.complex.Complex;
 
-public class FileInputAsChar{
+public class FileManipulate{
 
         // Instance variables
         protected String fileName = "";           //input file name
@@ -52,7 +49,7 @@ public class FileInputAsChar{
         protected boolean fileFound = true;       //true if file named is found
 
         // Constructor
-        public FileInputAsChar(String pathName){
+        public FileManipulate(String pathName){
                 this.pathName = pathName;
                 this.fileName = pathName;
                 int posSlash = pathName.indexOf("//");

@@ -16,7 +16,7 @@
 *
 *       Created: August 2002
 *	    Updated: 17 July 2003, 18 May 2005, 6 April 2008, 6 October 2009, 30 October 2009,
-*       2-9 November 2009, 20 January 2010, 23-25 May 2010, 3 June 2010, 18 January 2011
+*       2-9 November 2009, 20 January 2010, 23-25 May 2010, 3 June 2010, 18 January 2011, 13 - 27 April 2012
 *
 *
 *       DOCUMENTATION:
@@ -160,7 +160,7 @@ public class BlackBox{
             else{
                 i++;
                 if(i>=this.nSubclasses){
-                    System.out.println("Subclass name, " + this.fixedName + ", not recognised as a recorder subclass");
+                    System.out.println("Subclass name, " + this.fixedName + ", not recognised as a recorded subclass within this library");
                     System.out.println("Subclass, " + this.fixedName + ", handled as BlackBox");
                     this.subclassIndex = i;
                     test = false;
@@ -256,8 +256,11 @@ public class BlackBox{
 
             // calculate mean of the poles
             Complex mean = new Complex(0.0D, 0.0);
-            for(int i=0; i<nRoots; i++)mean = mean.plus(roots[i]);
+            for(int i=0; i<nRoots; i++){
+                mean = mean.plus(roots[i]);
+            }
             mean = mean.over(nRoots);
+            
             // check that mean != a root; increase mean by 1.5 till != any pole
             boolean test = true;
             int ii=0;
@@ -910,7 +913,17 @@ public class BlackBox{
     // Calculate the zeros and poles in the s-domain
     // does not include Pade approximation term
     protected void calcPolesZerosS(){
-        if(this.sNumer!=null){
+        // Strip out zero higher power terms
+        this.sNumer = ComplexPoly.reducePoly(this.sNumer);
+        this.sNumerDeg = this.sNumer.getDeg();
+        this.sNumerPade = ComplexPoly.reducePoly(this.sNumerPade);
+        this.sNumerDegPade = this.sNumerPade.getDeg();
+        this.sDenom = ComplexPoly.reducePoly(this.sDenom);
+        this.sDenomDeg = this.sDenom.getDeg();
+        this.sDenomPade = ComplexPoly.reducePoly(this.sDenomPade);
+        this.sDenomDegPade = this.sDenomPade.getDeg();
+        
+        if(this.sNumer!=null){    
             if(this.sNumer.getDeg()>0)this.sZeros = this.sNumer.rootsNoMessages();
             if(this.sZeros!=null){
                 this.sNumerScaleFactor = BlackBox.scaleFactor(this.sNumer, this.sZeros);
@@ -919,7 +932,7 @@ public class BlackBox{
                 this.sNumerScaleFactor = this.sNumer.coeffCopy(0);
             }
         }
-
+        
         if(this.sDenom!=null){
             if(this.sDenom.getDeg()>0)this.sPoles = this.sDenom.rootsNoMessages();
             if(this.sPoles!=null){
@@ -937,52 +950,61 @@ public class BlackBox{
         }
     }
 
+
     // Eliminates identical poles and zeros in the s-domain
     protected void zeroPoleCancellation(){
+        
         boolean check = false;
         boolean testI = true;
-        boolean testJ = true;
-        int i=0;
-        int j=0;
+        boolean testJ = false;
 
         if(this.sNumerDegPade==0 || this.sDenomDegPade==0)testI=false;
         if(this.sZerosPade==null || this.sPolesPade==null)testI=false;
-        while(testI){
-            j=0;
-            while(testJ){
-                if(this.sZerosPade[i].isEqual(this.sPolesPade[j])){
-                    for(int k=j+1; k<this.sDenomDegPade; k++)this.sPolesPade[k-1] = this.sPolesPade[k].copy();
-                    this.sDenomDegPade--;
-                    for(int k=i+1; k<this.sNumerDegPade; k++)this.sZerosPade[k-1] = this.sZerosPade[k].copy();
-                    this.sNumerDegPade--;
-                    check = true;
-                    testJ=false;
-                    i--;
+        
+        if(testI){            
+            int nPoles = this.sPolesPade.length;
+            int nZeros = this.sZerosPade.length;
+            for(int i=nZeros-1; i>=0; i--){
+                testJ = false;
+                for(int j=nPoles-1; j>=0; j--){
+                    if(this.sZerosPade[i].isEqual(this.sPolesPade[j])){
+                        if(j<this.sDenomDegPade-2){
+                            for(int k=j; k<this.sDenomDegPade; k++)this.sPolesPade[k] = this.sPolesPade[k+1].copy();
+                        }
+                        this.sDenomDegPade--;                     
+                        if(i<this.sNumerDegPade-2){
+                            for(int k=i; k<this.sNumerDegPade; k++)this.sZerosPade[k] = this.sZerosPade[k+1].copy();
+                        }
+                        this.sNumerDegPade--;
+                        i--;
+                        check = true;
+                        testJ = true;
+                    }
+                    if(testJ)break;
                 }
-                else{
-                    j++;
-                    if(j>this.sDenomDegPade-1)testJ=false;
-                }
-            }
-            i++;
-            if(i>this.sNumerDegPade-1)testI=false;
+            } 
         }
+
         if(check){
             if(this.sNumerDegPade==0){
                 this.sNumerPade = new ComplexPoly(1.0D);
+                this.sZerosPade = null;
             }
             else{
                 Complex[] holdn = Complex.oneDarray(sNumerDegPade);
-                for(int ii=0; ii<sNumerDegPade; ii++)holdn[i] = this.sZerosPade[ii].copy();
+                for(int ii=0; ii<sNumerDegPade; ii++){
+                    holdn[ii] = this.sZerosPade[ii].copy();
+                }
                 this.sZerosPade = holdn;
                 this.sNumerPade = ComplexPoly.rootsToPoly(this.sZerosPade);
             }
             if(this.sDenomDegPade==0){
                 this.sDenomPade = new ComplexPoly(1.0D);
+                this.sPolesPade = null;
             }
             else{
                 Complex[] holdd = Complex.oneDarray(sDenomDegPade);
-                for(int ii=0; ii<sDenomDegPade; ii++)holdd[i] = this.sPolesPade[ii].copy();
+                for(int ii=0; ii<sDenomDegPade; ii++)holdd[ii] = this.sPolesPade[ii].copy();
                 this.sPolesPade = holdd;
                 this.sDenomPade = ComplexPoly.rootsToPoly(this.sPolesPade);
             }
@@ -991,56 +1013,57 @@ public class BlackBox{
         check = false;
         testI = true;
         testJ = true;
-        i=0;
-        j=0;
-
         if(this.sNumerDeg==0 || this.sDenomDeg==0)testI=false;
         if(this.sZeros==null || this.sPoles==null)testI=false;
-        while(testI){
-            j=0;
-            while(testJ){
-                if(this.sZeros[i].isEqual(this.sPoles[j])){
-                    for(int k=j+1; k<this.sDenomDeg; k++)this.sPoles[k-1] = this.sPoles[k].copy();
-                    this.sDenomDeg--;
-                    for(int k=i+1; k<this.sNumerDeg; k++)this.sZeros[k-1] = this.sZeros[k].copy();
-                    this.sNumerDeg--;
-                    check = true;
-                    testJ=false;
-                    i--;
+        
+        if(testI){            
+            int nPoles = this.sPoles.length;
+            int nZeros = this.sZeros.length;
+            for(int i=nZeros-1; i>=0; i--){
+                testJ = false;
+                for(int j=nPoles-1; j>=0; j--){
+                    if(this.sZeros[i].isEqual(this.sPoles[j])){
+                        if(j<this.sDenomDegPade-2)for(int k=j+1; k<this.sDenomDeg; k++)this.sPoles[k-1] = this.sPoles[k].copy();
+                        this.sDenomDeg--;
+                        
+                        if(j<this.sNumerDegPade-2)for(int k=i+1; k<this.sNumerDeg; k++)this.sZeros[k-1] = this.sZeros[k].copy();
+                        this.sNumerDeg--;
+                        check = true;
+                        testJ = true;
+                        i--;
+                    }
+                    if(testJ)break;
                 }
-                else{
-                    j++;
-                    if(j>this.sDenomDeg-1)testJ=false;
-                }
-            }
-            i++;
-            if(i>this.sNumerDeg-1)testI=false;
+            } 
         }
+
         if(check){
             if(this.sNumerDeg==0){
                 this.sNumer = new ComplexPoly(1.0D);
+                this.sZeros = null;
             }
             else{
                 Complex[] holdn = Complex.oneDarray(sNumerDeg);
-                for(int ii=0; ii<sNumerDeg; ii++)holdn[i] = this.sZeros[ii].copy();
+                for(int ii=0; ii<sNumerDeg; ii++){
+                    holdn[ii] = this.sZeros[ii].copy();
+                }
                 this.sZeros = holdn;
                 this.sNumer = ComplexPoly.rootsToPoly(this.sZeros);
-                this.sNumerWorkingFactor = this.sNumerScaleFactor;
             }
             if(this.sDenomDeg==0){
                 this.sDenom = new ComplexPoly(1.0D);
+                this.sPoles=null;
             }
             else{
                 Complex[] holdd = Complex.oneDarray(sDenomDeg);
-                for(int ii=0; ii<sDenomDeg; ii++)holdd[i] = this.sPoles[ii].copy();
+                for(int ii=0; ii<sDenomDeg; ii++)holdd[ii] = this.sPoles[ii].copy();
                 this.sPoles = holdd;
                 this.sDenom = ComplexPoly.rootsToPoly(this.sPoles);
-                this.sDenomWorkingFactor = this.sDenomScaleFactor;
             }
         }
     }
 
-    // Get steadty state value for a unit step input
+    // Get steady state value for a unit step input
     public double getSeadyStateValue(){
         Complex num = this.sNumer.evaluate(Complex.zero());
         Complex den = this.sDenom.evaluate(Complex.zero());

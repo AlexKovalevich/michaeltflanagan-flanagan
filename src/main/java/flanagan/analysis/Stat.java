@@ -16,13 +16,15 @@
 *            28-30 September 2008 (probability Plot moved to separate class, ProbabilityPlot)
 *            4-5 October 2008,  8-13 December 2008, 14 June 2009, 13-23 October 2009,
 *            8 February 2010, 18-25 May 2010, 2 November 2010, 4 December 2010, 19-25 January 2011
+*            10 February 2011, 30 March 2011, 16 July 2011, 30 November 2011
+*            4 January 2012, 7 March 2012, 26-29 July 2012
 *
 *   DOCUMENTATION:
 *   See Michael Thomas Flanagan's Java library on-line web page:
 *   http://www.ee.ucl.ac.uk/~mflanaga/java/Stat.html
 *   http://www.ee.ucl.ac.uk/~mflanaga/java/
 *
-*   Copyright (c) 2002 - 2011 Michael Thomas Flanagan
+*   Copyright (c) 2002 - 2012 Michael Thomas Flanagan
 *
 *   PERMISSION TO COPY:
 *
@@ -51,6 +53,7 @@ import java.math.*;
 import flanagan.math.*;
 import flanagan.integration.Integration;
 import flanagan.integration.IntegralFunction;
+import flanagan.interpolation.CubicSpline;
 
 import flanagan.plot.PlotGraph;
 import flanagan.complex.*;
@@ -5094,6 +5097,11 @@ public class Stat extends ArrayMaths{
                 return med;
         }
 
+        public static BigDecimal secondQuartile(BigDecimal[] aa){
+            return Stat.median(aa);
+        }
+
+
         // Median of a 1D array of BigInteger, aa
         public static BigInteger median(BigInteger[] aa){
                 int n = aa.length;
@@ -5112,6 +5120,11 @@ public class Stat extends ArrayMaths{
                 return med;
         }
 
+        public static BigInteger secondQuartile(BigInteger[] aa){
+            return Stat.median(aa);
+        }
+
+
         // Median of a 1D array of doubles, aa
         public static double median(double[] aa){
                 int n = aa.length;
@@ -5126,6 +5139,10 @@ public class Stat extends ArrayMaths{
                 }
 
                 return med;
+        }
+
+        public static double secondQuartile(double[] aa){
+            return Stat.median(aa);
         }
 
 
@@ -5145,6 +5162,11 @@ public class Stat extends ArrayMaths{
                 return med;
         }
 
+        public static float secondQuartile(float[] aa){
+            return Stat.median(aa);
+        }
+
+
         // Median of a 1D array of int, aa
         public static double median(int[] aa){
                 int n = aa.length;
@@ -5161,6 +5183,11 @@ public class Stat extends ArrayMaths{
                 return med;
         }
 
+        public static double secondQuartile(int[] aa){
+            return Stat.median(aa);
+        }
+
+
         // Median of a 1D array of long, aa
         public static double median(long[] aa){
                 int n = aa.length;
@@ -5176,6 +5203,11 @@ public class Stat extends ArrayMaths{
 
                 return med;
         }
+
+        public static double secondQuartile(long[] aa){
+            return Stat.median(aa);
+        }
+
 
 
         // STANDARD DEVIATIONS  (STATIC METHODS)
@@ -6357,7 +6389,7 @@ public class Stat extends ArrayMaths{
                 Complex sumw=Complex.zero();
                 Complex sumwc=Complex.zero();
                 Complex mean=Complex.zero();
-                Stat st = new Stat(ww);
+                ArrayMaths st = new ArrayMaths(ww);
                 st = st.invert();
                 Complex[] weight = st.array_as_Complex();
                 for(int i=0; i<n; i++){
@@ -6736,6 +6768,18 @@ public class Stat extends ArrayMaths{
             // calculate corelation coefficient
             double sampleR = s2xy/Math.sqrt(s2xx*s2yy);
 
+            // Check for rounding error
+            if(sampleR>1.0){
+                if(Fmath.isEqualWithinLimits(sampleR, 1.0, 0.001)){
+                    sampleR = 1.0;
+                }
+            }
+            if(sampleR<-1.0){
+                if(Fmath.isEqualWithinLimits(Math.abs(sampleR), 1.0, 0.001)){
+                    sampleR = -1.0;
+                }
+            }
+
             return sampleR;
         }
 
@@ -6779,7 +6823,21 @@ public class Stat extends ArrayMaths{
             double sxy = Stat.covariance(x, y, w);
             double sx = Stat.variance(x, w);
             double sy = Stat.variance(y, w);
-            return sxy/Math.sqrt(sx*sy);
+            double sampleR = sxy/Math.sqrt(sx*sy);
+
+            // Check for rounding error
+            if(sampleR>1.0){
+                if(Fmath.isEqualWithinLimits(sampleR, 1.0, 0.001)){
+                    sampleR = 1.0;
+                }
+            }
+            if(sampleR<-1.0){
+                if(Fmath.isEqualWithinLimits(Math.abs(sampleR), 1.0, 0.001)){
+                    sampleR = -1.0;
+                }
+            }
+
+            return sampleR;
         }
 
         // Calculate correlation coefficient
@@ -6790,7 +6848,21 @@ public class Stat extends ArrayMaths{
         // f(1,0) - element10 - frequency of x = 1 and y = 0
         // f(1,1) - element11 - frequency of x and y both = 0
         public static double corrCoeff(int element00, int element01, int element10, int element11){
-            return ((double)(element00*element11 - element01*element10))/Math.sqrt((double)((element00+element01)*(element10+element11)*(element00+element10)*(element01+element11)));
+            double sampleR = ((double)(element00*element11 - element01*element10))/Math.sqrt((double)((element00+element01)*(element10+element11)*(element00+element10)*(element01+element11)));
+
+            // Check for rounding error
+            if(sampleR>1.0){
+                if(Fmath.isEqualWithinLimits(sampleR, 1.0, 0.001)){
+                    sampleR = 1.0;
+                }
+            }
+            if(sampleR<-1.0){
+                if(Fmath.isEqualWithinLimits(Math.abs(sampleR), 1.0, 0.001)){
+                    sampleR = -1.0;
+                }
+            }
+
+            return sampleR;
         }
 
         // Calculate correlation coefficient
@@ -6805,8 +6877,23 @@ public class Stat extends ArrayMaths{
             double element01 = (double)freqMatrix[0][1];
             double element10 = (double)freqMatrix[1][0];
             double element11 = (double)freqMatrix[1][1];
-            return ((element00*element11 - element01*element10))/Math.sqrt(((element00+element01)*(element10+element11)*(element00+element10)*(element01+element11)));
+            double sampleR = ((element00*element11 - element01*element10))/Math.sqrt(((element00+element01)*(element10+element11)*(element00+element10)*(element01+element11)));
+
+            // Check for rounding error
+            if(sampleR>1.0){
+                if(Fmath.isEqualWithinLimits(sampleR, 1.0, 0.001)){
+                    sampleR = 1.0;
+                }
+            }
+            if(sampleR<-1.0){
+                if(Fmath.isEqualWithinLimits(Math.abs(sampleR), 1.0, 0.001)){
+                    sampleR = -1.0;
+                }
+            }
+
+            return sampleR;
         }
+
 
         // Linear correlation coefficient cumulative probablity
         // old name calls renamed method
@@ -7945,6 +8032,7 @@ public class Stat extends ArrayMaths{
         public static double regularisedGammaFunction(double a, double x){
                 if(a<0.0D  || x<0.0D)throw new IllegalArgumentException("\nFunction defined only for a >= 0 and x>=0");
 
+                boolean oldIgSupress = Stat.igSupress;
                 Stat.igSupress = true;
                 double igf = 0.0D;
 
@@ -7960,7 +8048,7 @@ public class Stat extends ArrayMaths{
                     if(igf!=igf)igf = 1.0 - Stat.crigfGaussQuad(a, x);
                 }
                 if(igf<0.0)igf = 0.0;
-                Stat.igSupress = false;
+                Stat.igSupress = oldIgSupress;
                 return igf;
         }
 
@@ -7985,7 +8073,8 @@ public class Stat extends ArrayMaths{
         public static double complementaryRegularisedGammaFunction(double a, double x){
                 if(a<0.0D  || x<0.0D)throw new IllegalArgumentException("\nFunction defined only for a >= 0 and x>=0");
 
-                Stat.igSupress = true;
+                boolean oldIgSupress = Stat.igSupress;
+                Stat.igSupress = true; 
                 double igf = 1.0D;
 
                 if(x!=0.0D){
@@ -8003,10 +8092,9 @@ public class Stat extends ArrayMaths{
                                         igf = 1.0 - Stat.incompleteGammaFract(a, x);
                                 }
                         }
-                        if(igf!=igf)igf = Stat.crigfGaussQuad(a, x);
                 }
                 if(igf>1.0)igf = 1.0;
-                Stat.igSupress = false;
+                Stat.igSupress = oldIgSupress;
                 return igf;
         }
 
@@ -8556,8 +8644,20 @@ public class Stat extends ArrayMaths{
             // denominator (incomplete Gamma Function)
             double oneplustr = 1.0D + totalResources;
             double crigf = Stat.complementaryRegularisedGammaFunction(oneplustr, totalTraffic);
-            if(crigf==0.0){
-                prob = 1.0;
+            if(crigf!=crigf || crigf==0.0){
+                int low = (int)Math.floor(totalResources) - 2;
+                if(low<0)low=0;
+                int ni = 6;
+                int[] tr = new int[ni];
+                double[] trd = new double[ni];
+                double[] pp = new double[ni];
+                for(int i=0; i<ni; i++){
+                    tr[i] = low+i;
+                    trd[i] = (double)tr[i];
+                    pp[i] = Stat.erlangBprobability(totalTraffic, tr[i]);
+                }
+                CubicSpline cs = new CubicSpline(trd, pp);
+                prob = cs.interpolate(totalResources);
             }
             else{
                 double logdenom = Math.log(crigf) + Stat.logGammaFunction(oneplustr);
@@ -9476,6 +9576,31 @@ public class Stat extends ArrayMaths{
             return gaussianInverseCDF(0.0D, 1.0D, prob);
         }
 
+        
+        // Confidence limit of a mean
+        // Static method
+        public static double[] meanConfidenceLimits(double mean, double sd, double prob){
+            double[] cl = new double[2];
+            double probn = prob/2.0 + 0.5;
+            double z = Stat.gaussianInverseCDF(mean, sd, probn);
+            cl[0] = 2.0*mean - z;
+            cl[1] = z;
+            return cl;
+        }
+        
+        // Confidence limit of a mean
+        // instance method
+        public double[] meanConfidenceLimits(double prob){           
+            double[] cl = new double[2];
+            double probn = prob/2.0 + 0.5;         
+            double mean = this.mean();
+            double sd = this.standardDeviation();
+            double z = Stat.gaussianInverseCDF(mean, sd, probn);
+            cl[0] = 2.0*mean - z;
+            cl[1] = z;
+            return cl;
+        }
+        
 
         // Gaussian (normal) order statistic medians (n points)
         public static double[] gaussianOrderStatisticMedians(double mean, double sigma, int n){
@@ -10326,6 +10451,66 @@ public class Stat extends ArrayMaths{
                 return Stat.incompleteGamma((double)nu/2.0D, chiSquare/2.0D);
         }
 
+        // Chi-Square Inverse Cumulative Distribution Function
+        public static double chiSquareInverseCDF(int nu, double prob){
+            if(prob<0.0 || prob>1.0)throw new IllegalArgumentException("Entered cdf value, " + prob + ", must lie between 0 and 1 inclusive");
+
+            double icdf = 0.0D;
+
+            if(prob==0.0){
+                icdf = 0.0;
+            }
+            else{
+                if(prob==1.0){
+                    icdf = Double.POSITIVE_INFINITY;
+                }
+                else{
+
+                    // Create instance of the class holding the chiSquare cfd function
+                    ChiSquareFunct chi = new ChiSquareFunct();
+
+                    // set function variables
+                    chi.nu = nu;
+
+                    // required tolerance
+                    double tolerance = 1e-12;
+
+                    // lower bound
+                    double lowerBound = 0.0;
+
+                    // upper bound
+                    double upperBound = nu + 10.0*Math.sqrt(2.0*nu);
+
+                    // Create instance of RealRoot
+                    RealRoot realR = new RealRoot();
+
+                    // Set extension limits
+                    realR.noLowerBoundExtension();
+
+                    // Set tolerance
+                    realR.setTolerance(tolerance);
+
+                    // Supress error messages and arrange for NaN to be returned as root if root not found
+                    realR.resetNaNexceptionToTrue();
+                    realR.supressLimitReachedMessage();
+                    realR.supressNaNmessage();
+
+                    //  set function cfd variable
+                    chi.cfd = prob;
+
+                    // call root searching method
+                    icdf = realR.bisect(chi, lowerBound, upperBound);
+                }
+            }
+
+            return icdf;
+        }
+
+        // Chi Square Inverse Cumulative Distribution Function
+        public static double inverseChiSquareCDF(int nu, double prob){
+            return chiSquareInverseCDF(nu, prob);
+        }
+
         // Chi-Square Probability Density Function
         // nu  =  the degrees of freedom
         public static double chiSquarePDF(double chiSquare, int nu){
@@ -10423,6 +10608,17 @@ public class Stat extends ArrayMaths{
             }
 
             return chiSquareFreq(observ, expect);
+        }
+        
+        // Wilson-Hilferty transform
+        public static double wilsonHilferty(double chiSquare, int nu){
+            double hold = 2.0/(9.0*nu);
+            return (Math.pow((chiSquare/nu), 1.0/3.0) - (1.0 - hold))/Math.sqrt(hold);
+        }
+        
+        public static double wilsonHilferty(double reducedChiSquare, double reducedChiSquareVariance){
+            double hold = 3.0/Math.sqrt(reducedChiSquareVariance);
+            return (Math.pow(reducedChiSquare, 1.0/3.0) - 1.0)*hold + 1.0/hold;
         }
 
 
@@ -12585,7 +12781,7 @@ public class Stat extends ArrayMaths{
 
 
 
-    //  METHODS OVERRIDING ArrayMaths METHODS
+
     // DEEP COPY
     // Copy to a new instance of Stat
     public Stat copy(){
@@ -12838,700 +13034,9 @@ public class Stat extends ArrayMaths{
 
         return am;
     }
-
-        public Stat plus(double constant){
-            return super.plus(constant).toStat();
-        }
-
-        public Stat plus(float constant){
-            return super.plus(constant).toStat();
-        }
-
-        public Stat plus(long constant){
-            return super.plus(constant).toStat();
-        }
-
-        public Stat plus(int constant){
-            return super.plus(constant).toStat();
-        }
-
-        public Stat plus(short constant){
-            return super.plus(constant).toStat();
-        }
-
-        public Stat plus(byte constant){
-            return super.plus(constant).toStat();
-        }
-
-        public Stat plus(char constant){
-            return super.plus(constant).toStat();
-        }
-
-        public Stat plus(BigDecimal constant){
-            return super.plus(constant).toStat();
-        }
-
-        public Stat plus(BigInteger constant){
-            return super.plus(constant).toStat();
-        }
-
-        public Stat plus(Complex constant){
-            return super.plus(constant).toStat();
-        }
-
-        public Stat plus(Phasor constant){
-            return super.plus(constant).toStat();
-        }
-
-        public Stat plus(String constant){
-            return super.plus(constant).toStat();
-        }
-
-
-        public Stat plus(Double constant){
-            return super.plus(constant).toStat();
-        }
-
-        public Stat plus(Float constant){
-            return super.plus(constant).toStat();
-        }
-
-        public Stat plus(Long constant){
-            return super.plus(constant).toStat();
-        }
-
-        public Stat plus(Integer constant){
-            return super.plus(constant).toStat();
-        }
-
-        public Stat plus(Short constant){
-            return super.plus(constant).toStat();
-        }
-
-        public Stat plus(Byte constant){
-            return super.plus(constant).toStat();
-        }
-
-
-        public Stat plus(Character constant){
-            return super.plus(constant).toStat();
-        }
-
-        public Stat plus(Stat arrays){
-            return super.plus(arrays).toStat();
-        }
-
-        public Stat plus(ArrayMaths arraym){
-            return super.plus(arraym).toStat();
-        }
-
-        public Stat plus(ArrayList<Object> arrayl){
-            return super.plus(arrayl).toStat();
-        }
-
-        public Stat plus(Vector<Object> list){
-            return super.plus(list).toStat();
-        }
-
-        public Stat plus(double[] array){
-            return super.plus(array).toStat();
-        }
-
-        public Stat plus(float[] array){
-            return super.plus(array).toStat();
-        }
-
-        public Stat plus(long[] array){
-            return super.plus(array).toStat();
-        }
-
-        public Stat plus(int[] array){
-            return super.plus(array).toStat();
-        }
-
-        public Stat plus(short[] array){
-            return super.plus(array).toStat();
-        }
-
-        public Stat plus(byte[] array){
-            return super.plus(array).toStat();
-        }
-
-        public Stat plus(char[] array){
-            return super.plus(array).toStat();
-        }
-
-        public Stat plus(BigDecimal[] array){
-            return super.plus(array).toStat();
-        }
-
-        public Stat plus(BigInteger[] array){
-            return super.plus(array).toStat();
-        }
-
-        public Stat plus(Complex[] array){
-            return super.plus(array).toStat();
-        }
-
-        public Stat plus(Phasor[] array){
-            return super.plus(array).toStat();
-        }
-
-        public Stat plus(String[] array){
-            return super.plus(array).toStat();
-        }
-
-        public Stat plus(Double[] array){
-            return super.plus(array).toStat();
-        }
-
-        public Stat plus(Float[] array){
-            return super.plus(array).toStat();
-        }
-
-        public Stat plus(Long[] array){
-            return super.plus(array).toStat();
-        }
-
-        public Stat plus(Integer[] array){
-            return super.plus(array).toStat();
-        }
-
-        public Stat plus(Short[] array){
-            return super.plus(array).toStat();
-        }
-
-        public Stat plus(Byte[] array){
-            return super.plus(array).toStat();
-        }
-
-        public Stat plus(Character[] array){
-            return super.plus(array).toStat();
-        }
-
-        public Stat minus(double constant){
-            return super.minus(constant).toStat();
-        }
-
-        public Stat minus(float constant){
-            return super.minus(constant).toStat();
-        }
-
-        public Stat minus(long constant){
-            return super.minus(constant).toStat();
-        }
-
-        public Stat minus(int constant){
-            return super.minus(constant).toStat();
-        }
-
-        public Stat minus(short constant){
-            return super.minus(constant).toStat();
-        }
-
-        public Stat minus(byte constant){
-            return super.minus(constant).toStat();
-        }
-
-        public Stat minus(char constant){
-            return super.minus(constant).toStat();
-        }
-
-        public Stat minus(BigDecimal constant){
-            return super.minus(constant).toStat();
-        }
-
-        public Stat minus(BigInteger constant){
-            return super.minus(constant).toStat();
-        }
-
-        public Stat minus(Complex constant){
-            return super.minus(constant).toStat();
-        }
-
-        public Stat minus(Phasor constant){
-            return super.minus(constant).toStat();
-        }
-
-        public Stat minus(Double constant){
-            return super.minus(constant).toStat();
-        }
-
-        public Stat minus(Float constant){
-            return super.minus(constant).toStat();
-        }
-
-        public Stat minus(Long constant){
-            return super.minus(constant).toStat();
-        }
-
-        public Stat minus(Integer constant){
-            return super.minus(constant).toStat();
-        }
-
-        public Stat minus(Short constant){
-            return super.minus(constant).toStat();
-        }
-
-        public Stat minus(Byte constant){
-            return super.minus(constant).toStat();
-        }
-
-
-        public Stat minus(Character constant){
-            return super.minus(constant).toStat();
-        }
-
-        public Stat minus(Stat arrays){
-            return super.minus(arrays).toStat();
-        }
-
-        public Stat minus(ArrayMaths arraym){
-            return super.minus(arraym).toStat();
-        }
-
-        public Stat minus(Vector<Object> vec){
-            return super.minus(vec).toStat();
-        }
-
-        public Stat minus(ArrayList<Object> list){
-            return super.minus(list).toStat();
-        }
-
-        public Stat minus(double[] array){
-            return super.minus(array).toStat();
-        }
-
-        public Stat minus(float[] array){
-            return super.minus(array).toStat();
-        }
-
-        public Stat minus(long[] array){
-            return super.minus(array).toStat();
-        }
-
-        public Stat minus(int[] array){
-            return super.minus(array).toStat();
-        }
-
-        public Stat minus(short[] array){
-            return super.minus(array).toStat();
-        }
-
-        public Stat minus(byte[] array){
-            return super.minus(array).toStat();
-        }
-
-        public Stat minus(BigDecimal[] array){
-            return super.minus(array).toStat();
-        }
-
-        public Stat minus(BigInteger[] array){
-            return super.minus(array).toStat();
-        }
-
-        public Stat minus(Complex[] array){
-            return super.minus(array).toStat();
-        }
-
-        public Stat minus(Phasor[] array){
-            return super.minus(array).toStat();
-        }
-
-        public Stat minus(Double[] array){
-            return super.minus(array).toStat();
-        }
-
-        public Stat minus(Float[] array){
-            return super.minus(array).toStat();
-        }
-
-        public Stat minus(Long[] array){
-            return super.minus(array).toStat();
-        }
-
-        public Stat minus(Integer[] array){
-            return super.minus(array).toStat();
-        }
-
-        public Stat minus(Short[] array){
-            return super.minus(array).toStat();
-        }
-
-        public Stat minus(Byte[] array){
-            return super.minus(array).toStat();
-        }
-
-        public Stat times(double constant){
-            return super.times(constant).toStat();
-        }
-
-        public Stat times(float constant){
-            return super.times(constant).toStat();
-        }
-
-        public Stat times(long constant){
-            return super.times(constant).toStat();
-        }
-
-        public Stat times(int constant){
-            return super.times(constant).toStat();
-        }
-
-        public Stat times(short constant){
-            return super.times(constant).toStat();
-        }
-
-        public Stat times(byte constant){
-            return super.times(constant).toStat();
-        }
-
-        public Stat times(BigDecimal constant){
-            return super.times(constant).toStat();
-        }
-
-        public Stat times(BigInteger constant){
-            return super.times(constant).toStat();
-        }
-
-        public Stat times(Complex constant){
-            return super.times(constant).toStat();
-        }
-
-        public Stat times(Phasor constant){
-            return super.times(constant).toStat();
-        }
-
-        public Stat times(Double constant){
-            return super.times(constant).toStat();
-        }
-
-        public Stat times(Float constant){
-            return super.times(constant).toStat();
-        }
-
-        public Stat times(Long constant){
-            return super.times(constant).toStat();
-        }
-
-        public Stat times(Integer constant){
-            return super.times(constant).toStat();
-        }
-
-        public Stat times(Short constant){
-            return super.times(constant).toStat();
-        }
-
-        public Stat times(Byte constant){
-            return super.times(constant).toStat();
-        }
-
-        public Stat over(double constant){
-            return super.over(constant).toStat();
-        }
-
-        public Stat over(float constant){
-            return super.over(constant).toStat();
-        }
-
-        public Stat over(long constant){
-            return super.over(constant).toStat();
-        }
-
-        public Stat over(int constant){
-            return super.over(constant).toStat();
-        }
-
-        public Stat over(short constant){
-            return super.over(constant).toStat();
-        }
-
-        public Stat over(byte constant){
-            return super.over(constant).toStat();
-        }
-
-        public Stat over(BigDecimal constant){
-            return super.over(constant).toStat();
-        }
-
-        public Stat over(BigInteger constant){
-            return super.over(constant).toStat();
-        }
-
-        public Stat over(Complex constant){
-            return super.over(constant).toStat();
-        }
-
-        public Stat over(Phasor constant){
-            return super.over(constant).toStat();
-        }
-
-        public Stat over(Double constant){
-            return super.over(constant).toStat();
-        }
-
-        public Stat over(Float constant){
-            return super.over(constant).toStat();
-        }
-
-        public Stat over(Long constant){
-            return super.over(constant).toStat();
-        }
-
-        public Stat over(Integer constant){
-            return super.over(constant).toStat();
-        }
-
-        public Stat over(Short constant){
-            return super.over(constant).toStat();
-        }
-
-        public Stat over(Byte constant){
-            return super.over(constant).toStat();
-        }
-
-
-        public Stat pow(double n){
-            return super.pow(n).toStat();
-        }
-
-        public Stat pow(float n){
-            return super.pow(n).toStat();
-        }
-
-        public Stat pow(long n){
-            return super.pow(n).toStat();
-        }
-
-        public Stat pow(int n){
-            return super.pow(n).toStat();
-        }
-
-        public Stat pow(short n){
-            return super.pow(n).toStat();
-        }
-
-        public Stat pow(byte n){
-            return super.pow(n).toStat();
-        }
-
-        public Stat pow(Double n){
-            return super.pow(n).toStat();
-        }
-
-        public Stat pow(Float n){
-            return super.pow(n).toStat();
-        }
-
-        public Stat pow(Long n){
-            return super.pow(n).toStat();
-        }
-
-        public Stat pow(Integer n){
-            return super.pow(n).toStat();
-        }
-
-        public Stat pow(Short n){
-            return super.pow(n).toStat();
-        }
-
-        public Stat pow(Byte n){
-            return super.pow(n).toStat();
-        }
-
-        public Stat pow(BigInteger n){
-            return super.pow(n).toStat();
-        }
-
-        public Stat pow(BigDecimal n){
-            return super.pow(n).toStat();
-        }
-
-        public Stat sqrt(){
-            return super.sqrt().toStat();
-        }
-
-        public Stat oneOverSqrt(){
-            return super.oneOverSqrt().toStat();
-        }
-
-        public Stat abs(){
-            return super.abs().toStat();
-        }
-
-        public Stat log(){
-            return super.log().toStat();
-        }
-
-        public Stat log2(){
-            return super.log2().toStat();
-        }
-
-        public Stat log10(){
-            return super.log10().toStat();
-        }
-
-        public Stat antilog10(){
-            return super.antilog10().toStat();
-        }
-
-        public Stat xLog2x(){
-            return super.xLog2x().toStat();
-        }
-
-        public Stat xLogEx(){
-            return super.xLogEx().toStat();
-        }
-
-        public Stat xLog10x(){
-            return super.xLog10x().toStat();
-        }
-
-        public Stat minusxLog2x(){
-            return super.minusxLog2x().toStat();
-        }
-
-        public Stat minusxLogEx(){
-            return super.minusxLogEx().toStat();
-        }
-
-        public Stat minusxLog10x(){
-            return super.minusxLog10x().toStat();
-        }
-
-        public Stat exp(){
-            return super.exp().toStat();
-        }
-
-        public Stat invert(){
-            return super.invert().toStat();
-        }
-
-        public Stat negate(){
-            return super.negate().toStat();
-        }
-
-        public Stat sort(){
-            return super.sort().toStat();
-        }
-
-        public Stat sort(int[] indices){
-            return super.sort(indices).toStat();
-        }
-
-        public Stat reverse(){
-            return super.reverse().toStat();
-        }
-
-        public Stat concatenate(Stat xx){
-            return super.concatenate(xx).toStat();
-        }
-
-        public Stat concatenate(ArrayMaths xx){
-            return super.concatenate(xx).toStat();
-        }
-
-        public Stat concatenate(double[] xx){
-            return super.concatenate(xx).toStat();
-        }
-
-        public Stat concatenate(float[] xx){
-            return super.concatenate(xx).toStat();
-        }
-
-        public Stat concatenate(long[] xx){
-            return super.concatenate(xx).toStat();
-        }
-
-        public Stat concatenate(int[] xx){
-            return super.concatenate(xx).toStat();
-        }
-
-        public Stat concatenate(short[] xx){
-            return super.concatenate(xx).toStat();
-        }
-
-        public Stat concatenate(byte[] xx){
-            return super.concatenate(xx).toStat();
-        }
-
-        public Stat concatenate(char[] xx){
-            return super.concatenate(xx).toStat();
-        }
-
-        public Stat concatenate(Double[] xx){
-            return super.concatenate(xx).toStat();
-        }
-
-        public Stat concatenate(Float[] xx){
-            return super.concatenate(xx).toStat();
-        }
-
-        public Stat concatenate(Long[] xx){
-            return super.concatenate(xx).toStat();
-        }
-
-        public Stat concatenate(Integer[] xx){
-            return super.concatenate(xx).toStat();
-        }
-
-        public Stat concatenate(Short[] xx){
-            return super.concatenate(xx).toStat();
-        }
-
-        public Stat concatenate(Byte[] xx){
-            return super.concatenate(xx).toStat();
-        }
-
-        public Stat concatenate(Character[] xx){
-            return super.concatenate(xx).toStat();
-        }
-
-        public Stat concatenate(String[] xx){
-            return super.concatenate(xx).toStat();
-        }
-
-        public Stat concatenate(BigDecimal[] xx){
-            return super.concatenate(xx).toStat();
-        }
-
-        public Stat concatenate(BigInteger[] xx){
-            return super.concatenate(xx).toStat();
-        }
-
-        public Stat concatenate(Complex[] xx){
-            return super.concatenate(xx).toStat();
-        }
-
-        public Stat concatenate(Phasor[] xx){
-            return super.concatenate(xx).toStat();
-        }
-
-        public Stat truncate(int n){
-            return super.truncate(n).toStat();
-        }
-
-        public Stat floor(){
-            return super.floor().toStat();
-        }
-
-        public Stat ceil(){
-            return super.ceil().toStat();
-        }
-
-        public Stat rint(){
-            return super.rint().toStat();
-        }
-
-        public Stat randomize(){
-            return super.randomize().toStat();
-        }
-
-        public Stat randomise(){
-            return super.randomize().toStat();
-        }
-
+    
 }
+
 
 // CLASSES NEEDED BY METHODS IN THE ABOVE Stat CLASS
 

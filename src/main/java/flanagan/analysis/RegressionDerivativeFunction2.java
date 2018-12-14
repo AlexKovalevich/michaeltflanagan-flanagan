@@ -1,13 +1,14 @@
 /*
-*   Interface RegressionFunction2
+*   Interface RegressionDerivativeFunction2
 *
-*   The sum of squares function, for multiple y array option, needed
-*   by the non-linear regression methods in the class Regression
-*   is supplied by means of this interface, RegressionFunction2
+*   The first and second derivatives of the regression function with respect to a
+*   pair of parameters, for multiple y array option, needed by the statistical 
+*   analysis methods called by the non-linear regression methods in the class 
+*   Regression is supplied by means of this interface, RegressionDerivativeFunction
 *
 *   WRITTEN BY: Dr Michael Thomas Flanagan
 *
-*   DATE:	    October 2008
+*   DATE:	    January 2012
 *   MODIFIED:
 *
 *   DOCUMENTATION:
@@ -42,9 +43,14 @@
 package flanagan.analysis;
 
 // Interface for Regression class
-// Derivative function for non-linear regression methods
-// i = index of parameter a in dy/da[i]
-// k = index of the data x value
+// First and second derivative function for non-linear regression methods
+// p = parameter values
+// x = independent variable values
+// i = index of parameter p[i] in df/dp[i] and d2f/dp[i]dp[j]
+// j = index of parameter p[j] in df/dp[j] and d2f/dp[i]dp[j]
+// k = index of the independent variable
+// returns df/dp[i], df/dp[j] and d2f/dp[i]dp[j] as an array of double, f = the function of x and p
+
 public interface RegressionDerivativeFunction2{
-    double function(double[]param, double[] x, int i, int k);
+    double[] function(double[]p, double[] x,  int i, int j, int k);
 }

@@ -9,7 +9,8 @@
 *   WRITTEN BY: Dr Michael Thomas Flanagan
 *
 *   DATE:       October 2008
-*   AMENDED:    17-18 October 2008, 4 January 2010, 13 November 2010, 29-30 November 2010, 4 December 2010, 18 January 2011
+*   AMENDED:    17-18 October 2008, 4 January 2010, 13 November 2010, 29-30 November 2010, 4 December 2010, 
+*               18 January 2011, 17-18 July 2011, 12 December 2011, 22 August 2012
 *
 *   DOCUMENTATION:
 *   See Michael Thomas Flanagan's Java library on-line web pages:
@@ -45,7 +46,6 @@ import java.awt.*;
 
 import flanagan.math.*;
 import flanagan.io.*;
-import flanagan.analysis.*;
 import flanagan.plot.*;
 
 
@@ -55,8 +55,18 @@ public class PCA extends Scores{
     private Matrix dataMinusMeans = null;                               // data with row means subtracted as row per item as a Matrix
     private Matrix dataMinusMeansTranspose = null;                      // data with row means subtracted as row per item as a Matrix
     private Matrix covarianceMatrix = null;                             // variance-covariance Matrix
-    private Matrix correlationMatrix = null;                            // variance-covariance Matrix
+    private Matrix correlationMatrix = null;                            // correlation Matrix
+    private Matrix partialCorrelationMatrix = null;                     // partial correlation Matrix
 
+    private double kmo = 0.0;                                           // overall Kaiser-Meyer-Olkin (KMO) statistic
+    private double[] itemKMOs = null;                                   // individual item KMOs
+    private double chiSquareBartlett = 0.0;                             // Bartlett test of sphericity chi square
+    private int dfBartlett = 0;                                         // Bartlett test of sphericity degrees of freedom
+    private double probBartlett = 0.0;                                  // Bartlett test of sphericity chi square probability
+    private double sign10Bartlett = 0.0;                                // Bartlett test of sphericity chi square value at 10% significance level
+    private double sign05Bartlett = 0.0;                                // Bartlett test of sphericity chi square value at 5% significance level
+    private boolean bartlettDone = false;                               // = true when Bartlett test succesfully performe
+    
     private double[] eigenValues = null;                                // eigenvalues
     private double[] orderedEigenValues = null;                         // eigenvalues sorted into a descending order
     private int[] eigenValueIndices = null;                             // indices of the eigenvalues before sorting into a descending order
@@ -231,8 +241,81 @@ public class PCA extends Scores{
                     }
                 }
             }
-
             this.correlationMatrix = new Matrix(corr);
+
+            // Partial Correlation matrix
+            double[][] cofactors = new double[this.nItems][this.nItems];
+            double[][] partialCorr = new double[this.nItems][this.nItems];
+            for(int i=0; i<this.nItems; i++){
+                for(int j=0; j<this.nItems; j++){
+                    cofactors[i][j] = this.correlationMatrix.cofactor(i,j);
+                }
+            }
+            for(int i=0; i<this.nItems; i++){
+                for(int j=0; j<this.nItems; j++){
+                    if(cofactors[i][j]==0.0 && cofactors[i][i]==0.0 && cofactors[j][j]==0.0){
+                        partialCorr[i][j] = 1.0;
+                    }
+                    else{
+                        if(i==j){
+                            partialCorr[i][j] = 1.0;
+                        }
+                        else{
+                            partialCorr[i][j] = -cofactors[i][j]/Math.sqrt(cofactors[i][i]*cofactors[j][j]);
+                        }
+                    }
+                }
+            }
+            this.partialCorrelationMatrix = new Matrix(partialCorr);
+
+            // KMO (Kaiser-Meyer-Olkin) Statistic
+            // Overall KMO
+            double kmor = 0.0;
+            double kmoa = 0.0;
+            for(int i=0; i<this.nItems; i++){
+                for(int j=0; j<this.nItems; j++){
+                    if(i!=j){
+                        kmor += corr[i][j]*corr[i][j];
+                        kmoa += partialCorr[i][j]*partialCorr[i][j];
+                    }
+                }
+            }
+            if(kmor==0.0 && kmoa==0.0){
+                this.kmo = 0.5;
+            }
+            else{
+                this.kmo = kmor/(kmor + kmoa);
+            }
+
+            // individual item KMOs
+            this.itemKMOs = new double[this.nItems];
+            for(int i=0; i<this.nItems; i++){
+                kmor = 0.0;
+                kmoa = 0.0;
+                for(int j=0; j<this.nItems; j++){
+                    if(i!=j){
+                        kmor += corr[i][j]*corr[i][j];
+                        kmoa += partialCorr[i][j]*partialCorr[i][j];
+                    }
+                }
+                if(kmor==0.0 && kmoa==0.0){
+                    this.itemKMOs[i] = 0.5;
+                }
+                else{
+                    this.itemKMOs[i] = kmor/(kmor + kmoa);
+                }
+            }
+
+            // Bartlett Sphericity Test
+            double correlationDeterminant = this.correlationMatrix.determinant();
+            this.chiSquareBartlett = -((double)(this.nPersons -1) - ((double)(2*this.nItems + 5)/(double)6))*Math.log(Math.abs(correlationDeterminant));
+            if(this.chiSquareBartlett>=0.0){
+                this.dfBartlett = this.nItems*(this.nItems - 1)/2;
+                this.probBartlett = 1.0 - Stat.chiSquareCDF(this.chiSquareBartlett, this.dfBartlett);
+                this.sign10Bartlett = Stat.chiSquareInverseCDF(this.dfBartlett, 0.9);
+                this.sign05Bartlett = Stat.chiSquareInverseCDF(this.dfBartlett, 0.95);
+                this.bartlettDone = true;
+                }
 
             // Choose matrix
             Matrix forEigen = null;
@@ -992,6 +1075,12 @@ public class PCA extends Scores{
         return this.correlationMatrix;
     }
 
+    // Return partial correlation matrix
+    public Matrix partialCorrelationMatrix(){
+        if(!this.pcaDone)this.pca();
+        return this.partialCorrelationMatrix;
+    }
+
     // Return Monte Carlo means
     public double[] monteCarloMeans(){
         if(!this.monteCarloDone)this.monteCarlo();
@@ -1057,6 +1146,54 @@ public class PCA extends Scores{
         if(!this.monteCarloDone)this.monteCarlo();
         return this.percentileCrossover;
     }
+
+    // Return overall Kaiser-Meyer-Olkin (KMO) statistic
+    public double overallKMO(){
+        if(!this.pcaDone)this.pca();
+        return this.kmo;
+    }
+
+    public double kmo(){
+        if(!this.pcaDone)this.pca();
+        return this.kmo;
+    }
+
+    // Return all individual item Kaiser-Meyer-Olkin (KMO) statistics
+    public double[] itemKMOs(){
+        if(!this.pcaDone)this.pca();
+        return this.itemKMOs;
+    }
+
+    // Return Bartlett Sphericity Test Chi Square
+    public double chiSquareBartlett(){
+        if(!this.pcaDone)this.pca();
+        if(this.bartlettDone){
+            return this.chiSquareBartlett;
+        }
+        else{
+            System.out.println("Method chiSquareBartlett(): Bartlett Sphericity Test nor performed, NaN returned");
+            return Double.NaN;
+        }
+    }
+
+    // Return Bartlett Sphericity Test degrees of freedom
+    public int dofBartlett(){
+        if(!this.pcaDone)this.pca();
+        return this.dfBartlett;
+    }
+
+    // Return Bartlett Sphericity Test degrees of freedom
+    public double probabilityBartlett(){
+        if(!this.pcaDone)this.pca();
+        if(this.bartlettDone){
+            return this.probBartlett;
+        }
+        else{
+            System.out.println("Method probabilityBartlett(): Bartlett Sphericity Test nor performed, NaN returned");
+            return Double.NaN;
+        }
+    }
+
 
     // OUTPUT THE ANALYSIS
 
@@ -1376,13 +1513,13 @@ public class PCA extends Scores{
 
         // Correlation Matrix
         fout.println("CORRELATION MATRIX");
-        fout.println("Original component indices in parenthesis");
+        fout.println("Original item indices in parenthesis");
         fout.println();
         fout.print(" ", field1);
-        fout.print("component", field1);
+        fout.print("item", field1);
         for(int i=0; i<this.nItems; i++)fout.print((this.eigenValueIndices[i]+1) + " (" + (i+1) + ")", field2);
         fout.println();
-        fout.println("component");
+        fout.println("item");
         for(int i=0; i<this.nItems; i++){
             fout.print((this.eigenValueIndices[i]+1) + " (" + (i+1) + ")", 2*field1);
             for(int j=0; j<this.nItems; j++)fout.print(Fmath.truncate(this.correlationMatrix.getElement(j,i), this.trunc), field2);
@@ -1390,15 +1527,31 @@ public class PCA extends Scores{
         }
         fout.println();
 
-        // Covariance Matrix
-        fout.println("COVARIANCE MATRIX");
-        fout.println("Original component indices in parenthesis");
+        // Partial Correlation Matrix
+        fout.println("PARTIAL CORRELATION MATRIX");
+        fout.println("Original item indices in parenthesis");
         fout.println();
         fout.print(" ", field1);
-        fout.print("component", field1);
+        fout.print("item", field1);
         for(int i=0; i<this.nItems; i++)fout.print((this.eigenValueIndices[i]+1) + " (" + (i+1) + ")", field2);
         fout.println();
-        fout.println("component");
+        fout.println("item");
+        for(int i=0; i<this.nItems; i++){
+            fout.print((this.eigenValueIndices[i]+1) + " (" + (i+1) + ")", 2*field1);
+            for(int j=0; j<this.nItems; j++)fout.print(Fmath.truncate(this.partialCorrelationMatrix.getElement(j,i), this.trunc), field2);
+            fout.println();
+        }
+        fout.println();
+
+        // Covariance Matrix
+        fout.println("COVARIANCE MATRIX");
+        fout.println("Original item indices in parenthesis");
+        fout.println();
+        fout.print(" ", field1);
+        fout.print("item", field1);
+        for(int i=0; i<this.nItems; i++)fout.print((this.eigenValueIndices[i]+1) + " (" + (i+1) + ")", field2);
+        fout.println();
+        fout.println("item");
         for(int i=0; i<this.nItems; i++){
             fout.print((this.eigenValueIndices[i]+1) + " (" + (i+1) + ")", 2*field1);
             for(int j=0; j<this.nItems; j++)fout.print(Fmath.truncate(this.covarianceMatrix.getElement(j,i), this.trunc), field2);
@@ -1495,6 +1648,28 @@ public class PCA extends Scores{
         }
         fout.println();
 
+        fout.println("Kaiser-Meyer-Olkin (KMO) statistic");
+        fout.println("   Overall KMO statistic =   " + Fmath.truncate(this.kmo, this.trunc));
+        fout.println("   KMO values for each item");
+        fout.print("   ");
+        for(int i=0; i<nItems; i++)fout.print(i+1, field2);
+        fout.println();
+        fout.print("   ");
+        for(int i=0; i<nItems; i++)fout.print(Fmath.truncate(this.itemKMOs[i], this.trunc), field2);
+        fout.println();
+        fout.println();
+        
+        if(this.bartlettDone){
+            fout.println();
+            fout.println("Bartlett Sphericity Test");
+            fout.println("   Chi-Square =         " + Fmath.truncate(this.chiSquareBartlett, this.trunc));
+            fout.println("   Probability value =  " + Fmath.truncate(this.probBartlett, this.trunc));
+            fout.println("   Degrees of freedom = " + this.dfBartlett);
+            fout.println("   Chi-Square value at the 5% significance level  (p = 0.05) = " + Fmath.truncate(this.sign05Bartlett, this.trunc));
+            fout.println("   Chi-Square value at the 10% significance level (p = 0.10) = " + Fmath.truncate(this.sign10Bartlett, this.trunc));
+            fout.println();
+        }
+        
         fout.println("DATA USED");
         fout.println("Number of items = " + this.nItems);
         fout.println("Number of persons = " + this.nPersons);
@@ -1731,13 +1906,13 @@ public class PCA extends Scores{
 
         // Correlation Matrix
         fout.println("CORRELATION MATRIX");
-        fout.println("Original component indices in parenthesis");
+        fout.println("Original item indices in parenthesis");
         fout.println();
         fout.printtab(" ");
-        fout.printtab("component");
+        fout.printtab("item");
         for(int i=0; i<this.nItems; i++)fout.printtab((this.eigenValueIndices[i]+1) + " (" + (i+1) + ")");
         fout.println();
-        fout.println("component");
+        fout.println("item");
         for(int i=0; i<this.nItems; i++){
             fout.printtab((this.eigenValueIndices[i]+1) + " (" + (i+1) + ")");
             fout.printtab(" ");
@@ -1746,15 +1921,32 @@ public class PCA extends Scores{
         }
         fout.println();
 
-        // Covariance Matrix
-        fout.println("COVARIANCE MATRIX");
-        fout.println("Original component indices in parenthesis");
+        // Partial Correlation Matrix
+        fout.println("PARTIAL CORRELATION MATRIX");
+        fout.println("Original item indices in parenthesis");
         fout.println();
         fout.printtab(" ");
-        fout.printtab("component");
+        fout.printtab("item");
         for(int i=0; i<this.nItems; i++)fout.printtab((this.eigenValueIndices[i]+1) + " (" + (i+1) + ")");
         fout.println();
-        fout.println("component");
+        fout.println("item");
+        for(int i=0; i<this.nItems; i++){
+            fout.printtab((this.eigenValueIndices[i]+1) + " (" + (i+1) + ")");
+            fout.printtab(" ");
+            for(int j=0; j<this.nItems; j++)fout.printtab(Fmath.truncate(this.partialCorrelationMatrix.getElement(j,i), this.trunc));
+            fout.println();
+        }
+        fout.println();
+
+        // Covariance Matrix
+        fout.println("COVARIANCE MATRIX");
+        fout.println("Original item indices in parenthesis");
+        fout.println();
+        fout.printtab(" ");
+        fout.printtab("item");
+        for(int i=0; i<this.nItems; i++)fout.printtab((this.eigenValueIndices[i]+1) + " (" + (i+1) + ")");
+        fout.println();
+        fout.println("item");
         for(int i=0; i<this.nItems; i++){
             fout.printtab((this.eigenValueIndices[i]+1) + " (" + (i+1) + ")");
             fout.printtab(" ");
@@ -1852,10 +2044,26 @@ public class PCA extends Scores{
             fout.printtab(Fmath.truncate(rotatedProportionPercentage[i], this.trunc));
             fout.println(Fmath.truncate(rotatedCumulativePercentage[i], this.trunc));
         }
-
-
         fout.println();
 
+        fout.println("Kaiser-Meyer-Olkin (KMO) statistic");
+        fout.println("   Overall KMO statistic =   " + Fmath.truncate(this.kmo, this.trunc));
+        fout.println("   KMO values for each item");
+        fout.printtab("   ");
+        for(int i=0; i<nItems; i++)fout.printtab(i+1);
+        fout.println();
+        fout.printtab("   ");
+        for(int i=0; i<nItems; i++)fout.printtab(Fmath.truncate(this.itemKMOs[i], this.trunc));
+        fout.println();
+
+        fout.println();
+        fout.println("Bartlett Sphericity Test");
+        fout.println("   Chi-Square =         " + Fmath.truncate(this.chiSquareBartlett, this.trunc));
+        fout.println("   Probability value =  " + Fmath.truncate(this.probBartlett, this.trunc));
+        fout.println("   Degrees of freedom = " + this.dfBartlett);
+        fout.println("   Chi-Square value at the 5% significance level  (p = 0.05) = " + Fmath.truncate(this.sign05Bartlett, this.trunc));
+        fout.println("   Chi-Square value at the 10% significance level (p = 0.10) = " + Fmath.truncate(this.sign10Bartlett, this.trunc));
+        fout.println();
 
         fout.println("DATA USED");
         fout.println("Number of items = " + this.nItems);

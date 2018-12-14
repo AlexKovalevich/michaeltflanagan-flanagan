@@ -37,7 +37,7 @@ import flanagan.io.*;
 import flanagan.complex.Complex;
 import flanagan.complex.ComplexErrorProp;
 import flanagan.analysis.ErrorProp;
-import flanagan.analysis.Regression;
+import flanagan.analysis.Regression; 
 import flanagan.analysis.RegressionFunction2;
 import flanagan.analysis.Stat;
 import flanagan.math.Fmath;

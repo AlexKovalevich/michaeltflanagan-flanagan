@@ -11,14 +11,14 @@
 *
 *       Created: August 2002
 *       Updated: 17 April 2003, 3 May 2005, 2 July 2006, 27 February 2008, 6 April 2008, 7 November 2009
-*                24 May 2010
+*                24 May 2010, 13-15 April 2012
 *
 *       DOCUMENTATION:
 *       See Michael T Flanagan's JAVA library on-line web page:
 *       http://www.ee.ucl.ac.uk/~mflanaga/java/PropIntDeriv.html
 *       http://www.ee.ucl.ac.uk/~mflanaga/java/
 *
-*   Copyright (c) 2002 - 2010  Michael Thomas Flanagan
+*   Copyright (c) 2002 - 2012  Michael Thomas Flanagan
 *
 *   PERMISSION TO COPY:
 *   Permission to use, copy and modify this software and its documentation for
@@ -32,8 +32,8 @@
 *
 ***************************************************************************************/
 
-
 package flanagan.control;
+
 import flanagan.complex.Complex;
 import flanagan.complex.ComplexPoly;
 import flanagan.plot.Plot;
@@ -41,11 +41,11 @@ import flanagan.plot.PlotGraph;
 
 
 public class PropIntDeriv extends BlackBox{
-    private double kp = 1.0D;           //  proportional gain
-    private double ti = Double.POSITIVE_INFINITY; //  integral time constant
-    private double ki = 0.0D;           //  integral gain
-    private double td = 0.0D;           //  derivative time constant
-    private double kd = 0.0D;           //  derivative gain
+    private double kp = 1.0D;                       //  proportional gain
+    private double ti = Double.POSITIVE_INFINITY;   //  integral time constant
+    private double ki = 0.0D;                       //  integral gain
+    private double td = 0.0D;                       //  derivative time constant
+    private double kd = 0.0D;                       //  derivative gain
 
     // Constructor - unit proportional gain, zero integral gain, zero derivative gain
     public PropIntDeriv(){
@@ -55,12 +55,32 @@ public class PropIntDeriv extends BlackBox{
         super.setZtransformMethod(1);
         super.addDeadTimeExtras();
     }
+    
+    // Constructor - uproportional gain kp, integral gai ki, derivative gain kd
+    public PropIntDeriv(double kp, double ki, double kd){
+        super("PropIntDeriv");
+        this.kp=kp;
+        this.ki=ki;
+        this.ti=this.kp/ki;
+        this.kd=kd;
+        this.td=this.kp/kd;
+        super.setSnumer(new ComplexPoly(kp, ki, kd));
+        super.setSdenom(new ComplexPoly(0.0D, 1.0D));
+        super.setZtransformMethod(1);
+        super.addDeadTimeExtras();
+    }
 
     // Set the proportional gain
     public void setKp(double kp){
         this.kp=kp;
-        super.sNumer.resetCoeff(1, new Complex(kp, 0.0));
-        super.calcPolesZerosS();
+        if(super.sNumerDeg!=2){
+            super.setSnumer(new ComplexPoly(this.ki, this.kp, this.kd));
+            super.setSdenom(new ComplexPoly(0.0D, 1.0D));
+        }
+        else{
+            super.sNumer.resetCoeff(1, new Complex(kp, 0.0));
+            this.calcPolesZerosS();
+        }
         super.addDeadTimeExtras();
     }
 
@@ -68,8 +88,14 @@ public class PropIntDeriv extends BlackBox{
     public void setKi(double ki){
         this.ki=ki;
         this.ti=this.kp/ki;
-        super.sNumer.resetCoeff(0, new Complex(ki, 0.0));
-        super.calcPolesZerosS();
+        if(super.sNumerDeg!=2 || this.sDenomDeg!=1){
+            super.setSnumer(new ComplexPoly(this.ki, this.kp, this.kd));
+            super.setSdenom(new ComplexPoly(0.0D, 1.0D));
+        }
+        else{
+            super.sNumer.resetCoeff(0, new Complex(ki, 0.0));
+            this.calcPolesZerosS();
+        }
         super.addDeadTimeExtras();
     }
 
@@ -77,8 +103,14 @@ public class PropIntDeriv extends BlackBox{
     public void setTi(double ti){
         this.ti=ti;
         this.ki=this.kp/ti;
-        super.sNumer.resetCoeff(0, new Complex(ki, 0.0));
-        super.calcPolesZerosS();
+        if(super.sNumerDeg!=2 || this.sDenomDeg!=1){
+            super.setSnumer(new ComplexPoly(this.ki, this.kp, this.kd));
+            super.setSdenom(new ComplexPoly(0.0D, 1.0D));
+        }
+        else{
+            super.sNumer.resetCoeff(0, new Complex(ki, 0.0));
+            this.calcPolesZerosS();
+        }
         super.addDeadTimeExtras();
     }
 
@@ -86,8 +118,14 @@ public class PropIntDeriv extends BlackBox{
     public void setKd(double kd){
         this.kd=kd;
         this.td=kd/this.kp;
-        super.sNumer.resetCoeff(2, new Complex(kd, 0.0));
-        super.calcPolesZerosS();
+        if(super.sNumerDeg!=2 || this.sDenomDeg!=1){
+            super.setSnumer(new ComplexPoly(this.ki, this.kp, this.kd));
+            super.setSdenom(new ComplexPoly(0.0D, 1.0D));
+        }
+        else{
+            super.sNumer.resetCoeff(2, new Complex(kd, 0.0));
+            this.calcPolesZerosS();
+        }
         super.addDeadTimeExtras();
     }
 
@@ -95,8 +133,14 @@ public class PropIntDeriv extends BlackBox{
     public void setTd(double td){
         this.td=td;
         this.kd=this.kp*td;
-        super.sNumer.resetCoeff(2, new Complex(kd, 0.0));
-        super.calcPolesZerosS();
+        if(super.sNumerDeg!=2 || this.sDenomDeg!=1){
+            super.setSnumer(new ComplexPoly(this.ki, this.kp, this.kd));
+            super.setSdenom(new ComplexPoly(0.0D, 1.0D));
+        }
+        else{
+            super.sNumer.resetCoeff(2, new Complex(kd, 0.0));
+            this.calcPolesZerosS();
+        }
         super.addDeadTimeExtras();
     }
 

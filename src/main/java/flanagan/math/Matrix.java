@@ -9,19 +9,21 @@
 *
 *   WRITTEN BY: Dr Michael Thomas Flanagan
 *
-*   DATE:	    June 2002
-*   UPDATES:    21 April 2004, 16 February 2006, 31 March 2006, 22 April 2006, 1 July 2007, 17 July 2007
-*               18 August 2007, 7 October 2007, 27 February 2008, 7 April 2008, 5 July 2008, 6-15 September 2008
-*               7-14 October 2008, 16 February 2009, 16 June 2009, 15 October 2009, 4-5 November 2009
-*               12 January 2010, 19 February 2010, 14 November 2010, 12 January 2011, 20 January 2011
-*
+*   DATE:	June 2002
+*   UPDATES:    21 April 2004, 16 February 2006, 31 March 2006, 22 April 2006,
+*               1 July 2007, 17 July 2007, 18 August 2007, 7 October 2007
+*               27 February 2008, 7 April 2008, 5 July 2008, 6-15 September 2008, 7-14 October 2008, 
+*               16 February 2009, 16 June 2009, 15 October 2009, 4-5 November 2009
+*               12 January 2010, 19 February 2010, 14 November 2010
+*               12 January 2011, 20 January 2011, 14-16 July 2011
+*               7 April 2012, 26 June 2012
 *
 *   DOCUMENTATION:
 *   See Michael Thomas Flanagan's Java library on-line web page:
 *   http://www.ee.ucl.ac.uk/~mflanaga/java/Matrix.html
 *   http://www.ee.ucl.ac.uk/~mflanaga/java/
 *
-*   Copyright (c) 2002 - 2011  Michael Thomas Flanagan
+*   Copyright (c) 2002 - 2012  Michael Thomas Flanagan
 *   PERMISSION TO COPY:
 *
 * Permission to use, copy and modify this software and its documentation for NON-COMMERCIAL purposes is granted, without fee,
@@ -57,8 +59,20 @@ public class Matrix{
 
 	    private int numberOfRows = 0;                   // number of rows
 	    private int numberOfColumns = 0;                // number of columns
-	    private double matrix[][] = null; 	            // 2-D  Matrix
-	    private double hessenberg[][] = null; 	        // 2-D  Hessenberg equivalent
+	    private double[][] matrix = null; 	            // 2-D  Matrix as double
+            private String[][] matrixS = null;	            // 2-D  Matrix as String
+            private int entryType = -1;                     // Entry type
+                                                            // = 0; double
+                                                            // = 1; float
+                                                            // = 2; long
+                                                            // = 3; int
+                                                            // = 4; BigDecimal
+                                                            // = 5; BigInteger
+                                                            // = x; 
+                                                            // = y;
+            private boolean numericalCheck = true;          // = false if no numerical data entered, e.g. only non-numerical strings entered
+            
+	    private double[][] hessenberg = null; 	    // 2-D  Hessenberg equivalent
 	    private boolean hessenbergDone = false;         // = true when Hessenberg matrix calculated
 	    private int permutationIndex[] = null;          // row permutation index
 	    private double rowSwapIndex = 1.0D;             // row swap index
@@ -80,197 +94,317 @@ public class Matrix{
 
 	    // CONSTRUCTORS
 	    // Construct a numberOfRows x numberOfColumns matrix of variables all equal to zero
-        public Matrix(int numberOfRows, int numberOfColumns){
+            public Matrix(int numberOfRows, int numberOfColumns){
 		    this.numberOfRows = numberOfRows;
 		    this.numberOfColumns = numberOfColumns;
-	        this.matrix = new double[numberOfRows][numberOfColumns];
-		    this.permutationIndex = new int[numberOfRows];
-            for(int i=0;i<numberOfRows;i++)this.permutationIndex[i]=i;
-        }
+                    this.matrix = new double[this.numberOfRows][this.numberOfColumns];
+                    this.matrixS = new String[this.numberOfRows][this.numberOfColumns];
+		    this.permutationIndex = new int[this.numberOfRows];
+                    this.entryType = 0;
+                    for(int i=0;i<this.numberOfRows;i++){
+                        this.permutationIndex[i]=i;
+                        for(int j=0;j<this.numberOfColumns;j++)this.matrixS[i][j] = "0.0";
+                    }
+                    this.eigenDone = false;
+                    this.hessenbergDone = false;
+            }
 
 	    // Construct a numberOfRows x numberOfColumns matrix of variables all equal to the number const
-        public Matrix(int numberOfRows, int numberOfColumns, double constant){
+            public Matrix(int numberOfRows, int numberOfColumns, double constant){
 		    this.numberOfRows = numberOfRows;
 		    this.numberOfColumns = numberOfColumns;
-		    this.matrix = new double[numberOfRows][numberOfColumns];
-            for(int i=0;i<numberOfRows;i++){
-            		for(int j=0;j<numberOfColumns;j++)this.matrix[i][j]=constant;
-		    }
-		    this.permutationIndex = new int[numberOfRows];
-            for(int i=0;i<numberOfRows;i++)this.permutationIndex[i]=i;
+		    this.matrix = new double[this.numberOfRows][this.numberOfColumns];
+                    this.matrixS = new String[this.numberOfRows][this.numberOfColumns];
+                    this.permutationIndex = new int[this.numberOfRows];
+                    this.entryType = 0;
+                    for(int i=0;i<this.numberOfRows;i++){
+                        this.permutationIndex[i]=i;
+                        for(int j=0;j<this.numberOfColumns;j++){
+                            this.matrix[i][j] = constant;
+                            this.matrixS[i][j] = Conv.convert_double_to_String(constant);
+                        }
+                    }
+                    this.eigenDone = false;
+                    this.hessenbergDone = false;
  	    }
 
 	    // Construct matrix with a copy of an existing numberOfRows x numberOfColumns 2-D array of variables
-        public Matrix(double[][] twoD){
+            public Matrix(double[][] twoD){
 		    this.numberOfRows = twoD.length;
 		    this.numberOfColumns = twoD[0].length;
 		    this.matrix = new double[this.numberOfRows][this.numberOfColumns];
-		    for(int i=0; i<numberOfRows; i++){
-		    	if(twoD[i].length!=numberOfColumns)throw new IllegalArgumentException("All rows must have the same length");
-    			for(int j=0; j<numberOfColumns; j++){
-    		    		this.matrix[i][j]=twoD[i][j];
-    			}
-		    }
-		    this.permutationIndex = new int[numberOfRows];
-            for(int i=0;i<numberOfRows;i++)this.permutationIndex[i]=i;
+                    this.matrixS = new String[this.numberOfRows][this.numberOfColumns];
+                    this.permutationIndex = new int[this.numberOfRows];
+                    this.entryType = 0;
+                    for(int i=0;i<this.numberOfRows;i++){
+                        this.permutationIndex[i]=i;
+                        for(int j=0;j<this.numberOfColumns;j++){
+                            this.matrix[i][j] = twoD[i][j];
+                            this.matrixS[i][j] = Conv.convert_double_to_String(twoD[i][j]);
+                        }
+                    }
+                    this.eigenDone = false;
+                    this.hessenbergDone = false;
    	    }
 
    	    // Construct matrix with a copy of an existing numberOfRows x numberOfColumns 2-D array of floats
-        public Matrix(float[][] twoD){
+            public Matrix(float[][] twoD){
 		    this.numberOfRows = twoD.length;
 		    this.numberOfColumns = twoD[0].length;
-		    for(int i=1; i<numberOfRows; i++){
-		        if(twoD[i].length!=numberOfColumns)throw new IllegalArgumentException("All rows must have the same length");
+		    for(int i=1; i<this.numberOfRows; i++){
+		        if(twoD[i].length!=this.numberOfColumns)throw new IllegalArgumentException("All rows must have the same length");
 		    }
 		    this.matrix = new double[this.numberOfRows][this.numberOfColumns];
-		    for(int i=0; i<numberOfRows; i++){
-		        for(int j=0; j<numberOfColumns; j++){
-		            this.matrix[i][j] = (double)twoD[i][j];
-		        }
-		    }
-		    this.permutationIndex = new int[numberOfRows];
-            for(int i=0;i<numberOfRows;i++)this.permutationIndex[i]=i;
+                    this.matrixS = new String[this.numberOfRows][this.numberOfColumns];
+                    this.permutationIndex = new int[this.numberOfRows];
+                    this.entryType = 1;
+                    for(int i=0;i<this.numberOfRows;i++){
+                        this.permutationIndex[i]=i;
+                        for(int j=0;j<this.numberOfColumns;j++){
+                            this.matrix[i][j] = (double)twoD[i][j];
+                            this.matrixS[i][j] = Conv.convert_float_to_String(twoD[i][j]);
+                        }
+                    }
+                    this.eigenDone = false;
+                    this.hessenbergDone = false;
    	    }
 
    	    // Construct matrix with a copy of an existing numberOfRows x numberOfColumns 2-D array of longs
-        public Matrix(long[][] twoD){
+            public Matrix(long[][] twoD){
 		    this.numberOfRows = twoD.length;
 		    this.numberOfColumns = twoD[0].length;
-		    for(int i=1; i<numberOfRows; i++){
-		        if(twoD[i].length!=numberOfColumns)throw new IllegalArgumentException("All rows must have the same length");
+		    for(int i=1; i<this.numberOfRows; i++){
+		        if(twoD[i].length!=this.numberOfColumns)throw new IllegalArgumentException("All rows must have the same length");
 		    }
 		    this.matrix = new double[this.numberOfRows][this.numberOfColumns];
-		    for(int i=0; i<numberOfRows; i++){
-		        for(int j=0; j<numberOfColumns; j++){
-		            this.matrix[i][j] = (double)twoD[i][j];
-		        }
-		    }
-		    this.permutationIndex = new int[numberOfRows];
-            for(int i=0;i<numberOfRows;i++)this.permutationIndex[i]=i;
+                    this.matrixS = new String[this.numberOfRows][this.numberOfColumns];
+                    this.permutationIndex = new int[this.numberOfRows];
+                    this.entryType = 2;
+                    for(int i=0;i<this.numberOfRows;i++){
+                        this.permutationIndex[i]=i;
+                        for(int j=0;j<this.numberOfColumns;j++){
+                            this.matrix[i][j] = (double)twoD[i][j];
+                            this.matrixS[i][j] = Conv.convert_long_to_String(twoD[i][j]);
+                        }
+                    }
+                    this.eigenDone = false;
+                    this.hessenbergDone = false;
    	    }
 
 
    	    // Construct matrix with a copy of an existing numberOfRows x numberOfColumns 2-D array of ints
-        public Matrix(int[][] twoD){
+            public Matrix(int[][] twoD){
+		    this.numberOfRows = twoD.length;
+		    this.numberOfColumns = twoD[0].length;
+		    for(int i=1; i<this.numberOfRows; i++){
+		        if(twoD[i].length!=numberOfColumns)throw new IllegalArgumentException("All rows must have the same length");
+		    }
+		    this.matrix = new double[this.numberOfRows][this.numberOfColumns];
+                    this.matrixS = new String[this.numberOfRows][this.numberOfColumns];
+                    this.permutationIndex = new int[this.numberOfRows];
+                    this.entryType = 3;
+                    for(int i=0;i<numberOfRows;i++){
+                        this.permutationIndex[i]=i;
+                        for(int j=0;j<this.numberOfColumns;j++){
+                            this.matrix[i][j] = (double)twoD[i][j];
+                            this.matrixS[i][j] = Conv.convert_long_to_String(twoD[i][j]);
+                        }
+                    }
+                    this.eigenDone = false;
+                    this.hessenbergDone = false;
+   	    }
+            
+            // Construct matrix with a copy of an existing numberOfRows x numberOfColumns 2-D array of char
+            public Matrix(char[][] twoD){
+		    this.numberOfRows = twoD.length;
+		    this.numberOfColumns = twoD[0].length;
+		    for(int i=1; i<this.numberOfRows; i++){
+		        if(twoD[i].length!=numberOfColumns)throw new IllegalArgumentException("All rows must have the same length");
+		    }
+		    this.matrix = new double[this.numberOfRows][this.numberOfColumns];
+                    this.matrixS = new String[this.numberOfRows][this.numberOfColumns];
+                    this.permutationIndex = new int[this.numberOfRows];
+                    this.entryType = 3;
+                    for(int i=0;i<this.numberOfRows;i++){
+                        this.permutationIndex[i]=i;
+                        for(int j=0;j<this.numberOfColumns;j++){
+                            this.matrix[i][j] = Conv.convert_char_to_double(twoD[i][j]);
+                            this.matrixS[i][j] = Conv.convert_char_to_String(twoD[i][j]);
+                        }
+                    }
+                    this.eigenDone = false;
+                    this.hessenbergDone = false;
+   	    }
+            
+            // Construct matrix with a copy of an existing numberOfRows x numberOfColumns 2-D array of char
+            public Matrix(String[][] twoD){
 		    this.numberOfRows = twoD.length;
 		    this.numberOfColumns = twoD[0].length;
 		    for(int i=1; i<numberOfRows; i++){
 		        if(twoD[i].length!=numberOfColumns)throw new IllegalArgumentException("All rows must have the same length");
 		    }
 		    this.matrix = new double[this.numberOfRows][this.numberOfColumns];
-		    for(int i=0; i<numberOfRows; i++){
-		        for(int j=0; j<numberOfColumns; j++){
-		            this.matrix[i][j] = (double)twoD[i][j];
-		        }
-		    }
-		    this.permutationIndex = new int[numberOfRows];
-            for(int i=0;i<numberOfRows;i++)this.permutationIndex[i]=i;
+                    this.matrixS = new String[this.numberOfRows][this.numberOfColumns];
+                    this.permutationIndex = new int[this.numberOfRows];
+                    this.entryType = 3;
+                    this.numericalCheck = false;
+                    for(int i=0;i<this.numberOfRows;i++){
+                        this.permutationIndex[i]=i;
+                        for(int j=0;j<numberOfColumns;j++){
+                            this.matrixS[i][j] = twoD[i][j];
+                        }
+                    }
+                    for(int i=0;i<this.numberOfRows;i++){
+                        for(int j=0;j<this.numberOfColumns;j++){
+                            try{
+                                this.matrix[i][j] = Conv.convert_String_to_double(twoD[i][j]);
+                            }catch(NumberFormatException err){
+                                System.out.println(err);
+                                System.out.println("The entered String array does not contain numerical values - none of the numerical methods in this class are available.");
+                                this.numericalCheck = false;
+                                break;
+                            }
+                        }
+                        if(!this.numericalCheck)break;
+                    }
+                    this.eigenDone = false;
+                    this.hessenbergDone = false;
    	    }
 
 	    // Construct matrix with a copy of an existing numberOfRows 1-D array of ArrayMaths
-        public Matrix(ArrayMaths[] twoD){
+            public Matrix(ArrayMaths[] twoD){
 		    this.numberOfRows = twoD.length;
 		    this.numberOfColumns = twoD[0].length();
 		    this.matrix = new double[this.numberOfRows][this.numberOfColumns];
-		    for(int i=0; i<numberOfRows; i++){
+                    this.matrixS = new String[this.numberOfRows][this.numberOfColumns];
+		    for(int i=0; i<this.numberOfRows; i++){
 		        double[] arrayh = (twoD[i].copy()).array();
-		        if(arrayh.length!=numberOfColumns)throw new IllegalArgumentException("All rows must have the same length");
+		        if(arrayh.length!=this.numberOfColumns)throw new IllegalArgumentException("All rows must have the same length");
+                        String[] arrayhs = (twoD[i].copy()).array_as_String();
 		        this.matrix[i] = arrayh;
+                        this.matrixS[i] = arrayhs;
 		    }
-		    this.permutationIndex = new int[numberOfRows];
-            for(int i=0;i<numberOfRows;i++)this.permutationIndex[i]=i;
+		    this.permutationIndex = new int[this.numberOfRows];
+                    for(int i=0;i<this.numberOfRows;i++)this.permutationIndex[i]=i;
+                    this.eigenDone = false;
+                    this.hessenbergDone = false;
    	    }
 
    	    // Construct matrix with a copy of an existing numberOfRows 1-D array of ArrayLists<Object>
-        public Matrix(ArrayList<Object>[] twoDal){
-            this.numberOfRows = twoDal.length;
-            ArrayMaths[] twoD = new ArrayMaths[this.numberOfRows];
-            for(int i=0; i<this.numberOfRows; i++){
-                twoD[i] = new ArrayMaths(twoDal[i]);
-            }
+            public Matrix(ArrayList<Object>[] twoDal){
+                    this.numberOfRows = twoDal.length;
+                    ArrayMaths[] twoD = new ArrayMaths[this.numberOfRows];
+                    for(int i=0; i<this.numberOfRows; i++){
+                        twoD[i] = new ArrayMaths(twoDal[i]);
+                    }
 
 		    this.numberOfColumns = twoD[0].length();
 		    this.matrix = new double[this.numberOfRows][this.numberOfColumns];
+                    this.matrixS = new String[this.numberOfRows][this.numberOfColumns];
 		    for(int i=0; i<numberOfRows; i++){
 		        double[] arrayh = (twoD[i].copy()).array();
-		        if(arrayh.length!=numberOfColumns)throw new IllegalArgumentException("All rows must have the same length");
+		        if(arrayh.length!=this.numberOfColumns)throw new IllegalArgumentException("All rows must have the same length");
 		        this.matrix[i] = arrayh;
 		    }
-		    this.permutationIndex = new int[numberOfRows];
-            for(int i=0;i<numberOfRows;i++)this.permutationIndex[i]=i;
+		    this.permutationIndex = new int[this.numberOfRows];
+                    for(int i=0;i<this.numberOfRows;i++)this.permutationIndex[i]=i;
+                    this.eigenDone = false;
+                    this.hessenbergDone = false;
    	    }
 
-        // Construct matrix with a copy of an existing numberOfRows 1-D array of Vector<Object>
-        public Matrix(Vector<Object>[] twoDv){
-            this.numberOfRows = twoDv.length;
-            ArrayMaths[] twoD = new ArrayMaths[this.numberOfRows];
-            for(int i=0; i<this.numberOfRows; i++){
-                twoD[i] = new ArrayMaths(twoDv[i]);
-            }
+            // Construct matrix with a copy of an existing numberOfRows 1-D array of Vector<Object>
+            public Matrix(Vector<Object>[] twoDv){
+                    this.numberOfRows = twoDv.length;
+                    ArrayMaths[] twoD = new ArrayMaths[this.numberOfRows];
+                    for(int i=0; i<this.numberOfRows; i++){
+                        twoD[i] = new ArrayMaths(twoDv[i]);
+                    }
 
 		    this.numberOfColumns = twoD[0].length();
 		    this.matrix = new double[this.numberOfRows][this.numberOfColumns];
+                    this.matrixS = new String[this.numberOfRows][this.numberOfColumns];
 		    for(int i=0; i<numberOfRows; i++){
 		        double[] arrayh = (twoD[i].copy()).array();
-		        if(arrayh.length!=numberOfColumns)throw new IllegalArgumentException("All rows must have the same length");
+		        if(arrayh.length!=this.numberOfColumns)throw new IllegalArgumentException("All rows must have the same length");
 		        this.matrix[i] = arrayh;
 		    }
-		    this.permutationIndex = new int[numberOfRows];
-            for(int i=0;i<numberOfRows;i++)this.permutationIndex[i]=i;
+		    this.permutationIndex = new int[this.numberOfRows];
+                    for(int i=0;i<this.numberOfRows;i++)this.permutationIndex[i]=i;
+                    this.eigenDone = false;
+                    this.hessenbergDone = false;
    	    }
 
    	    // Construct matrix with a copy of an existing numberOfRows x numberOfColumns 2-D array of BigDecimals
-        public Matrix(BigDecimal[][] twoD){
+            public Matrix(BigDecimal[][] twoD){
 		    this.numberOfRows = twoD.length;
 		    this.numberOfColumns = twoD[0].length;
 		    for(int i=1; i<numberOfRows; i++){
 		        if(twoD[i].length!=numberOfColumns)throw new IllegalArgumentException("All rows must have the same length");
 		    }
 		    this.matrix = new double[this.numberOfRows][this.numberOfColumns];
-		    for(int i=0; i<numberOfRows; i++){
-		        for(int j=0; j<numberOfColumns; j++){
-		            this.matrix[i][j] = twoD[i][j].doubleValue();
-		        }
-		    }
-		    this.permutationIndex = new int[numberOfRows];
-            for(int i=0;i<numberOfRows;i++)this.permutationIndex[i]=i;
+                    this.matrixS = new String[numberOfRows][numberOfColumns];
+                    this.permutationIndex = new int[numberOfRows];
+                    this.entryType = 4;
+                    for(int i=0;i<numberOfRows;i++){
+                        this.permutationIndex[i]=i;
+                        for(int j=0;j<numberOfColumns;j++){
+                            this.matrix[i][j] = twoD[i][j].doubleValue();
+                            this.matrixS[i][j] = Conv.convert_BigDecimal_to_String(twoD[i][j]);
+                        }
+                    }
+                    this.eigenDone = false;
+                    this.hessenbergDone = false;
    	    }
 
    	    // Construct matrix with a copy of an existing numberOfRows x numberOfColumns 2-D array of BigIntegers
-        public Matrix(BigInteger[][] twoD){
+            public Matrix(BigInteger[][] twoD){
 		    this.numberOfRows = twoD.length;
 		    this.numberOfColumns = twoD[0].length;
 		    for(int i=1; i<numberOfRows; i++){
 		        if(twoD[i].length!=numberOfColumns)throw new IllegalArgumentException("All rows must have the same length");
 		    }
 		    this.matrix = new double[this.numberOfRows][this.numberOfColumns];
-		    for(int i=0; i<numberOfRows; i++){
-		        for(int j=0; j<numberOfColumns; j++){
-		            this.matrix[i][j] = twoD[i][j].doubleValue();
-		        }
-		    }
-		    this.permutationIndex = new int[numberOfRows];
-            for(int i=0;i<numberOfRows;i++)this.permutationIndex[i]=i;
+                    this.matrixS = new String[numberOfRows][numberOfColumns];
+                    this.entryType = 5;
+                    this.permutationIndex = new int[this.numberOfRows];
+                    for(int i=0;i<numberOfRows;i++){
+                        this.permutationIndex[i]=i;
+                        for(int j=0;j<numberOfColumns;j++){
+                            this.matrix[i][j] = twoD[i][j].doubleValue();
+                            this.matrixS[i][j] = Conv.convert_BigInteger_to_String(twoD[i][j]);
+                        }
+                    }
+                    this.eigenDone = false;
+                    this.hessenbergDone = false;
    	    }
 
 
-
 	    // Construct matrix with a copy of the 2D matrix and permutation index of an existing Matrix bb.
-        public Matrix(Matrix bb){
+            public Matrix(Matrix bb){
 		    this.numberOfRows = bb.numberOfRows;
 		    this.numberOfColumns = bb.numberOfColumns;
 		    this.matrix = new double[this.numberOfRows][this.numberOfColumns];
+                    this.matrixS = new String[numberOfRows][numberOfColumns];
+                    this.entryType = bb.getEntryType();
 		    for(int i=0; i<numberOfRows; i++){
 		        for(int j=0; j<numberOfColumns; j++){
 		            this.matrix[i][j] = bb.matrix[i][j];
+                            this.matrixS[i][j] = bb.matrixS[i][j];
 		        }
 		    }
 		    this.permutationIndex = Conv.copy(bb.permutationIndex);
-            this.rowSwapIndex = bb.rowSwapIndex;
+                    this.rowSwapIndex = bb.rowSwapIndex;
+                    this.eigenDone = false;
+                    this.hessenbergDone = false;
  	    }
 
 
         // METHODS
+        // GET ENTRY TYPE
+        private int getEntryType(){
+            return this.entryType;
+        }
+        
         // SET VALUES
         // reset value of tiny used to replace zero in LU decompostions
         // If not set: 1e-100 used
@@ -288,6 +422,8 @@ public class Matrix{
     		    		this.matrix[i][j]=aarray[i][j];
     			}
 		    }
+                    this.eigenDone = false;
+                    this.hessenbergDone = false;
 	    }
 
     	// Set an individual array element
@@ -296,13 +432,15 @@ public class Matrix{
     	// aa = value of the element
     	public void setElement(int i, int j, double aa){
         	this.matrix[i][j]=aa;
+                this.eigenDone = false;
+                this.hessenbergDone = false;
     	}
 
 
     	// Set a sub-matrix starting with row index i, column index j
     	public void setSubMatrix(int i, int j, double[][] subMatrix){
-    	    int k = subMatrix.length;
-    	    int l = subMatrix[0].length;
+                int k = subMatrix.length;
+                int l = subMatrix[0].length;
         	if(i+k-1>=this.numberOfRows)throw new IllegalArgumentException("Sub-matrix position is outside the row bounds of this Matrix");
         	if(j+l-1>=this.numberOfColumns)throw new IllegalArgumentException("Sub-matrix position is outside the column bounds of this Matrix");
 
@@ -310,12 +448,14 @@ public class Matrix{
         	int n = 0;
         	for(int p=0; p<k; p++){
         	    n = 0;
-                for(int q=0; q<l; q++){
-                    this.matrix[i+p][j+q] = subMatrix[m][n];
-                    n++;
-                }
-                m++;
+                    for(int q=0; q<l; q++){
+                        this.matrix[i+p][j+q] = subMatrix[m][n];
+                        n++;
+                    }
+                    m++;
         	}
+                this.eigenDone = false;
+                this.hessenbergDone = false;
     	}
 
     	// Set a sub-matrix starting with row index i, column index j
@@ -323,6 +463,8 @@ public class Matrix{
     	// See setSubMatrix above - this method has been retained for compatibility purposes
     	public void setSubMatrix(int i, int j, int k, int l, double[][] subMatrix){
     	    this.setSubMatrix(i, j, subMatrix);
+            this.eigenDone = false;
+            this.hessenbergDone = false;
     	}
 
     	// Set a sub-matrix
@@ -336,6 +478,8 @@ public class Matrix{
                 		this.matrix[row[p]][col[q]] = subMatrix[p][q];
             		}
         	}
+                this.eigenDone = false;
+                this.hessenbergDone = false;
     	}
 
     	// Get the value of matrixCheck
@@ -1274,8 +1418,45 @@ public class Matrix{
     	    int n = mat.length;
         	for(int i=0; i<n; i++)if(n!=mat[i].length)throw new IllegalArgumentException("Matrix is not square");
             Matrix amat = new Matrix(mat);
-            return amat.determinant();
+            return amat.logDeterminant();
     	}
+
+    	// COFACTOR
+    	// Returns the Matrix of all cofactors
+    	public Matrix cofactor(){
+    	    double[][] cof = new double[this.numberOfRows][this.numberOfColumns];
+    	    for(int i=0; i<this.numberOfRows; i++){
+    	        for(int j=0; j<this.numberOfColumns; j++){
+    	            cof[i][j] = this.cofactor(i,j);
+    	        }
+    	    }
+    	    return new Matrix(cof);
+    	}
+
+    	// Returns the ii,jjth cofactor
+    	public double cofactor(int ii, int jj){
+    	    if(ii<0 || ii>=this.numberOfRows)throw new IllegalArgumentException("The entered row index, " + ii + " must lie between 0 and " + (this.numberOfRows-1) + " inclusive");
+    	    if(jj<0 || jj>=this.numberOfColumns)throw new IllegalArgumentException("The entered column index, " + jj + " must lie between 0 and " + (this.numberOfColumns-1) + " inclusive");
+    	    int[] rowi = new int[this.numberOfRows - 1];
+    	    int[] colj = new int[this.numberOfColumns - 1];
+    	    int kk = 0;
+    	    for(int i=0; i<this.numberOfRows; i++){
+    	        if(i!=ii){
+    	            rowi[kk]=i;
+    	            kk++;
+    	        }
+    	    }
+    	    kk = 0;
+    	    for(int j=0; j<this.numberOfColumns; j++){
+    	        if(j!=jj){
+    	            colj[kk]=j;
+    	            kk++;
+    	        }
+    	    }
+            Matrix aa = this.getSubMatrix(rowi, colj);
+            double aadet = aa.determinant();
+            return aadet*Math.pow(-1.0, (ii+jj));
+        }
 
     	// REDUCED ROW ECHELON FORM
         public Matrix reducedRowEchelonForm(){

@@ -5,8 +5,9 @@
 *
 *   WRITTEN BY: Dr Michael Thomas Flanagan
 *
-*   DATE:    July - August 2008
-*   AMENDED: 2-12 September 2008, 15-19 December 2010, 2-5 January 2011, 20 January 2011
+*   DATE:       July - August 2008
+*   AMENDED:    2-12 September 2008, 15-19 December 2010, 
+*               2-5 January 2011, 20 January 2011, 7 December 2011
 *
 *   DOCUMENTATION:
 *   See Michael Thomas Flanagan's Java library on-line web page:
@@ -180,7 +181,8 @@ public class BoxCox{
     }
 
     public BoxCox(ArrayMaths amoriginalData){
-        this.sod = amoriginalData.toStat();
+        double[] ama = amoriginalData.array();
+        this.sod = new Stat(ama);
     }
 
     public BoxCox(ArrayList<Object> originalData){
@@ -217,7 +219,7 @@ public class BoxCox{
         this.originalExcessKurtosis = this.sod.excessKurtosis();
 
         // Store original data sorted into ascending order
-        Stat sorted = this.sod.sort();
+        ArrayMaths sorted = this.sod.sort();
         this.sortedOriginalData = sorted.array();
         this.originalIndices = sorted.originalIndices();
 
@@ -268,7 +270,7 @@ public class BoxCox{
 
         // Shift data to ensure all values are greater than zero
         this.lambdaTwo = 0.1*this.standardizedOriginalRange - this.standardizedOriginalMinimum;
-        Stat st1 = this.sod.plus(this.lambdaTwo);
+        ArrayMaths st1 = this.sod.plus(this.lambdaTwo);
         this.shiftedStandardizedOriginalData = st1.getArray_as_double();
 
         // Create an instance of the BoxCoxFunction for Maximization
@@ -333,7 +335,7 @@ public class BoxCox{
         this.standardizedTransformedDataStatistics(this.standardizedTransformedData);
 
         // Obtain the intercept and gradient of the Gaussian probabilty plot
-        Stat st4 = new Stat(this.standardizedTransformedData);
+        ArrayMaths st4 = new ArrayMaths(this.standardizedTransformedData);
         st4 = st4.sort();
         double[] ordered = st4.array();
         Regression reg = new Regression(this.gaussianOrderMedians, ordered);
@@ -483,7 +485,7 @@ public class BoxCox{
         this.standardizedTransformedDataStatistics(this.standardizedTransformedData);
 
         // Obtain the intercept and gradient of the Gaussian probabilty plot
-        Stat st4 = new Stat(this.standardizedTransformedData);
+        ArrayMaths st4 = new ArrayMaths(this.standardizedTransformedData);
         st4 = st4.sort();
         double[] ordered = st4.array();
         Regression reg = new Regression(this.gaussianOrderMedians, ordered);
@@ -984,7 +986,8 @@ class BoxCoxFunction implements MaximizationFunction{
     public double[] yTransform = null;
     public double[] gaussianOrderMedians = null;
     public Regression reg = null;
-    public Stat am = null;
+    public ArrayMaths am = null;
+    public Stat st = null;
 
     public double function( double[] x){
 
@@ -997,10 +1000,13 @@ class BoxCoxFunction implements MaximizationFunction{
         }
 
         // Sort transformed array into ascending order
-        am = new Stat(yTransform);
+        am = new ArrayMaths(yTransform);
         am = am.sort();
+        double[] yTrans = am.array();
 
-        yTransform = am.standardize();
+        // Standardize
+        st = new Stat(yTrans);
+        yTransform = st.standardize();
 
         // Calculate and return probability plot correlation coefficient
         reg = new Regression(gaussianOrderMedians, yTransform);

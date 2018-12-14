@@ -8,14 +8,16 @@
 *   DATE:       April 2008
 *   AMENDED:    22-30 May 2008, 4 June 2008, 27-28 June 2007, 2-4 July 2008,
 *               8 July 2008, 25 July 2008, 4 September 2008, 13 December 2008
-*               29 September 2010, 29 November 2010, 18 January 2011
+*               29 September 2010, 29 November 2010, 
+*               18 January 2011, 30 November 2011, 10 December 2011
+*               30-31 July 2012, 17 September 2012
 *
 *   DOCUMENTATION:
 *   See Michael Thomas Flanagan's Java library on-line web pages:
 *   http://www.ee.ucl.ac.uk/~mflanaga/java/
 *   http://www.ee.ucl.ac.uk/~mflanaga/java/ArrayMaths.html
 *
-*   Copyright (c) 2008 - 2011
+*   Copyright (c) 2008 - 2012
 *
 *   PERMISSION TO COPY:
 *
@@ -1196,230 +1198,7 @@ public class ArrayMaths{
         return am;
     }
 
-    // Copy to a new instance of Stat
-    public Stat statCopy(){
-
-        Stat am = new Stat();
-        am.length = this.length;
-        am.maxIndex = this.maxIndex;
-        am.minIndex = this.minIndex;
-        am.sumDone = this.sumDone;
-        am.productDone = this.productDone;
-        am.sumlongToDouble = this.sumlongToDouble;
-        am.productlongToDouble = this.productlongToDouble;
-        am.type = this.type;
-        if(this.originalTypes==null){
-            am.originalTypes = null;
-        }
-        else{
-            am.originalTypes = Conv.copy(this.originalTypes);
-        }
-        if(this.sortedIndices==null){
-            am.sortedIndices = null;
-        }
-        else{
-            am.sortedIndices = Conv.copy(this.sortedIndices);
-        }
-        am.suppressMessages = this.suppressMessages;
-        am.minmax = new ArrayList<Object>();
-        if(this.minmax.size()!=0){
-            switch(this.type){
-            case 0:
-            case 1: double dd = ((Double)this.minmax.get(0)).doubleValue();
-                    am.minmax.add(new Double(dd));
-                    dd = ((Double)this.minmax.get(1)).doubleValue();
-                    am.minmax.add(new Double(dd));
-                    break;
-            case 4:
-            case 5: long ll= ((Long)this.minmax.get(0)).longValue();
-                    am.minmax.add(new Double(ll));
-                    ll = ((Long)this.minmax.get(1)).longValue();
-                    am.minmax.add(new Long(ll));
-                    break;
-            case 2:
-            case 3: float ff = ((Float)this.minmax.get(0)).floatValue();
-                    am.minmax.add(new Double(ff));
-                    ff = ((Float)this.minmax.get(1)).floatValue();
-                    am.minmax.add(new Double(ff));
-                    break;
-            case 6:
-            case 7: int ii = ((Integer)this.minmax.get(0)).intValue();
-                    am.minmax.add(new Integer(ii));
-                    ii = ((Double)this.minmax.get(1)).intValue();
-                    am.minmax.add(new Integer(ii));
-                    break;
-            case 8:
-            case 9: short ss = ((Short)this.minmax.get(0)).shortValue();
-                    am.minmax.add(new Short(ss));
-                    ss = ((Double)this.minmax.get(1)).shortValue();
-                    am.minmax.add(new Short((ss)));
-                    break;
-            case 10:
-            case 11: byte bb = ((Byte)this.minmax.get(0)).byteValue();
-                    am.minmax.add(new Byte(bb));
-                    ss = ((Byte)this.minmax.get(1)).byteValue();
-                    am.minmax.add(new Byte((bb)));
-                    break;
-            case 12: BigDecimal bd = (BigDecimal)this.minmax.get(0);
-                    am.minmax.add(bd);
-                    bd = (BigDecimal)this.minmax.get(1);
-                    am.minmax.add(bd);
-                    bd = null;
-                    break;
-            case 13: BigInteger bi = (BigInteger)this.minmax.get(0);
-                    am.minmax.add(bi);
-                    bi = (BigInteger)this.minmax.get(1);
-                    am.minmax.add(bi);
-                    bi = null;
-                    break;
-            case 16:
-            case 17: int iii = ((Integer)this.minmax.get(0)).intValue();
-                    am.minmax.add(new Integer(iii));
-                    iii = ((Double)this.minmax.get(1)).intValue();
-                    am.minmax.add(new Integer(iii));
-                    break;
-            }
-        }
-
-        am.summ = new ArrayList<Object>();
-        if(this.summ.size()!=0){
-            switch(this.type){
-            case 0:
-            case 1:
-            case 2:
-            case 3:
-            case 18: double dd = ((Double)summ.get(0)).doubleValue();
-                    am.summ.add(new Double(dd));
-                    break;
-            case 4:
-            case 5:
-            case 6:
-            case 7:
-            case 8:
-            case 9:
-            case 10:
-            case 11:
-            case 16:
-            case 17: if(this.sumlongToDouble){
-                        double dd2 = ((Double)summ.get(0)).doubleValue();
-                        am.summ.add(new Double(dd2));
-                    }
-                    else{
-                        long ll = ((Long)summ.get(0)).longValue();
-                        am.summ.add(new Long(ll));
-                    }
-                    break;
-            case 12: BigDecimal bd = (BigDecimal)summ.get(0);
-                    am.summ.add(bd);
-                    break;
-            case 13:  BigInteger bi = (BigInteger)summ.get(0);
-                    am.summ.add(bi);
-                    break;
-            case 14:  Complex cc = (Complex)summ.get(0);
-                    am.summ.add(cc);
-                    break;
-            case 15:  Phasor pp = (Phasor)summ.get(0);
-                    am.summ.add(pp);
-                    break;
-            default: throw new IllegalArgumentException("Data type not identified by this method");
-            }
-        }
-
-        am.productt = new ArrayList<Object>();
-        if(this.productt.size()!=0){
-            switch(this.type){
-            case 0:
-            case 1:
-            case 2:
-            case 3:
-            case 18: double dd = ((Double)productt.get(0)).doubleValue();
-                    am.productt.add(new Double(dd));
-                    break;
-            case 4:
-            case 5:
-            case 6:
-            case 7:
-            case 8:
-            case 9:
-            case 10:
-            case 11:
-            case 16:
-            case 17: if(this.sumlongToDouble){
-                        double dd2 = ((Double)productt.get(0)).doubleValue();
-                        am.productt.add(new Double(dd2));
-                    }
-                    else{
-                        long ll = ((Long)productt.get(0)).longValue();
-                        am.productt.add(new Long(ll));
-                    }
-                    break;
-            case 12: BigDecimal bd = (BigDecimal)productt.get(0);
-                    am.productt.add(bd);
-                    break;
-            case 13:  BigInteger bi = (BigInteger)productt.get(0);
-                    am.productt.add(bi);
-                    break;
-            case 14:  Complex cc = (Complex)productt.get(0);
-                    am.productt.add(cc);
-                    break;
-            case 15:  Phasor pp = (Phasor)productt.get(0);
-                    am.productt.add(pp);
-                    break;
-            default: throw new IllegalArgumentException("Data type not identified by this method");
-            }
-        }
-
-
-        switch(this.type){
-            case 0:
-            case 1: double[] dd = Conv.copy(this.getArray_as_double());
-                    for(int i=0; i<this.length; i++)am.array.add(new Double(dd[i]));
-                    break;
-            case 2:
-            case 3: float[] ff = Conv.copy(this.getArray_as_float());
-                    for(int i=0; i<this.length; i++)am.array.add(new Float(ff[i]));
-                    break;
-            case 4:
-            case 5: long[] ll = Conv.copy(this.getArray_as_long());
-                    for(int i=0; i<this.length; i++)am.array.add(new Long(ll[i]));
-                    break;
-            case 6:
-            case 7: int[] ii = Conv.copy(this.getArray_as_int());
-                    for(int i=0; i<this.length; i++)am.array.add(new Integer(ii[i]));
-                    break;
-            case 8:
-            case 9: short[] ss = Conv.copy(this.getArray_as_short());
-                    for(int i=0; i<this.length; i++)am.array.add(new Short(ss[i]));
-                    break;
-            case 10:
-            case 11: byte[] bb = Conv.copy(this.getArray_as_byte());
-                    for(int i=0; i<this.length; i++)am.array.add(new Byte(bb[i]));
-                    break;
-            case 12: BigDecimal[] bd = Conv.copy(this.getArray_as_BigDecimal());
-                    for(int i=0; i<this.length; i++)am.array.add(bd[i]);
-                    break;
-            case 13: BigInteger[] bi = Conv.copy(this.getArray_as_BigInteger());
-                    for(int i=0; i<this.length; i++)am.array.add(bi[i]);
-                    break;
-            case 14: Complex[] ccc = this.getArray_as_Complex();
-                    for(int i=0; i<this.length; i++)am.array.add(ccc[i].copy());
-                    break;
-            case 15: Phasor[] ppp = this.getArray_as_Phasor();
-                    for(int i=0; i<this.length; i++)am.array.add(ppp[i].copy());
-                    break;
-            case 16:
-            case 17: char[] cc = Conv.copy(this.getArray_as_char());
-                    for(int i=0; i<this.length; i++)am.array.add(new Character(cc[i]));
-                    break;
-            case 18: String[] sss = Conv.copy(this.getArray_as_String());
-                    for(int i=0; i<this.length; i++)am.array.add(sss[i]);
-                    break;
-        }
-
-        return am;
-    }
-
-
+    
     // POSSIBLE LOSS OF PRECISION MESSAGE
     // Suppress possible loss of precisicion messages in an instance of ArrayMaths
     public void suppressMessages(){
@@ -5146,6 +4925,7 @@ public class ArrayMaths{
         ArrayMaths am = new ArrayMaths();
         am.array = new ArrayList<Object>();
         am.length = this.length;
+        String constantS = Double.toString(constant);
 
         switch(this.type){
             case 0:
@@ -5173,7 +4953,7 @@ public class ArrayMaths{
                     break;
             case 13: for(int i=0; i<this.length; i++){
                         BigInteger hold1 = (BigInteger)(this.array.get(i));
-                        BigDecimal hold2 = (new BigDecimal(hold1)).add(new BigDecimal(constant));
+                        BigDecimal hold2 = (new BigDecimal(hold1)).add(new BigDecimal(constantS));
                         am.array.add(hold2);
                         hold1 = null;
                         hold2 = null;
@@ -5186,7 +4966,7 @@ public class ArrayMaths{
             case 15: for(int i=0; i<this.length; i++)am.array.add(((Phasor)this.array.get(i)).plus(new Complex(constant)));
                     am.type = this.type;
                     break;
-            case 18: for(int i=0; i<this.length; i++)am.array.add((String)this.array.get(i)+ Double.toString(constant));
+            case 18: for(int i=0; i<this.length; i++)am.array.add((String)this.array.get(i)+ constantS);
                     am.type = this.type;
                     break;
             case 16: throw new IllegalArgumentException("a double or float cannot be added to a char");
@@ -9536,11 +9316,12 @@ public class ArrayMaths{
             am.array.add(this.array.get(this.length - i - 1));
             am.sortedIndices[i] = this.length - i - 1;
         }
-        int[] maxminIndices = new int[2];
-        ArrayMaths.findMinMax(am.getArray_as_Object(), am.minmax, maxminIndices, am.typeName, am.type);
-        am.maxIndex = maxminIndices[0];
-        am.minIndex = maxminIndices[1];
-
+        if(this.type!=18){
+            int[] maxminIndices = new int[2];
+            ArrayMaths.findMinMax(am.getArray_as_Object(), am.minmax, maxminIndices, am.typeName, am.type);
+            am.maxIndex = maxminIndices[0];
+            am.minIndex = maxminIndices[1];
+        }
         return am;
     }
 
@@ -12189,9 +11970,30 @@ public class ArrayMaths{
         return this.randomize();
     }
 
-
+    // SORT
+        
     // sort the array into ascending order
+    // saves sorted array in this instance
+    public void ascendingSortEquals(){
+        this.sortEquals();
+    }
+    
+    public void sortEquals(){
+        ArrayMaths am = this.sort();
+        this.array = am.array;
+        this.sortedIndices = am.sortedIndices;
+        this.maxIndex = am.maxIndex;
+        this.minIndex = am.minIndex;   
+    }    
+    
+    // sort the array into ascending order
+    // returns sorted array in a new ArrayMaths
+    public ArrayMaths ascendingSort(){
+         return this.sort();
+    }
+     
     public ArrayMaths sort(){
+
         if(this.suppressMessages)Conv.suppressMessages();
         ArrayMaths am = new ArrayMaths();
         am.array = new ArrayList<Object>();
@@ -12271,29 +12073,85 @@ public class ArrayMaths{
         Conv.restoreMessages();
         return am;
     }
+    
+    // sort the array into descending order
+    // saves sorted array in this instance
+    public void descendingSortEquals(){
+        ArrayMaths am = this.descendingSort();
+        this.array = am.array;
+        this.sortedIndices = am.sortedIndices;
+        this.maxIndex = am.maxIndex;
+        this.minIndex = am.minIndex;   
+    }    
+    
+    // sort the array into ascending order
+    // returns sorted array in a new ArrayMaths
+    public ArrayMaths descendingSort(){
+         ArrayMaths am = this.sort();
+         int[] ind = (int[])am.sortedIndices.clone();
+         am.reverse();
+         int n = ind.length;
+         for(int i=0; i<n; i++)am.sortedIndices[i] = ind[n-i-1];
+         return am;
+    }
 
     // alphabetic sort
+    // a to z alphabetic sort
     public ArrayList<Object> alphabeticSort(String[] words){
+        return alphabeticAtoZsort(words);
+    }
 
-        this.words = words;
+    public ArrayList<Object> alphabeticAtoZsort(String[] words){
+        
         this.nWords = words.length;
-
+        this.words = new String[this.nWords];
         this.sortedWords = new String[this.nWords];
-        for(int i=0; i<this.nWords; i++)this.sortedWords[i] = this.words[i];
+        for(int i=0; i<this.nWords; i++){
+            this.words[i] = words[i];
+            this.sortedWords[i] = this.words[i];
+        }
 
-        this.alphabeticSortIndices(words);
+        this.alphabeticSortIndices(this.words);
 
         for(int i=0; i<this.nWords; i++){
-            sortedWords[i] = words[wordOrder[i]];
+            this.sortedWords[i] = this.words[this.wordOrder[i]];
         }
 
         ArrayList<Object> ret = new ArrayList<Object>();
-        ret.add(sortedWords);
-        ret.add(wordOrder);
+        ret.add(this.sortedWords);
+        ret.add(this.wordOrder);
 
         return ret;
     }
+    
+    // z to a alphabetic sort
+    public ArrayList<Object> alphabeticZtoASort(String[] words){
+               
+        this.nWords = words.length;
+        this.words = new String[this.nWords];
+        this.sortedWords = new String[this.nWords];
+        int[] hold = new int[this.nWords];
+        for(int i=0; i<this.nWords; i++){
+            this.words[i] = words[i];
+            this.sortedWords[i] = this.words[i];
+        }
 
+        this.alphabeticSortIndices(this.words);
+
+        for(int i=0; i<this.nWords; i++){
+            this.sortedWords[this.nWords-i-1] = this.words[this.wordOrder[i]];
+            hold[i] = this.wordOrder[this.nWords-i-1];
+        }
+        this.wordOrder = (int[])hold.clone();
+        
+        ArrayList<Object> ret = new ArrayList<Object>();
+        ret.add(this.sortedWords);
+        ret.add(this.wordOrder);
+
+        return ret;
+    }
+    
+    
     // get sorted indices
     public void alphabeticSortIndices(String[] words){
 
@@ -12351,8 +12209,6 @@ public class ArrayMaths{
             holdi[i] = colInt[indChar[i]];
         }
 
-
-
         // rearrange words and their indices
         for(int i=0; i<n; i++){
             this.holdWordOrder[i+iStart] = holdi[i];
@@ -12362,7 +12218,6 @@ public class ArrayMaths{
             this.wordChar[i] = this.holdWordChar[i];
             this.wordOrder[i] = this.holdWordOrder[i];
         }
-
 
         ArrayList<Integer> al = null;
         if(ii<this.nLength-1){
@@ -12415,8 +12270,19 @@ public class ArrayMaths{
 
         return iindices;
     }
+    
+    // sort the array into ascending order
+    // saves sorted array in this instance
+    public void sortEquals(int[] indices){
+        ArrayMaths am = this.sort(indices);
+        this.array = am.array;
+        this.sortedIndices = am.sortedIndices;
+        this.maxIndex = am.maxIndex;
+        this.minIndex = am.minIndex;   
+    }
 
     // order an array to a given sequence of indices
+    // sorted array returned in a new instance of ArrayMaths
     public ArrayMaths sort(int[] indices){
         int nArg = indices.length;
         if(this.length!=nArg)throw new IllegalArgumentException("The argument array [length = " + nArg + "], must be of the same length as this instance array [length = " + this.length +"]");
@@ -15213,15 +15079,6 @@ public class ArrayMaths{
         }
     }
 
-    // Returns an instance of Stat in which all the instance variable common to the sub-class Stat and the super-class ArrayMaths
-    // are set to the values of this instance of ArrayMaths after conversion:
-    //  convert array to Double if not Complex, Phasor,  BigDecimal or BigInteger
-    //  convert to BigDecimal if BigInteger
-    //  convert Phasor to Complexof
-    public Stat toStat(){
-        this.convertToHighest();
-        return this.statCopy();
-    }
 
     // plot the array
     public void plot(int n){

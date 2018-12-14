@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <artifactId>flanagan</artifactId>
   <groupId>uk.ac.ucl.ee.mflanaga</groupId>
-  <version>1.0.20110204</version>
+  <version>1.0.20121106</version>
   <modelVersion>4.0.0</modelVersion>
 
 </project>

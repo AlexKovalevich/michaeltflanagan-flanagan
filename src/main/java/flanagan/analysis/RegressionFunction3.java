@@ -1,22 +1,29 @@
 /*
-*   Interface RegressionDerivativeFunction
+*   Interface RegressionFunction3
 *
-*   The first and second derivatives of the regression function with respect 
-*   to a pair of parameters, needed by the statistical analysis methods 
-*   called by the non-linear regression methods in the class Regression is 
-*   supplied by means of this interface, RegressionDerivativeFunction
+*   The sum of squares function needed by several of the non-linear 
+*   regression methods in the class Regression is supplied by means of
+*   this interface, RegressionFunction3.  The methods using weighting 
+*   factors derived from measurement errors in both the dependent and
+*   independent variables require this function.
+ * 
+*   RegressionFunction3 accepts a one dimensional array, to contain the 
+*   estimates of the parameters, a one dimensional array, to contain the
+*   values of the independent variables at the point of interest, and an 
+*   integer, e.g. to provide the current point index
+*   RegressionFunction3 returns a two dimensinal array of dounles.
 *
 *   WRITTEN BY: Dr Michael Thomas Flanagan
 *
-*   DATE:	    January 2012
-*   MODIFIED:
+*   DATE:	Adapted form of RegressionFunction2  20 March 2012
+*   MODIFIED:   
 *
 *   DOCUMENTATION:
 *   See Michael Thomas Flanagan's Java library on-line web page:
 *   http://www.ee.ucl.ac.uk/~mflanaga/java/Regression.html
 *   http://www.ee.ucl.ac.uk/~mflanaga/java/
 *
-*   Copyright (c) 2008
+*   Copyright (c) 2002 - 2012
 *
 *   PERMISSION TO COPY:
 *
@@ -43,13 +50,7 @@
 package flanagan.analysis;
 
 // Interface for Regression class
-// First and second derivative function for non-linear regression methods
-// p = parameter values
-// x = independent variable values
-// i = index of parameter p[i] in df/dp[i] and d2f/dp[i]dp[j]
-// j = index of parameter p[j] in df/dp[j] and d2f/dp[i]dp[j]
-// returns df/dp[i], df/dp[j] and d2f/dp[i]dp[j] as an array of double, f = the function of x and p
-
-public interface RegressionDerivativeFunction{
-    double[] function(double[]p, double[] x,  int i, int j);
+// Sum of squares function for non-linear regression methods
+public interface RegressionFunction3{
+    double[] function(double[]param, double[] x, int i);
 }

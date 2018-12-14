@@ -12,14 +12,14 @@
 *
 *   DATE:    February 2002
 *   UPDATED: 1 August 2006, 29 April 2007, 15,21,22 June 2007, 22 November 2007
-*            20 May 2008, 26 August 2008, 9 November 2009, 6 june 2010
+*            20 May 2008, 26 August 2008, 9 November 2009, 6 June 2010
 *
 *   DOCUMENTATION:
 *   See Michael T Flanagan's Java library on-line web pages:
 *   http://www.ee.ucl.ac.uk/~mflanaga/java/Complex.html
 *   http://www.ee.ucl.ac.uk/~mflanaga/java/
 *
-*   Copyright (c) 2002 - 2009    Michael Thomas Flanagan
+*   Copyright (c) 2002 - 2012    Michael Thomas Flanagan
 *
 *   PERMISSION TO COPY:
 *
@@ -64,29 +64,25 @@ public class Complex{
 
         // CONSTRUCTORS
         // default constructor - real and imag = zero
-        public Complex()
-        {
+        public Complex(){
                 this.real = 0.0D;
                 this.imag = 0.0D;
         }
 
         // constructor - initialises both real and imag
-        public Complex(double real, double imag)
-        {
+        public Complex(double real, double imag){
                 this.real = real;
                 this.imag = imag;
         }
 
         // constructor - initialises  real, imag = 0.0
-        public Complex(double real)
-        {
+        public Complex(double real){
                 this.real = real;
                 this.imag = 0.0D;
         }
 
         // constructor - initialises both real and imag to the values of an existing Complex
-        public Complex(Complex c)
-        {
+        public Complex(Complex c){
                 this.real = c.real;
                 this.imag = c.imag;
         }
@@ -298,7 +294,7 @@ public class Complex{
                 System.out.print(" " + this.toString());
         }
 
-        // PRINT AN ARRAY OF COMLEX NUMBERS
+        // PRINT AN ARRAY OF COMPLEX NUMBERS
         // Print an array to terminal window with text (message) and a line return
         public static void println(String message, Complex[] aa){
             System.out.println(message);
@@ -367,6 +363,7 @@ public class Complex{
 
 
         // CONVERSIONS
+        
         // Format a complex number as a string, a + jb or a + ib[instance method]
         // < value of real > < + or - > < j or i> < value of imag >
         // Choice of j or i is set by Complex.seti() or Complex.setj()
@@ -1210,20 +1207,20 @@ public class Complex{
                 double res = 0.0D;
 
                 if(rmod==0.0D){
-                res=imod;
+                    res=imod;
                 }
                 else{
-                if(imod==0.0D){
+                    if(imod==0.0D){
                         res=rmod;
-                }
-                        if(rmod>=imod){
-                                ratio=a.imag/a.real;
-                                res=rmod*Math.sqrt(1.0D + ratio*ratio);
-                        }
-                        else{
-                                ratio=a.real/a.imag;
-                                res=imod*Math.sqrt(1.0D + ratio*ratio);
-                        }
+                    }
+                    if(rmod>=imod){
+                        ratio=a.imag/a.real;
+                        res=rmod*Math.sqrt(1.0D + ratio*ratio);
+                    }
+                    else{
+                        ratio=a.real/a.imag;
+                        res=imod*Math.sqrt(1.0D + ratio*ratio);
+                    }
                 }
                 return res;
         }

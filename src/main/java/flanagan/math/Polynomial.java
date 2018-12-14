@@ -14,7 +14,7 @@
 *   See class Complex for standard complex arithmetic
 *
 *   DATE:    6 June 2010 (adapted from ComplexPoly [February 2002])
-*   UPDATED: 21 January 2011
+*   UPDATED: 21 January 2011, 14 April 2012
 *
 *   DOCUMENTATION:
 *   See Michael Thomas Flanagan's Java library on-line web pages:
@@ -22,7 +22,7 @@
 *   http://www.ee.ucl.ac.uk/~mflanaga/java/
 *
 *
-*   Copyright (c) 2002 - 2011
+*   Copyright (c) 2002 - 2012
 *
 *   PERMISSION TO COPY:
 *   Permission to use, copy and modify this software and its documentation for
@@ -229,6 +229,74 @@ public class Polynomial{
 
         // METHODS
 
+        // Return a polynomial as one in which the highest term does not have a zero coefficient
+        // instance method
+        public Polynomial reducePoly(){
+            Polynomial ppoly = null;
+            int degh = this.deg;
+            boolean test = true;
+            int counter = this.deg;
+            while(test){
+                    if(this.coeff[counter]==0.0){
+                        counter--;
+                        degh--;
+                        if(counter<0)test = false;
+                    }
+                    else{
+                        test=false;
+                    }
+            }
+            
+            if(this.deg==degh){
+                ppoly = this.copy();  
+            }
+            else{
+                if(degh>=0){        
+                    ppoly = new Polynomial(degh);
+                    for(int i=0; i<=degh; i++){
+                        ppoly.resetCoeff(i, this.coeff[i]);
+                    }
+                }
+            }
+            return ppoly;
+        }
+        
+        // Return a polynomial as one in which the highest term does not have a zero coefficient
+        // static method
+        public static Polynomial reducePoly(Polynomial poly){
+            Polynomial ppoly = null;
+            if(ppoly!=null){
+                int degh = poly.getDeg();  
+                int degr = degh;
+                boolean test = true;
+                int counter = degr;
+                while(test){
+                    if(poly.coeff[counter]==0){
+                        counter--;
+                        degr--;
+                        if(counter<0)test = false;
+                    }
+                    else{
+                        test=false;
+                    }
+                }
+        
+                if(degr==degh){
+                    ppoly = poly.copy();  
+                }
+                else{
+                    if(degr>=0){        
+                        ppoly = new Polynomial(degr);
+                        for(int i=0; i<=degr; i++){
+                            ppoly.resetCoeff(i, poly.coeff[i]);
+                        }
+                    }
+                }
+            }
+            return ppoly;
+        }
+
+        
         // Returns a Polynomial given the polynomial's roots
         public static Polynomial rootsToPoly(double[] roots){
             if(roots==null)return null;

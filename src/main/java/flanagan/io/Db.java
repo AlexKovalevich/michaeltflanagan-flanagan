@@ -40,6 +40,7 @@ package flanagan.io;
 
 import java.io.*;
 import java.math.*;
+import java.util.ArrayList;
 import javax.swing.JOptionPane;
 
 import flanagan.analysis.ErrorProp;
@@ -144,6 +145,60 @@ public class Db{
                         }
                 }
                 return d;
+        }
+
+        // Reads a double array from a dialog box with a prompt message
+        // No default option if the return key alone is pressed
+        public static final synchronized double[] readDoubleArray(String mess){
+                String line="";
+                double[] darray = null;
+                boolean finish = false;
+                System.out.flush();
+                String mess0 = "";
+                if(Db.inputTypeInfo)mess0 = "Input type: double[], each element separated by a comma\n";
+                mess = mess + "\n";
+                String dfltmess = " ";
+                int nElements = 0;
+                ArrayList<Double> al = new ArrayList<Double>();
+
+                while(!finish){
+                        line = JOptionPane.showInputDialog(mess0 + mess, dfltmess);
+
+                        if(line!=null){
+                            if(line.equals("")){
+                                line=null;
+                            }
+                            else{
+                                int pos = -1;
+                                String hold = null;
+                                boolean test = true;
+                                while(test){
+                                    pos = line.indexOf(',');
+                                    if(pos==-1){
+                                        hold = line.trim();
+                                        test = false;
+                                        finish=true;
+                                    }
+                                    else{
+                                        hold = (line.substring(0,pos)).trim();
+                                        line = line.substring(pos+1);
+                                    }
+                                    try{
+                                        al.add(Double.valueOf(hold));
+                                    }catch(NumberFormatException e){
+                                        // Valid double not entered - dialog box recalled
+                                    }
+                                }
+                            }
+                        }
+                }
+                nElements = al.size();
+                darray = new double[nElements];
+                for(int i=0; i<nElements; i++){
+                    darray[i] = (al.get(i)).doubleValue();
+                }
+
+                return darray;
         }
 
         // Read a Complex number from dialog box with a prompt message

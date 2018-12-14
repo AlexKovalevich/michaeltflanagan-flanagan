@@ -7,7 +7,7 @@
 *   WRITTEN BY: Dr Michael Thomas Flanagan
 *
 *   DATE:	 February 2002
-*   REVISED: 20 July 2005, 7 July 2008, 27 July 2008, 11 August 2008
+*   REVISED: 20 July 2005, 7 July 2008, 27 July 2008, 11 August 2008, 5 February 2011, 21 February 2011
 *
 *   Copyright (c) 2002 - 2008
 *
@@ -41,91 +41,91 @@ public class Plot extends Canvas implements Serializable{
 
         protected static final long serialVersionUID = 1L;  // serial version unique identifier
 
-    	protected double[][] data = null;   // data to be plotted
-                                        	// data[i][] i = 0, 2, 4 . . .  x values
-                                        	// data[i][] i = 1, 3, 5 . . .  y values for x[i-1][]
-    	protected double[][] copy = null;   // copy of original data to be plotted
-    	protected int nCurves = 0;          // number of curves
-    	protected int[] nPoints = null;     // number of points points on curve each curve
-    	protected int nmPoints = 0;         // number of points points on curve with most points
-    	protected int niPoints = 200;       // number of cubic spline interpolation points
-    	protected int[] pointOpt = null;    // point plotting option for each curve
-                                        	// pointOpt = 0: no points plotted
-                                        	// pointOpt = i where i = 1,2,3,4,5,6,7,8: points plotted
-                                            	// default options
-                                            		// curve 1 - open circles
-                                            		// curve 2 - open squares
-                                            		// curve 3 - open diamonds
-                                            		// curve 4 - filled circles
-                                            		// curve 5 - filled squares
-                                            		// curve 6 - filled diamonds
-                                            		// curve 7 - x crosses
-                                            		// curve 8 - + crosses
-                                            		// further curves - above sequence repeated
-    	protected int[] pointSize = null;   // point size in pixels for each curve
-    	protected int npTypes = 8;          // number of point types
-    	protected boolean[] errorBar = null; // true - error bar plotted, flase no error bar plotted - default = false
-    	protected double[][] errors = null;  // error bar values - should be an estimate of the sd of the variable
-    	protected double[][] errorsCopy = null; // copy of error bar values
-    	protected int[] lineOpt = null;     // line drawing option for each curve
-                                            	// lineOpt = 0: no line plotted
-                                            	// lineOpt = 1: cubic spline interpolation line plotted as a continuous line
-                                            	// lineOpt = 2: cubic spline interpolation line plotted as a dashed line
-                                            	// lineOpt = 3: line plotted by joining points
-                                            	// lineOpt = 4: dashed line plotted by joining points
-                                            	// default - lineOpt = 1
-    	protected int[] dashLength = null;   // dash length in lineOpt = 2
-    	protected boolean[] minMaxOpt = null;// true - curve included in maximum and minimum axes value calculation
-    	protected boolean[] trimOpt = null;  // true - curve trimmed to fit axes rectangle
+    	protected double[][] data = null;               // data to be plotted
+                                        	            // data[i][] i = 0, 2, 4 . . .  x values
+                                        	            // data[i][] i = 1, 3, 5 . . .  y values for x[i-1][]
+    	protected double[][] copy = null;               // copy of original data to be plotted
+    	protected int nCurves = 0;                      // number of curves
+    	protected int[] nPoints = null;                 // number of points points on curve each curve
+    	protected int nmPoints = 0;                     // number of points points on curve with most points
+    	protected int niPoints = 200;                   // number of cubic spline interpolation points
+    	protected int[] pointOpt = null;                // point plotting option for each curve
+                                        	            // pointOpt = 0: no points plotted
+                                        	            // pointOpt = i where i = 1,2,3,4,5,6,7,8: points plotted
+                                            	        // default options
+                                            		        // curve 1 - open circles
+                                            		        // curve 2 - open squares
+                                            		        // curve 3 - open diamonds
+                                            		        // curve 4 - filled circles
+                                            		        // curve 5 - filled squares
+                                            		        // curve 6 - filled diamonds
+                                            		        // curve 7 - x crosses
+                                            		        // curve 8 - + crosses
+                                            		        // further curves - above sequence repeated
+    	protected int[] pointSize = null;               // point size in pixels for each curve
+    	protected int npTypes = 8;                      // number of point types
+    	protected boolean[] errorBar = null;            // true - error bar plotted, flase no error bar plotted - default = false
+    	protected double[][] errors = null;             // error bar values - should be an estimate of the sd of the variable
+    	protected double[][] errorsCopy = null;         // copy of error bar values
+    	protected int[] lineOpt = null;                 // line drawing option for each curve
+                                            	            // lineOpt = 0: no line plotted
+                                            	            // lineOpt = 1: cubic spline interpolation line plotted as a continuous line
+                                            	            // lineOpt = 2: cubic spline interpolation line plotted as a dashed line
+                                            	            // lineOpt = 3: line plotted by joining points
+                                            	            // lineOpt = 4: dashed line plotted by joining points
+                                            	            // default - lineOpt = 1
+    	protected int[] dashLength = null;              // dash length in lineOpt = 2
+    	protected boolean[] minMaxOpt = null;           // true - curve included in maximum and minimum axes value calculation
+    	protected boolean[] trimOpt = null;             // true - curve trimmed to fit axes rectangle
 
-    	protected int fontSize = 14;    // text font size
-    	protected int xLen = 625;       // length of the x axis in pixels
-   	    protected int yLen = 375;       // length of the y axis in pixels
-    	protected int xBot = 100;       // x coordinate of the bottom of the x axis in pixels
-    	protected int xTop = xBot+xLen; // x coordinate of the top of the x axis in pixels
-    	protected int yTop = 110;       // y coordinate of the top of the y axis in pixels
-    	protected int yBot = yTop+yLen; // y coordinate of the bottom of the y axis in pixels
+    	protected int fontSize = 14;                    // text font size
+    	protected int xLen = 625;                       // length of the x axis in pixels
+   	    protected int yLen = 375;                       // length of the y axis in pixels
+    	protected int xBot = 100;                       // x coordinate of the bottom of the x axis in pixels
+    	protected int xTop = xBot+xLen;                 // x coordinate of the top of the x axis in pixels
+    	protected int yTop = 110;                       // y coordinate of the top of the y axis in pixels
+    	protected int yBot = yTop+yLen;                 // y coordinate of the bottom of the y axis in pixels
 
-    	protected double xLow = 0;      // scaled lower limit data value of the x axis
-    	protected double xHigh = 0;     // scaled upper limit data value of the x axis
-    	protected double yLow = 0;      // scaled lower limit data value of the y axis
-    	protected double yHigh = 0;     // scaled upper limit data value of the y axis
-    	protected int xFac = 0;         // decadic exponent of x axis scaling factor
-    	protected int yFac = 0;         // decadic exponent of y axis scaling factor
-    	protected int xTicks = 0;       // number of x axis ticks
-    	protected int yTicks = 0;       // number of y axis ticks
+    	protected double xLow = 0;                      // scaled lower limit data value of the x axis
+    	protected double xHigh = 0;                     // scaled upper limit data value of the x axis
+    	protected double yLow = 0;                      // scaled lower limit data value of the y axis
+    	protected double yHigh = 0;                     // scaled upper limit data value of the y axis
+    	protected int xFac = 0;                         // decadic exponent of x axis scaling factor
+    	protected int yFac = 0;                         // decadic exponent of y axis scaling factor
+    	protected int xTicks = 0;                       // number of x axis ticks
+    	protected int yTicks = 0;                       // number of y axis ticks
 
-    	protected double xMin = 0.0D;    // minimum x data value
-    	protected double xMax = 0.0D;    // maximum x data value
-    	protected double yMin = 0.0D;    // minimum y data value
-    	protected double yMax = 0.0D;    // maximum y data value
+    	protected double xMin = 0.0D;                   // minimum x data value
+    	protected double xMax = 0.0D;                   // maximum x data value
+    	protected double yMin = 0.0D;                   // minimum y data value
+    	protected double yMax = 0.0D;                   // maximum y data value
 
-    	protected double xOffset = 0.0D;        // xaxis data value offset
-   	    protected double yOffset = 0.0D;        // y axis data value offset
-    	protected boolean noXoffset = false;    // no x axis offset allowed if true
-   	    protected boolean noYoffset = false;    // no y axis offset allowed if true
-    	protected double xLowFac = 0.75D;       // x axis data setting low factor
-    	protected double yLowFac = 0.75D;       // y axis data setting low factor
+    	protected double xOffset = 0.0D;                // xaxis data value offset
+   	    protected double yOffset = 0.0D;                // y axis data value offset
+    	protected boolean noXoffset = false;            // no x axis offset allowed if true
+   	    protected boolean noYoffset = false;            // no y axis offset allowed if true
+    	protected double xLowFac = 0.75D;               // x axis data setting low factor
+    	protected double yLowFac = 0.75D;               // y axis data setting low factor
 
-    	protected String graphTitle  = "  ";    // graph title
-    	protected String graphTitle2 = "  ";    // graph title (secondline)
-    	protected String xAxisLegend = "  ";    // x axis legend title
-    	protected String xAxisUnits  = "  ";    // x axis unit name, e.g.  V, ohm
-    	protected String yAxisLegend = "  ";    // y axis legend title
-    	protected String yAxisUnits  = "  ";    // x axis unit name
+    	protected String graphTitle  = "  ";            // graph title
+    	protected String graphTitle2 = "  ";            // graph title (secondline)
+    	protected String xAxisLegend = "  ";            // x axis legend title
+    	protected String xAxisUnits  = "  ";            // x axis unit name, e.g.  V, ohm
+    	protected String yAxisLegend = "  ";            // y axis legend title
+    	protected String yAxisUnits  = "  ";            // x axis unit name
 
-    	protected boolean xZero = false;        // if true - a (x=0) zero line is required
-    	protected boolean yZero = false;        // if true - a (y=0) zero line required
-    	protected boolean noXunits = true;      // if true - no x axis units
-    	protected boolean noYunits = true;      // if true - no y axis units
+    	protected boolean xZero = false;                // if true - a (x=0) zero line is required
+    	protected boolean yZero = false;                // if true - a (y=0) zero line required
+    	protected boolean noXunits = true;              // if true - no x axis units
+    	protected boolean noYunits = true;              // if true - no y axis units
 
-    	protected double[] xAxisNo = new double[50];      // x axis legend numbers as double
-    	protected double[] yAxisNo = new double[50];      // y axis legend numbers as double
-    	protected String[] xAxisChar = new String[50];    // x axis legend numbers as char
-    	protected String[] yAxisChar = new String[50];    // y axis legend numbers as char
-    	protected int[] axisTicks = new int[50];          // no of ticks for scaled lengths
+    	protected double[] xAxisNo = new double[50];    // x axis legend numbers as double
+    	protected double[] yAxisNo = new double[50];    // y axis legend numbers as double
+    	protected String[] xAxisChar = new String[50];  // x axis legend numbers as char
+    	protected String[] yAxisChar = new String[50];  // y axis legend numbers as char
+    	protected int[] axisTicks = new int[50];        // no of ticks for scaled lengths
 
-    	protected static double dataFill = 3.0e200; // value used to initialise data array by Plot.data()
+    	protected static double dataFill = Double.NaN;  // value used to initialise data array by Plot.data()
 
 
         // Constructor
@@ -200,8 +200,8 @@ public class Plot extends Canvas implements Serializable{
                 l1=nPoints[i];
                  while(testlen){
                     if(l1<0)throw new IllegalArgumentException("curve array index  "+k+ ": blank array");
-                    if(cdata[k][l1-1]==dataFill){
-                        if(cdata[k+1][l1-1]==dataFill){
+                    if(cdata[k][l1-1]!=cdata[k][l1-1]){
+                        if(cdata[k+1][l1-1]!=cdata[k+1][l1-1]){
                             l1--;
                             testopt=false;
                         }
@@ -843,7 +843,6 @@ public class Plot extends Canvas implements Serializable{
     	// Calculate axis ticks and tick values
     	public static int ticks(double low, double high, double[] tickval, String[] tickchar){
 
-
         	// Find range
             int[] trunc = {1, 1, 1, 2, 3};
             double[] scfac1 = {1.0, 10.0, 1.0, 0.1, 0.01};
@@ -1062,7 +1061,7 @@ public class Plot extends Canvas implements Serializable{
         	int posdot = stroffset.indexOf('.');
         	int posexp = stroffset.indexOf('E');
 
-		if(posexp==-1){
+		    if(posexp==-1){
             		return stroffset;
         	}
         	else{
@@ -1436,88 +1435,32 @@ public class Plot extends Canvas implements Serializable{
             		}
 
                     if(lineOpt[i]==4){
+
                 	    // Join points with dotted line option
 
-                		// lines between points
-                		int[] lengths = new int[nxpoints-1];
-                		double[] gradients = new double[nxpoints-1];
-                		double[] intercepts = new double[nxpoints-1];
-                		int totalLength = 0;
+                		dsum=0;
+                		dcheck=true;
                 		xoldpoint=xBot+(int)((((this.data[kk][0])-xLow)/xdenom)*xLen);
                 		yoldpoint=yBot-(int)((((this.data[kk+1][0])-yLow)/ydenom)*yLen);
                 		for(int ii=1; ii<nxpoints; ii++){
+                		        dsum++;
+                		        if(dsum>dashLength[i]){
+                                    dsum=0;
+                                    if(dcheck){
+                                        dcheck=false;
+                                    }
+								    else{
+                                        dcheck=true;
+                                    }
+                                }
                     			xnewpoint=xBot+(int)((((this.data[kk][ii])-xLow)/xdenom)*xLen);
                     			ynewpoint=yBot-(int)((((this.data[kk+1][ii])-yLow)/ydenom)*yLen);
-                    			lengths[ii-1] = (int)Fmath.hypot((double)(xnewpoint-xoldpoint), (double)(ynewpoint-yoldpoint));
-                    			totalLength += lengths[ii-1];
-                    			gradients[ii-1] = (double)(ynewpoint-yoldpoint)/(double)(xnewpoint-xoldpoint);
-                    			intercepts[ii-1] = (double)yoldpoint - gradients[ii-1]*xoldpoint;
+                    			btest2=printCheck(trimOpt[i], xoldpoint, xnewpoint, yoldpoint, ynewpoint);
+                    			if(dcheck)g.drawLine(xoldpoint,yoldpoint,xnewpoint,ynewpoint);
                     			xoldpoint=xnewpoint;
                     			yoldpoint=ynewpoint;
                 		}
-
-                		// number of points
-                		int incrmt = totalLength/(4*niPoints-1);
-                		int nlpointsold = 0;
-                		int nlpointsnew = 0;
-               		    int totalLpoints = 1;
-                		for(int ii=1; ii<nxpoints; ii++){
-                		    totalLpoints++;
-                		    nlpointsnew = lengths[ii-1]/incrmt;
-                  	        for(int jj = nlpointsold+1; jj<(nlpointsnew + nlpointsold); jj++)totalLpoints ++;
-                    	    nlpointsold = nlpointsold + nlpointsnew;
-                        }
-
-                        // fill arrays
-                		int[] xdashed = new int[totalLpoints];
-                		int[] ydashed = new int[totalLpoints];
-                		nlpointsold = 0;
-                		nlpointsnew = 0;
-                		xdashed[0] = xBot+(int)((((this.data[kk][0])-xLow)/xdenom)*xLen);
-                		ydashed[0] = yBot-(int)((((this.data[kk+1][0])-yLow)/ydenom)*yLen);
-                		for(int ii=1; ii<nxpoints; ii++){
-                		    nlpointsnew = lengths[ii-1]/incrmt;
-                		    xdashed[nlpointsnew + nlpointsold] = xBot+(int)((((this.data[kk][ii])-xLow)/xdenom)*xLen);
-                    		ydashed[nlpointsnew + nlpointsold] = yBot-(int)((((this.data[kk+1][ii])-yLow)/ydenom)*yLen);
-                    	    if(Math.abs(gradients[ii-1])>0.5){
-                    	        int diff = (ydashed[nlpointsnew + nlpointsold] - ydashed[nlpointsold])/nlpointsnew;
-                    	        for(int jj = nlpointsold+1; jj<(nlpointsnew + nlpointsold); jj++){
-                    	            ydashed[jj] = ydashed[jj-1]+diff;
-                    	            if(Fmath.isInfinity(Math.abs(gradients[ii-1]))){
-                    	                xdashed[jj] = xdashed[nlpointsnew + nlpointsold];
-                    	            }
-                    	            else{
-                    	                xdashed[jj] = (int)(((double)ydashed[jj] - intercepts[ii-1])/gradients[ii-1]);
-                    	            }
-                    	        }
-                    	    }
-                    	    else{
-                    	       int diff = (xdashed[nlpointsnew + nlpointsold] - xdashed[nlpointsold])/nlpointsnew;
-                    	       for(int jj = nlpointsold+1; jj<(nlpointsnew + nlpointsold); jj++){
-                    	            xdashed[jj] = xdashed[jj-1]+diff;
-                    	            ydashed[jj] = (int)(gradients[ii-1]*ydashed[jj] + intercepts[ii-1]);
-                    	        }
-                    	    }
-                    	    nlpointsold = nlpointsold + nlpointsnew;
-                    	}
-
-                    	dsum=0;
-                        dcheck=true;
-               	        for(int ii=1; ii<totalLpoints; ii++){
-           			    dsum++;
-                            if(dsum>dashLength[i]){
-                                dsum=0;
-                                if(dcheck){
-                                    dcheck=false;
-                                }
-								else{
-                                    dcheck=true;
-                                }
-                            }
-                        	if(dcheck)g.drawLine(xdashed[ii-1],ydashed[ii-1],xdashed[ii],ydashed[ii]);
-                	    }
             		}
-
 
 
             		// Plot points

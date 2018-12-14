@@ -9,7 +9,7 @@
 *   WRITTEN BY: Dr Michael Thomas Flanagan
 *
 *   DATE:	    15 February 2006,
-*   UPDATES:    9 June 2007, 27 July 2007, 4 December 2007, 21 September 2008, 12 October 2009, 31 October 2009
+*   UPDATES:    9 June 2007, 27 July 2007, 4 December 2007, 21 September 2008, 12 October 2009, 31 October 2009, 11 September 2012
 *
 *   DOCUMENTATION:
 *   See Michael Thomas Flanagan's Java library on-line web page:
@@ -246,7 +246,7 @@ public class PolyCubicSpline{
                             this.yValue = ((TriCubicSpline)(this.method)).interpolate(unknownCoord[0], unknownCoord[1], unknownCoord[2]);
                             break;
                 case 4:     // If fOfX is four dimensional perform quadricubic spline
-                            this.yValue = ((QuadriCubicSpline)(this.method)).interpolate(unknownCoord[0], unknownCoord[1], unknownCoord[2], unknownCoord[2]);
+                            this.yValue = ((QuadriCubicSpline)(this.method)).interpolate(unknownCoord[0], unknownCoord[1], unknownCoord[2], unknownCoord[3]);
                             break;
                 default:    // If fOfX is greater than four dimensional, recursively call PolyCubicSpline
                             //  with, as arguments, the n1 fOfX sub-arrays, each of (number of dimensions - 1) dimensions,

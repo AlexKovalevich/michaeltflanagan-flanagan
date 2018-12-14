@@ -9,24 +9,28 @@
 *
 *   The sum of squares function needed by the non-linear regression methods
 *   non-linear regression methods is supplied by means of the interfaces,
-*   RegressionFunction or RegressionFunction2
+*   RegressionFunction, Regression2 or RegressionFunction3
 *
 *   WRITTEN BY: Dr Michael Thomas Flanagan
 *
-*   DATE:	    February 2002
-*   MODIFIED:   7 January 2006,  28 July 2006, 9 August 2006, 4 November 200621 November 2006, 21 December 2006,
-*               14 April 2007, 9 June 2007, 25 July 2007, 23/24 August 2007, 14 September 2007, 28 December 2007,
-*               18-26 March 2008, 7 April 2008, 27 April 2008, 10/12/19 May 2008, 5-6 July 2004, 28 July 2008,
-*               29 August 2008, 5 September 2008, 6 October 2008, 13-15 October 2009, 13 November 2009, 10 December 2009,
-*               20 December 2009, 12 January 2010, 18-25 May 2010, 9 July 2010, 10-16 August 2010, 21-29 October 2010
-*               2-7 November 2010, 2 January 2011, 20-31 January 2011, 2-4 February 2011
+*   DATE:           February 2002
+*   MODIFIED:       5-6 July 2004,
+*                   7 January 2006,  28 July 2006, 9 August 2006, 4 November 2006, 21 November 2006, 21 December 2006,
+*                   14 April 2007, 9 June 2007, 25 July 2007, 23/24 August 2007, 14 September 2007, 28 December 2007,
+*                   18-26 March 2008, 7 April 2008, 27 April 2008, 10/12/19 May 2008,  28 July 2008, 29 August 2008, 5 September 2008, 6 October 2008, 
+*                   13-15 October 2009, 13 November 2009, 10 December 2009, 20 December 2009, 
+*                   12 January 2010, 18-25 May 2010, 9 July 2010, 10-16 August 2010, 21-29 October 2010, 2-7 November 2010, 
+*                   2 January 2011, 20-31 January 2011, 2-7 February 2011, 21-27 February 2011, 30 March 2011, 13 November 2011
+*                   16 January 2012, 21 January 2012, 
+*                   20-31 March 2012(MAJOR REVISION), 
+*                   22-25 June 2012 
 *
 *   DOCUMENTATION:
 *   See Michael Thomas Flanagan's Java library on-line web page:
 *   http://www.ee.ucl.ac.uk/~mflanaga/java/Regression.html
 *   http://www.ee.ucl.ac.uk/~mflanaga/java/
 *
-* Copyright (c) 2002 - 2011 Michael Thomas Flanagan
+* Copyright (c) 2002 - 2012 Michael Thomas Flanagan
 *
 * PERMISSION TO COPY:
 *
@@ -64,34 +68,44 @@ import flanagan.interpolation.CubicSpline;
 public class Regression{
 
     protected int nData0=0;        		            // number of y data points inputted (in a single array if multiple y arrays)
-    protected int nData=0;                          // number of y data points (nData0 times the number of y arrays)
+    protected int nData=0;                                  // number of y data points (nData0 times the number of y arrays)
+    protected double nEffective = 0;                        // effective nData for weighte data
     protected int nXarrays=1;     		            // number of x arrays
     protected int nYarrays=1;     		            // number of y arrays
-    protected int nTerms=0;       		            // number of unknown parameters to be estimated
-                                    		        //  multiple linear (a + b.x1 +c.x2 + . . ., = nXarrays + 1
-                                    		        //  polynomial fitting; = polynomial degree + 1
-                                    		        //  generalised linear; = nXarrays
-                                    		        //  simplex = no. of parameters to be estimated
-    protected int degreesOfFreedom=0; 		        // degrees of freedom = nData - nTerms
-    protected double[][]  xData=null;      	        // x  data values
-    protected double[]    yData=null;      	        // y  data values
-    protected double[]    yCalc=null;      	        // calculated y values using the regrssion coefficients
-    protected double[]    weight=null;     	        // weighting factors
-    protected double[]    residual=null;   	        // residuals
-    protected double[]    residualW=null;  	        // weighted residuals
-    protected boolean     weightOpt=false;          // weighting factor option
-                                                   	// = true; weights supplied
-                                                   	// = false; weigths set to unity in regression
-                                                   	//          average error used in statistacal methods
-                                                   	// if any weight[i] = zero,
-                                                   	//                    weighOpt is set to false and
-                                                   	//                    all weights set to unity
-    protected int weightFlag=0;                     // weighting flag  - weightOpt = false, weightFlag = 0;  weightOpt = true, weightFlag = 1
+    protected int nParam=0;       		            // number of unknown parameters to be estimated
+                                                            //  multiple linear (a + b.x1 +c.x2 + . . ., = nXarrays + 1
+                                                            //  polynomial fitting; = polynomial degree + 1
+                                                            //  generalised linear; = nXarrays
+                                                            //  simplex = no. of parameters to be estimated
+    protected int degreesOfFreedom=0;                       // degrees of freedom = nData - nParam
+    protected double[][]  xData=null;                       // x  data values
+    protected double[][]  xErrors=null;                     // y error values
+    protected boolean     xErrorsEntered = false;           // = true when x errors entered
+    protected double[]    yData=null;                       // y  data values
+    protected double[]    yErrors=null;                     // y error values
+    protected boolean     yErrorsEntered = false;           // = true when y errors entered
+    protected boolean     dualErrorsRequired = false;       // = true if both x and y errors allowed and used by the method
+    protected boolean     trueErrors = true;                // = true if entered y or x and y errors are true estimates of the standard deviations;
+    protected double[]    weight=null;                     // weighting factors; either y errors or calculated x and y propagated errors
+                                                            // scaled to the sd of the observations if weight set as arbitrary
+    protected double[]    yCalc=null;                       // calculated y values using the regression coefficients
+    protected double[]    residual=null;                    // residuals
+    protected double[]    residualW=null;                   // weighted residuals
+    protected boolean     weightOpt=false;                 // weighting factor option
+                                                            // = true; weight supplied
+                                                            // = false; weigths set to unity in regression
+                                                            //          average error used in statistical methods
+                                                            // if more than 40% this.weight[i] = zero,
+                                                            //                    weighOpt is set to false and
+                                                            //                    all weight set to unity
+                                                            // else zero weight set to average of neighbours
+    protected int weightFlag = 0;                            // weighting flag  - weightOpt = false, weightFlag = 0;  weightOpt = true, weightFlag = 1
+    
     protected String[] weightWord = {"", "Weighted "};
 
     protected double[]  best = null;                // best estimates vector of the unknown parameters
     protected double[]  bestSd =null; 	            // standard deviation estimates of the best estimates of the unknown parameters
-	protected double[]  pseudoSd = null;            // Pseudo-nonlinear sd
+    protected double[]  pseudoSd = null;            // Pseudo-nonlinear sd
     protected double[]  tValues = null;             // t-values of the best estimates
     protected double[]  pValues = null;             // p-values of the best estimates
     protected double fixedInterceptL = 0.0;         // Fixed intercept (linear regression)
@@ -106,72 +120,86 @@ public class Regression{
     protected double  sumOfSquaresRegrn=Double.NaN; // Regression sum of the squares
 
     protected double  lastSSnoConstraint=0.0D;      // Last sum of the squares of the residuals with no constraint penalty
-	protected double[][]  covar=null;               // Covariance matrix
-	protected double[][]  corrCoeff=null;           // Correlation coefficient matrix
-	protected double xyR = Double.NaN;              // correlation coefficient between x and y data (y = a + b.x only)
+    protected double[][]  covar=null;               // Covariance matrix
+    protected double[][]  corrCoeff=null;           // Correlation coefficient matrix
+    protected double xyR = Double.NaN;              // correlation coefficient between x and y data (y = a + b.x only)
     protected double yyR = Double.NaN;              // correlation coefficient between y calculted and y data (all regressions)
     protected double multR = Double.NaN;            // coefficient of determination
     protected double adjustedR = Double.NaN;        // adjusted coefficient of determination
     protected double multipleF = Double.NaN;        // coefficient of determination: F-ratio
     protected double multipleFprob = Double.NaN;    // coefficient of determination: F-ratio probability
 
-	protected String[] paraName = null;   	        // names of parameters, eg, mean, sd; c[0], c[1], c[2] . . .
-	protected int prec = 4;               	        // number of places to which double variables are truncated on output to text files
-	protected int field = 13;             	        // field width on output to text files
-
-    protected int lastMethod=-1;          	        // code indicating the last regression procedure attempted
+    protected String[] paraName = null;   	        // names of parameters, eg, mean, sd; c[0], c[1], c[2] . . .
+    protected int prec = 4;               	        // number of places to which double variables are truncated on output to text files
+    protected int field = 13;             	        // field width on output to text files
+    
+    protected int simplexFlag = 1;                      // = 1; unweighted or y weight; y 1D; RegressionFunction, at least, required
+                                                        // = 2; unweighted or y weight; y 2D; RegressionFunction2, at least, required
+                                                        // = 3; x and y weight; y 1D; RegressionFunction3 required
+                                                        // = 4; x and y weight; y 2D; RegressionFunction3 required
+    
+    protected int derivFlag = 1;                        // = 1; RegressionDerivativeFunction
+                                                        // = 2; RegressionDerivativeFunction2
+    protected boolean nonLinStatsNeeded = true;         // = false if non linear stats not to be called from nelderMead
+                                                        
+    protected int lastMethod = -1;          	        // code indicating the last regression procedure attempted
                                                  	// = 0 multiple linear regression, y = a + b.x1 +c.x2 . . .
                                                  	// = 1 polynomial fitting, y = a +b.x +c.x^2 . . .
                                                 	// = 2 generalised multiple linear y = a.f1(x) + b.f2(x) . . .
                                                 	// = 3 Nelder and Mead simplex
                                                 	// = 4 Fit to a Gaussian distribution (see also 38 below)
                                                  	// = 5 Fit to a Lorentzian distribution
-                                                    // = 6 Fit to a Poisson distribution
+                                                        // = 6 Fit to a Poisson distribution
                                                 	// = 7 Fit to a Two Parameter Gumbel distribution (minimum order statistic)
                                                 	// = 8 Fit to a Two Parameter Gumbel distribution (maximum order statistic)
                                                 	// = 9 Fit to a One Parameter Gumbel distribution (minimum order statistic)
                                                 	// = 10 Fit to One Parameter Gumbel distribution (maximum order statistic)
                                                 	// = 11 Fit to a Standard Gumbel distribution (minimum order statistic)
                                            	        // = 12 Fit to a Standard Gumbel distribution (maximum order statistic)
-                                                    // = 13 Fit to a Three parameter Frechet distribution
-                                                    // = 14 Fit to a Two Parameter Frechet distribution
-                                                    // = 15 Fit to a Standard Frechet distribution
-                                                    // = 16 Fit to a Three parameter Weibull distribution
-                                                    // = 17 Fit to a Two Parameter Weibull distribution
-                                                    // = 18 Fit to a Standard Weibull distribution
-                                                    // = 19 Fit to a Two Parameter Exponential distribution
-                                                    // = 20 Fit to a One Parameter Exponential distribution
-                                                    // = 21 Fit to a Standard Parameter Exponential distribution
-                                                    // = 22 Fit to a Rayleigh distribution
-                                                    // = 23 Fit to a Two Parameter Pareto distribution
-                                                    // = 24 Fit to a One Parameter Pareto distribution
-                                                    // = 25 Fit to a Sigmoidal Threshold Function
-                                                    // = 26 Fit to a rectangular Hyperbola
-                                                    // = 27 Fit to a scaled Heaviside Step Function
-                                                    // = 28 Fit to a Hills/Sips Sigmoid
-                                                    // = 29 Fit to a Shifted Pareto distribution
-                                                    // = 30 Fit to a Logistic distribution
-                                                    // = 31 Fit to a Beta distribution - [0, 1] interval
-                                                    // = 32 Fit to a Beta distribution - [min, max] interval
-                                                    // = 33 Fit to a Three Parameter Gamma distribution
-                                                    // = 34 Fit to a Standard Gamma distribution
-                                                    // = 35 Fit to an Erlang distribution
-                                                    // = 36 Fit to a two parameter log-normal distribution
-                                                    // = 37 Fit to a three parameter log-normal distribution
-                                                    // = 38 Fit to a Gaussian distribution  [allows fixed p-arameters] (see also 4 above)
-                                                    // = 39 Fit to a EC50 dose response curve
-                                                    // = 40 Fit to a LogEC50 dose response curve
-                                                    // = 41 Fit to a EC50 dose response curve - bottom constrained
-                                                    // = 42 Fit to a LogEC50 dose response curve- bottom constrained
-                                                    // = 43 Fit to a simple exponential, A.exp(Bx)
-                                                    // = 44 Fit to multiple exponentials
-                                                    // = 45 Fit to a A(1 - exp(Bx))
-                                                    // = 46 Fit to a constant
-                                                    // = 47 Linear fit with fixed intercept
-                                                    // = 48 Polynomial fit with a fixed intercept
-                                                    // = 49 Multiple Gaussians
-                                                    // = 50 Non-integer polynomial
-
+                                                        // = 13 Fit to a Three parameter Frechet distribution
+                                                        // = 14 Fit to a Two Parameter Frechet distribution
+                                                        // = 15 Fit to a Standard Frechet distribution
+                                                        // = 16 Fit to a Three parameter Weibull distribution
+                                                        // = 17 Fit to a Two Parameter Weibull distribution
+                                                        // = 18 Fit to a Standard Weibull distribution
+                                                        // = 19 Fit to a Two Parameter Exponential distribution
+                                                        // = 20 Fit to a One Parameter Exponential distribution
+                                                        // = 21 Fit to a Standard Parameter Exponential distribution
+                                                        // = 22 Fit to a Rayleigh distribution
+                                                        // = 23 Fit to a Two Parameter Pareto distribution
+                                                        // = 24 Fit to a One Parameter Pareto distribution
+                                                        // = 25 Fit to a Sigmoidal Threshold Function
+                                                        // = 26 Fit to a rectangular Hyperbola
+                                                        // = 27 Fit to a scaled Heaviside Step Function
+                                                        // = 28 Fit to a Hills/Sips Sigmoid
+                                                        // = 29 Fit to a Shifted Pareto distribution
+                                                        // = 30 Fit to a Logistic distribution
+                                                        // = 31 Fit to a Beta distribution - [0, 1] interval
+                                                        // = 32 Fit to a Beta distribution - [min, max] interval
+                                                        // = 33 Fit to a Three Parameter Gamma distribution
+                                                        // = 34 Fit to a Standard Gamma distribution
+                                                        // = 35 Fit to an Erlang distribution
+                                                        // = 36 Fit to a two parameter log-normal distribution
+                                                        // = 37 Fit to a three parameter log-normal distribution
+                                                        // = 38 Fit to a Gaussian distribution  [allows fixed p-arameters] (see also 4 above)
+                                                        // = 39 Fit to a EC50 dose response curve (four parameter logistic)
+                                                        // = 40 Fit to a EC50 dose response curve - top and bottom fixed
+                                                        // = 41 Fit to a EC50 dose response curve (four parameter logistic) - bottom constrained
+                                                        // = 42 Five parameter logistic function - top and bottom fixed (see also method 51)
+                                                        // = 43 Fit to a simple exponential, A.exp(Bx)
+                                                        // = 44 Fit to multiple exponentials
+                                                        // = 45 Fit to a A(1 - exp(Bx))
+                                                        // = 46 Fit to a constant
+                                                        // = 47 Linear fit with fixed intercept
+                                                        // = 48 Polynomial fit with a fixed intercept
+                                                        // = 49 Multiple Gaussians
+                                                        // = 50 Non-integer polynomial
+                                                        // = 51 Five parameter logistic function (see also method 42 above)
+                                                        // = 52 Shifted rectangular hyperbola
+    // non-linear special function methods accepting both x and y errors
+    protected int[] dualMethods = {19, 20, 21, 25, 26, 28, 39, 40, 41, 42, 43, 44, 45, 50, 51, 52};
+    protected int nSpecDual = dualMethods.length;    
+    
     protected boolean bestPolyFlag = false;         // = true if bestPolynomial called
     protected int bestPolynomialDegree = 0;         // degree of best polynomial fit
     protected double fProbSignificance = 0.05;      // significance level used in F-test in bestPolynomial method
@@ -184,9 +212,9 @@ public class Regression{
 
     protected boolean frechetWeibull = true;        // Frechet Weibull switch - if true Frechet, if false Weibull
     protected boolean linNonLin = true;             // if true linear method, if false non-linear method
-    protected boolean trueFreq = false;   	        // true if xData values are true frequencies, e.g. in a fit to Gaussian
-                                        	        // false if not
-                                        	        // if true chiSquarePoisson (see above) is also calculated
+    protected boolean trueFreq = false;   	    // true if xData values are true frequencies, e.g. in a fit to Gaussian
+                                                    // false if not
+                                                    // if true chiSquarePoisson (see above) is also calculated
     protected String xLegend = "x axis values";     // x axis legend in X-Y plot
     protected String yLegend = "y axis values";     // y axis legend in X-Y plot
     protected String graphTitle = " ";              // user supplied graph title
@@ -197,22 +225,22 @@ public class Regression{
     protected boolean supressErrorMessages= false;  // = true if some designated error messages are to be supressed
 
     // Non-linear members
-    protected boolean nlrStatus=true; 	            // Status of non-linear regression on exiting regression method
+    protected boolean nlrStatus=true;                       // Status of non-linear regression on exiting regression method
                                 		            // = true  -  convergence criterion was met
                                 		            // = false -  convergence criterion not met - current estimates returned
     protected int scaleOpt=0;     		            //  if = 0; no scaling of initial estimates
                                 		            //  if = 1; initial simplex estimates scaled to unity
                                 		            //  if = 2; initial estimates scaled by user provided values in scale[]
                                 		            //  (default = 0)
-    protected double[] scale = null;  	            // values to scale initial estimate (see scaleOpt above)
-    protected boolean zeroCheck = false; 	        // true if any best estimate value is zero
-                                       		        // if true the scale factor replaces the best estimate in numerical differentiation
-    protected boolean penalty = false; 	            // true if single parameter penalty function is included
-    protected boolean sumPenalty = false; 	        // true if multiple parameter penalty function is included
-    protected int nConstraints = 0; 		        // number of single parameter constraints
-    protected int nSumConstraints = 0; 		        // number of multiple parameter constraints
-    protected int maxConstraintIndex = -1;          // maximum index of constrained parameter/s
-    protected double constraintTolerance = 1e-4;    // tolerance in constraining parameter/s to a fixed value
+    protected double[] scale = null;                        // values to scale initial estimate (see scaleOpt above)
+    protected boolean zeroCheck = false;                    // true if any best estimate value is zero
+                                                            // if true the scale factor replaces the best estimate in numerical differentiation
+    protected boolean penalty = false;                      // true if single parameter penalty function is included
+    protected boolean sumPenalty = false;                   // true if multiple parameter penalty function is included
+    protected int nConstraints = 0;                         // number of single parameter constraints
+    protected int nSumConstraints = 0;                      // number of multiple parameter constraints
+    protected int maxConstraintIndex = -1;                  // maximum index of constrained parameter/s
+    protected double constraintTolerance = 1e-4;            // tolerance in constraining parameter/s to a fixed value
     protected ArrayList<Object> penalties = new ArrayList<Object>();        // constrant method index,
                                                                             //  number of single parameter constraints,
                                                                             //  then repeated for each constraint:
@@ -227,52 +255,55 @@ public class Regression{
                                                                             //  summation signs
                                                                             //  below or above constraint flag,
                                                                             //  constraint boundary value
-    protected int[] penaltyCheck = null;  	        // = -1 values below the single constraint boundary not allowed
-                                        	        // = +1 values above the single constraint boundary not allowed
+    protected int[] penaltyCheck = null;  	    // = -1 values below the single constraint boundary not allowed
+                                        	    // = +1 values above the single constraint boundary not allowed
     protected int[] sumPenaltyCheck = null;  	    // = -1 values below the multiple constraint boundary not allowed
-                                        	        // = +1 values above the multiple constraint boundary not allowed
+                                        	    // = +1 values above the multiple constraint boundary not allowed
     protected double penaltyWeight = 1.0e30;        // weight for the penalty functions
-    protected int[] penaltyParam = null;   	        // indices of paramaters subject to single parameter constraint
+    protected int[] penaltyParam = null;   	    // indices of paramaters subject to single parameter constraint
     protected int[][] sumPenaltyParam = null;       // indices of paramaters subject to multiple parameter constraint
     protected double[][] sumPlusOrMinus = null;     // valueall before each parameter in multiple parameter summation
     protected int[] sumPenaltyNumber = null;        // number of paramaters in each multiple parameter constraint
 
-    protected double[] constraints = null; 	        // single parameter constraint values
+    protected double[] constraints = null; 	    // single parameter constraint values
     protected double[] sumConstraints = null;       // multiple parameter constraint values
     protected int constraintMethod = 0;             // constraint method number
                                                     // =0: cliff to the power two (only method at present)
+    protected ArrayList<Object> constrainedSingle = new ArrayList<Object>();         // single constraint phrase
+    protected ArrayList<Object> constrainedMultiple = new ArrayList<Object>();       // multiple constraint phrase
+    String[] constraintString = null;                                                // all constraint phrases
 
     protected boolean scaleFlag = true;             // if true ordinate scale factor, Ao, included as unknown in fitting to special functions
                                                     // if false Ao set to unity (default value) or user provided value (in yScaleFactor)
     protected double yScaleFactor = 1.0D;           // y axis factor - set if scaleFlag (above) = false
-    protected int nMax = 3000;    		            // Nelder and Mead simplex maximum number of iterations
-    protected int nIter = 0;      		            // Nelder and Mead simplex number of iterations performed
-    protected int konvge = 3;     		            // Nelder and Mead simplex number of restarts allowed
+    protected int nMax = 3000;    		    // Nelder and Mead simplex maximum number of iterations allowed
+    protected int minIter = 300;    		    // Nelder and Mead simplex minimum number of iterations required
+    protected int nIter = 0;      		    // Nelder and Mead simplex number of iterations performed
+    protected int konvge = 3;     		    // Nelder and Mead simplex number of restarts allowed
     protected int kRestart = 0;       	            // Nelder and Mead simplex number of restarts taken
     protected double fMin = -1.0D;    	            // Nelder and Mead simplex minimum value
-    protected double fTol = 1e-9;     	            // Nelder and Mead simplex convergence tolerance
+    protected double fTol = 1e-9;     	            // Nelder and Mead simplex convergence tolerance factor
     protected double rCoeff = 1.0D;   	            // Nelder and Mead simplex reflection coefficient
     protected double eCoeff = 2.0D;   	            // Nelder and Mead simplex extension coefficient
     protected double cCoeff = 0.5D;   	            // Nelder and Mead simplex contraction coefficient
     protected double[] startH = null; 	            // Nelder and Mead simplex unscaled initial estimates
     protected double[] stepH = null;   	            // Nelder and Mead simplex unscaled initial step values
     protected double[] startSH = null; 	            // Nelder and Mead simplex scaled initial estimates
-    protected double[] stepSH = null;   	        // Nelder and Mead simplex scaled initial step values
-    protected double dStep = 0.5D;    	            // Nelder and Mead simplex default step value
+    protected double[] stepSH = null;   	    // Nelder and Mead simplex scaled initial step values
+    protected double dStep = 0.1D;    	            // Nelder and Mead simplex default step value
     protected double[][] grad = null; 	            // Non-linear regression gradients
-	protected double delta = 1e-4;    	            // Fractional step in numerical differentiation
-	protected double deltaBeale = 1e-3;    	        // Fractional step in calculation of Beale's nonlinearity
-
-	protected boolean invertFlag=true; 	            // Hessian Matrix ('linear' non-linear statistics) check
-	                                 	            //   true matrix successfully inverted, false inversion failed
-	protected boolean posVarFlag=true; 	            // Hessian Matrix ('linear' non-linear statistics) check
-	                                 	            //   true - all variances are positive; false - at least one is negative
-    protected int minTest = 0;    		            // Nelder and Mead minimum test
-                                		            //  = 0; tests simplex sd < fTol
-                                		            //  = 1; tests reduced chi suare or sum of squares < mean of abs(y values)*fTol
-    protected double simplexSd = 0.0D;    	        // simplex standard deviation
-    protected boolean statFlag = true;    	        // if true - statistical method called
-                                        	        // if false - no statistical analysis
+    protected double delta = 1e-4;                  // Fractional step in numerical differentiation
+  
+    protected boolean invertFlag=true; 	            // Hessian Matrix ('linear' non-linear statistics) check
+                                 	            //   true matrix successfully inverted, false inversion failed
+    protected boolean posVarFlag=true; 	            // Hessian Matrix ('linear' non-linear statistics) check
+                                 	            //   true - all variances are positive; false - at least one is negative
+    protected int minTest = 0;    		    // Nelder and Mead minimum test
+                                		    //  = 0; tests simplex sd < fTol
+                                		    //  = 1; tests reduced chi suare or sum of squares < mean of abs(y values)*fTol
+    protected double simplexSd = 0.0D;    	    // simplex standard deviation
+    protected boolean statFlag = true;    	    // if true - statistical method called
+                                        	    // if false - no statistical analysis
     protected boolean plotOpt = true;               // if true - plot of calculated values is cubic spline interpolation between the calculated values
                                                     // if false - calculated values linked by straight lines (accomodates Poiwsson distribution plots)
     protected boolean multipleY = false;            // = true if y variable consists of more than set of data each needing a different calculation in RegressionFunction
@@ -298,38 +329,68 @@ public class Regression{
     protected boolean plotWindowCloseChoice = false;// if false:    closing window terminates program
                                                     // if true:     closing window does not terminate program
 
-    protected double bottom = 0.0;                  // bottom value of sigmoid curves
-    protected double bottomIndex = 0.0;             // index of the bottom value of a sigmoid curve
-    protected double top = 0.0;                     // top value of a sigmoid curve
-    protected double topIndex = 0.0;                // index of the top value of a sigmoid curve
-    protected int midPointIndex = 0;                // index of the mid point of a sigmoid curve
+    protected double minimumY = 0;                  // minimum y-value
+    protected double minimumYindex = 0;             // index of minimum y-value
+    protected double maximumY = 0;                  // maximum y-value
+    protected double maximumYindex = 0;             // index of maximum y-value
+    protected double bottom = 0;                    // supplied logistic /EC50 curve bottom
+    protected double top = 0;                       // supplied logistic /EC50 curve top
+
+    protected double bottomS = 0.0;                 // calculated bottom value of sigmoid curves
+    protected double bottomSindex = 0.0;            // index of the calculated bottom value of a sigmoid curve
+    protected double topS = 0.0;                    // calculated top value of a sigmoid curve
+    protected double topSindex = 0.0;               // index of the calculated top value of a sigmoid curve
+    protected int midPointLowerIndex = 0;           // lower index of the mid point of a sigmoid curve
+    protected int midPointUpperIndex = 0;           // upper index of the mid point of a sigmoid curve
     protected double midPointXvalue = 0.0;          // x-value of the mid point of a sigmoid curve
     protected double midPointYvalue = 0.0;          // y-value of the mid point of a sigmoid curve
     protected int directionFlag = 0;                // = 1,  gradient of a sigmoid curve is positive
                                                     // = -1, gradient of a sigmoid curve is negative
 
+    protected double dDurbinWatson = Double.NaN;    // Durbin-Watson d statistic
+    protected boolean dDurbinWatsonDone = false;    // = true when Durbin-Watson d calculated
+    
+    protected double[][] firstDerivs = null;            // first derivatives of the functionwith respect to each parameter for each data point           
+    protected boolean analyticalDerivative = false;     // = true if analytical calculation of first derivatives performed
+                                                        // = false if numerical differencing used to obtain first derivatives   
+    protected double obsnVariance = 0.0;                // variance of the observations
+    
+    
+
     // HISTOGRAM CONSTRUCTION
-    //  Tolerance used in including an upper point in last histogram bin when it is outside due to riunding erors
+    //  Tolerance used in including an upper point in last histogram bin when it is outside due to rounding errors
     protected static double histTol = 1.0001D;
 
-    //CONSRUCTORS
+    //CONSTRUCTORS
 
     // Default constructor - primarily facilitating the subclass ImpedSpecRegression
     public Regression(){
-	}
+    }
 
-    // Constructor with data with x as 2D array and weights provided
-    public Regression(double[][] xData, double[] yData, double[] weight){
-
-        int n=weight.length;
+    // Constructor with data with x as 2D array and y errors provided
+    public Regression(double[][] xData, double[] yData, double[] yErrors){
+        this.simplexFlag = 1;
         this.nData0 = yData.length;
-        weight = this.checkForZeroWeights(weight);
+        yErrors = this.checkForZeroWeights(yErrors);
         if(this.weightOpt)this.weightFlag = 1;
-        this.setDefaultValues(Conv.copy(xData), Conv.copy(yData), Conv.copy(weight));
-	}
+        this.setDefaultValues(Conv.copy(xData), Conv.copy(yData), Conv.copy(yErrors));
+    }
+    
+    // Constructor with data with x as 2D array and x and y errors provided
+    public Regression(double[][] xData, double[] yData, double[][] xErrors, double[] yErrors){
+        this.simplexFlag = 3;
+        this.nData0 = yData.length;
+        this.jointZeroCheck(xErrors, yErrors);
+        this.yErrorsEntered = true;
+        this.xErrorsEntered = true;
+        this.weightOpt = true;
+        this.weightFlag = 1;
+        this.setDefaultValues(Conv.copy(xData), Conv.copy(yData), Conv.copy(xErrors), Conv.copy(yErrors));
+    }
 
-	// Constructor with data with x and y as 2D arrays and weights provided
-    public Regression(double[][] xxData, double[][] yyData, double[][] wWeight){
+    // Constructor with data with x and y as 2D arrays and y errors provided
+    public Regression(double[][] xxData, double[][] yyData, double[][] yyErrors){
+        this.simplexFlag = 2;
         this.multipleY = true;
         int nY1 = yyData.length;
         this.nYarrays = nY1;
@@ -338,7 +399,7 @@ public class Regression{
         int nX1 = xxData.length;
         int nX2 = xxData[0].length;
         double[] yData = new double[nY1*nY2];
-        double[] weight = new double[nY1*nY2];
+        double[] yErrors = new double[nY1*nY2];
         double[][] xData = new double[nY1*nY2][nX1];
         int ii=0;
         for(int i=0; i<nY1; i++){
@@ -349,47 +410,104 @@ public class Regression{
             for(int j=0; j<nY2; j++){
                 yData[ii] = yyData[i][j];
                 xData[ii][i] = xxData[i][j];
-                weight[ii] = wWeight[i][j];
+                yErrors[ii] = yyErrors[i][j];
                 ii++;
             }
         }
-        weight = this.checkForZeroWeights(weight);
+        yErrors = this.checkForZeroWeights(yErrors);
         if(this.weightOpt)this.weightFlag = 1;
-        this.setDefaultValues(xData, yData, weight);
-	}
-
-	// Constructor with data with x as 1D array and weights provided
-    public Regression(double[] xxData, double[] yData, double[] weight){
+        this.setDefaultValues(xData, yData, yErrors);
+    }
+    
+        // Constructor with data with x and y as 2D arrays and x and y errors provided
+    public Regression(double[][] xxData, double[][] yyData, double[][] xxErrors, double[][] yyErrors){
+        this.simplexFlag = 4;
+        this.multipleY = true;
+        int nY1 = yyData.length;
+        this.nYarrays = nY1;
+        int nY2 = yyData[0].length;
+        this.nData0 = nY2;
+        int nX1 = xxData.length;
+        int nX2 = xxData[0].length;
+        double[] yData = new double[nY1*nY2];
+        double[] yErrors = new double[nY1*nY2];
+        double[][] xData = new double[nY1*nY2][nX1];
+        double[][] xErrors = new double[nY1*nY2][nX1];
+        int ii=0;
+        for(int i=0; i<nY1; i++){
+            int nY = yyData[i].length;
+            if(nY!=nY2)throw new IllegalArgumentException("multiple y arrays must be of the same length");
+            int nX = xxData[i].length;
+            if(nY!=nX)throw new IllegalArgumentException("multiple y arrays must be of the same length as the x array length");
+            for(int j=0; j<nY2; j++){
+                yData[ii] = yyData[i][j];
+                xData[ii][i] = xxData[i][j];
+                yErrors[ii] = yyErrors[i][j];
+                xErrors[ii][i] = xxErrors[i][j];
+                ii++;
+            }
+        }
+        this.jointZeroCheck(xErrors, yErrors);
+        this.yErrorsEntered = true;
+        this.xErrorsEntered = true;
+        this.weightOpt = true;
+        this.weightFlag = 1;
+        this.setDefaultValues(Conv.copy(xData), Conv.copy(yData), Conv.copy(xErrors), Conv.copy(yErrors));
+        this.setDefaultValues(xData, yData, yErrors);
+    }
+    
+    // Constructor with data with x as 1D array and y errors provided
+    public Regression(double[] xxData, double[] yData, double[] yErrors){
+        this.simplexFlag = 1;
         this.nData0 = yData.length;
         int n = xxData.length;
-        int m = weight.length;
+        int m = yErrors.length;
         double[][] xData = new double[1][n];
         for(int i=0; i<n; i++){
             xData[0][i]=xxData[i];
         }
-
-        weight = this.checkForZeroWeights(weight);
+        yErrors = this.checkForZeroWeights(yErrors);
         if(this.weightOpt)this.weightFlag = 1;
-        this.setDefaultValues(Conv.copy(xData), Conv.copy(yData), Conv.copy(weight));
-	}
-
-	// Constructor with data with x as 1D array and y as 2D array and weights provided
-    public Regression(double[] xxData, double[][] yyData, double[][] wWeight){
-
+        this.setDefaultValues(Conv.copy(xData), Conv.copy(yData), Conv.copy(yErrors));
+    }
+    
+    // Constructor with data with x as 1D array and x and y errors provided
+    public Regression(double[] xxData, double[] yData, double[] xxErrors, double[] yErrors){
+        this.simplexFlag = 3;
+        this.nData0 = yData.length;
+        int n = xxData.length;
+        int m = yErrors.length;
+        double[][] xData = new double[1][n];
+        double[][] xErrors = new double[1][n];
+        for(int i=0; i<n; i++){
+            xData[0][i]=xxData[i];
+            xErrors[0][i]=xxErrors[i];
+        }
+        this.jointZeroCheck(xErrors, yErrors);
+        this.xErrorsEntered = true;
+        this.yErrorsEntered = true;
+        this.weightOpt = true;
+        this.weightFlag = 1;
+        this.setDefaultValues(Conv.copy(xData), Conv.copy(yData), Conv.copy(xErrors), Conv.copy(yErrors));
+    }
+    
+    // Constructor with data with x as 1D array and y as 2D array and y errors provided
+    public Regression(double[] xxData, double[][] yyData, double[][] yyErrors){
+        this.simplexFlag = 1;
         this.multipleY = true;
         int nY1 = yyData.length;
         this.nYarrays = nY1;
         int nY2= yyData[0].length;
         this.nData0 = nY2;
         double[] yData = new double[nY1*nY2];
-        double[] weight = new double[nY1*nY2];
+        double[] yErrors = new double[nY1*nY2];
         int ii=0;
         for(int i=0; i<nY1; i++){
             int nY = yyData[i].length;
             if(nY!=nY2)throw new IllegalArgumentException("multiple y arrays must be of the same length");
             for(int j=0; j<nY2; j++){
                 yData[ii] = yyData[i][j];
-                weight[ii] = wWeight[i][j];
+                yErrors[ii] = yyErrors[i][j];
                 ii++;
             }
         }
@@ -404,33 +522,75 @@ public class Regression{
             }
         }
 
-        weight = this.checkForZeroWeights(weight);
+        yErrors = this.checkForZeroWeights(yErrors);
         if(this.weightOpt)this.weightFlag = 1;
-        this.setDefaultValues(xData, yData, weight);
-	}
+        this.setDefaultValues(xData, yData, yErrors);
+    }
+    
+    // Constructor with data with x as 1D array and y as 2D array and x and y errors provided
+    public Regression(double[] xxData, double[][] yyData, double[] xxErrors, double[][] yyErrors){
+        this.simplexFlag = 4;
+        this.multipleY = true;
+        int nY1 = yyData.length;
+        this.nYarrays = nY1;
+        int nY2= yyData[0].length;
+        this.nData0 = nY2;
+        double[] yData = new double[nY1*nY2];
+        double[] yErrors = new double[nY1*nY2];
+        int ii=0;
+        for(int i=0; i<nY1; i++){
+            int nY = yyData[i].length;
+            if(nY!=nY2)throw new IllegalArgumentException("multiple y arrays must be of the same length");
+            for(int j=0; j<nY2; j++){
+                yData[ii] = yyData[i][j];
+                yErrors[ii] = yyErrors[i][j];
+                ii++;
+            }
+        }
+        int n = xxData.length;
+        if(n!=nY2)throw new IllegalArgumentException("x and y data lengths must be the same");
+        double[][] xData = new double[1][nY1*n];
+        double[][] xErrors = new double[1][nY1*n];
+        ii=0;
+        for(int j=0; j<nY1; j++){
+            for(int i=0; i<n; i++){
+                xData[0][ii]=xxData[i];
+                xErrors[0][ii]=xxErrors[i];
+                ii++;
+            }
+        }
 
-    // Constructor with data with x as 2D array and no weights provided
+        this.jointZeroCheck(xErrors, yErrors);
+        this.xErrorsEntered = true;
+        this.yErrorsEntered = true;
+        this.weightOpt = true;
+        this.weightFlag = 1;
+        this.setDefaultValues(Conv.copy(xData), Conv.copy(yData), Conv.copy(xErrors), Conv.copy(yErrors));
+   
+    }
+
+    // Constructor with data with x as 2D array and no errors provided
     public Regression(double[][] xData, double[] yData){
         this.nData0 = yData.length;
         int n = yData.length;
-        double[] weight = new double[n];
+        double[] yErrors = new double[n];
 
         this.weightOpt=false;
         this.weightFlag = 0;
-        for(int i=0; i<n; i++)weight[i]=1.0D;
+        for(int i=0; i<n; i++)yErrors[i]=1.0D;
 
-        setDefaultValues(Conv.copy(xData), Conv.copy(yData), weight);
-	}
+        setDefaultValues(Conv.copy(xData), Conv.copy(yData), yErrors);
+    }
 
-    // Constructor with data with x and y as 2D arrays and no weights provided
+    // Constructor with data with x and y as 2D arrays and no errors provided
     public Regression(double[][] xxData, double[][] yyData){
         this.multipleY = true;
+        this.simplexFlag = 2;
         int nY1 = yyData.length;
         this.nYarrays = nY1;
         int nY2 = yyData[0].length;
         this.nData0 = nY2;
         int nX1 = xxData.length;
-        int nX2 = xxData[0].length;
         double[] yData = new double[nY1*nY2];
         if(nY1!=nX1)throw new IllegalArgumentException("Multiple xData and yData arrays of different overall dimensions not supported");
         double[][] xData = new double[1][nY1*nY2];
@@ -448,34 +608,36 @@ public class Regression{
         }
 
         int n = yData.length;
-        double[] weight = new double[n];
+        double[] yErrors = new double[n];
 
         this.weightOpt=false;
-        for(int i=0; i<n; i++)weight[i]=1.0D;
+        for(int i=0; i<n; i++)yErrors[i]=1.0D;
         this.weightFlag = 0;
 
-        setDefaultValues(xData, yData, weight);
-	}
+        setDefaultValues(xData, yData, yErrors);
+    }
 
-    // Constructor with data with x as 1D array and no weights provided
+    // Constructor with data with x as 1D array and no errors provided
     public Regression(double[] xxData, double[] yData){
+        this.simplexFlag = 1;
         this.nData0 = yData.length;
         int n = xxData.length;
         double[][] xData = new double[1][n];
-        double[] weight = new double[n];
+        double[] yErrors = new double[n];
 
         for(int i=0; i<n; i++)xData[0][i]=xxData[i];
 
         this.weightOpt=false;
         this.weightFlag = 0;
-        for(int i=0; i<n; i++)weight[i]=1.0D;
+        for(int i=0; i<n; i++)yErrors[i]=1.0D;
 
-        setDefaultValues(xData, Conv.copy(yData), weight);
-	}
+        setDefaultValues(xData, Conv.copy(yData), yErrors);
+    }
 
-	// Constructor with data with x as 1D array and y as a 2D array and no weights provided
+    // Constructor with data with x as 1D array and y as a 2D array and no errors provided
     public Regression(double[] xxData, double[][] yyData){
         this.multipleY = true;
+        this.simplexFlag = 2;
         int nY1 = yyData.length;
         this.nYarrays = nY1;
         int nY2= yyData[0].length;
@@ -492,37 +654,38 @@ public class Regression{
         }
 
         double[][] xData = new double[1][nY1*nY2];
-        double[] weight = new double[nY1*nY2];
+        double[] yErrors = new double[nY1*nY2];
 
         ii=0;
         int n = xxData.length;
         for(int j=0; j<nY1; j++){
             for(int i=0; i<n; i++){
                 xData[0][ii]=xxData[i];
-                weight[ii]=1.0D;
+                yErrors[ii]=1.0D;
                 ii++;
             }
         }
         this.weightOpt=false;
         this.weightFlag = 0;
 
-        setDefaultValues(xData, yData, weight);
-	}
+        setDefaultValues(xData, yData, yErrors);
+    }
 
-	// Constructor with data as a single array that has to be binned
-	// bin width and value of the low point of the first bin provided
+    // Constructor with data as a single array that has to be binned
+    // bin width and value of the low point of the first bin provided
     public Regression(double[] xxData, double binWidth, double binZero){
+        this.simplexFlag = 1;
         double[][] data = Regression.histogramBins(Conv.copy(xxData), binWidth, binZero);
         int n = data[0].length;
         this.nData0 = n;
         double[][] xData = new double[1][n];
         double[] yData = new double[n];
-        double[] weight = new double[n];
+        double[] yErrors = new double[n];
         for(int i=0; i<n; i++){
             xData[0][i]=data[0][i];
             yData[i]=data[1][i];
         }
-        boolean flag = setTrueFreqWeights(yData, weight);
+        boolean flag = setTrueFreqWeights(yData, yErrors);
         if(flag){
             this.trueFreq=true;
             this.weightOpt=true;
@@ -533,23 +696,24 @@ public class Regression{
             this.weightOpt=false;
             this.weightFlag = 0;
         }
-        setDefaultValues(xData, yData, weight);
-	}
+        setDefaultValues(xData, yData, yErrors);
+    }
 
-	// Constructor with data as a single array that has to be binned
-	// bin width provided
+    // Constructor with data as a single array that has to be binned
+    // bin width provided
     public Regression(double[] xxData, double binWidth){
+        this.simplexFlag = 1;
         double[][] data = Regression.histogramBins(Conv.copy(xxData), binWidth);
         int n = data[0].length;
         this.nData0 = n;
         double[][] xData = new double[1][n];
         double[] yData = new double[n];
-        double[] weight = new double[n];
+        double[] yErrors = new double[n];
         for(int i=0; i<n; i++){
             xData[0][i]=data[0][i];
             yData[i]=data[1][i];
         }
-        boolean flag = setTrueFreqWeights(yData, weight);
+        boolean flag = setTrueFreqWeights(yData, yErrors);
         if(flag){
             this.trueFreq=true;
             this.weightOpt=true;
@@ -560,122 +724,34 @@ public class Regression{
             this.weightOpt=false;
             this.weightFlag = 0;
         }
-        System.out.println("sf1 " + scaleFlag);
-        setDefaultValues(xData, yData, weight);
-        System.out.println("sf2 " + scaleFlag);
-	}
-
-    // Check entered weights for zeros.
-    // If more than 40% are zero or less than zero, all weights replaced by unity
-    // If less than 40% are zero or less than zero, the zero or negative weights are replaced by the average of their nearest neighbours
-    protected double[] checkForZeroWeights(double[] weight){
-        this.weightOpt=true;
-        int nZeros = 0;
-        int n=weight.length;
-
-        for(int i=0; i<n; i++)if(weight[i]<=0.0)nZeros++;
-        double perCentZeros = 100.0*(double)nZeros/(double)n;
-        if(perCentZeros>40.0){
-            System.out.println(perCentZeros + "% of the weights are zero or less; all weights set to 1.0");
-            for(int i=0; i<n; i++)weight[i]=1.0D;
-            this.weightOpt = false;
-        }
-        else{
-            if(perCentZeros>0.0D){
-                for(int i=0; i<n; i++){
-                    if(weight[i]<=0.0){
-                        if(i==0){
-                            int ii=1;
-                            boolean test = true;
-                            while(test){
-                                if(weight[ii]>0.0D){
-                                    double ww = weight[0];
-                                    weight[0] = weight[ii];
-                                    System.out.println("weight at point " + i + ", " + ww + ", replaced by "+ weight[i]);
-                                    test = false;
-                                }
-                            else{
-                                    ii++;
-                                }
-                            }
-                        }
-                        if(i==(n-1)){
-                            int ii=n-2;
-                            boolean test = true;
-                            while(test){
-                                if(weight[ii]>0.0D){
-                                    double ww = weight[i];
-                                    weight[i] = weight[ii];
-                                    System.out.println("weight at point " + i + ", " + ww + ", replaced by "+ weight[i]);
-                                    test = false;
-                                }
-                                else{
-                                    ii--;
-                                }
-                            }
-                        }
-                        if(i>0 && i<(n-2)){
-                            double lower = 0.0;
-                            double upper = 0.0;
-                            int ii=i-1;
-                            boolean test = true;
-                            while(test){
-                                if(weight[ii]>0.0D){
-                                    lower = weight[ii];
-                                    test = false;
-                                }
-                                else{
-                                    ii--;
-                                    if(ii==0)test = false;
-                                }
-                            }
-                            ii=i+1;
-                            test = true;
-                            while(test){
-                                if(weight[ii]>0.0D){
-                                    upper = weight[ii];
-                                    test = false;
-                                }
-                                else{
-                                    ii++;
-                                    if(ii==(n-1))test = false;
-                                }
-                            }
-                            double ww = weight[i];
-                            if(lower==0.0){
-                                weight[i] = upper;
-                            }
-                            else{
-                                if(upper==0.0){
-                                    weight[i] = lower;
-                                }
-                                else{
-                                    weight[i] = (lower + upper)/2.0;
-                                }
-                            }
-                            System.out.println("weight at point " + i + ", " + ww + ", replaced by "+ weight[i]);
-                        }
-                    }
-                }
-            }
-        }
-        return weight;
-	}
-
-	// Enter data methods
-	// Enter data with x as 2D array and weights provided
-    public void enterData(double[][] xData, double[] yData, double[] weight){
-
-        int n=weight.length;
+        setDefaultValues(xData, yData, yErrors);
+    }
+    
+    // ENTER DATA METHODS
+        // Enter data method with x as 2D array and y errors provided
+    public void enterData(double[][] xData, double[] yData, double[] yErrors){
+        this.simplexFlag = 1;
         this.nData0 = yData.length;
-        this.weightOpt=true;
-        weight = this.checkForZeroWeights(weight);
+        yErrors = this.checkForZeroWeights(yErrors);
         if(this.weightOpt)this.weightFlag = 1;
-        this.setDefaultValues(xData, yData, weight);
-	}
+        this.setDefaultValues(Conv.copy(xData), Conv.copy(yData), Conv.copy(yErrors));
+    }
+    
+    // Enter data method with x as 2D array and x and y errors provided
+    public void enterData(double[][] xData, double[] yData, double[][] xErrors, double[] yErrors){
+        this.simplexFlag = 3;
+        this.nData0 = yData.length;
+        this.jointZeroCheck(xErrors, yErrors);
+        this.yErrorsEntered = true;
+        this.xErrorsEntered = true;
+        this.weightOpt = true;
+        this.weightFlag = 1;
+        this.setDefaultValues(Conv.copy(xData), Conv.copy(yData), Conv.copy(xErrors), Conv.copy(yErrors));
+    }
 
-	// Enter data with x and y as 2D arrays and weights provided
-    public void enterData(double[][] xxData, double[][] yyData, double[][] wWeight){
+    // Enter data method with x and y as 2D arrays and y errors provided
+    public void enterData(double[][] xxData, double[][] yyData, double[][] yyErrors){
+        this.simplexFlag = 2;
         this.multipleY = true;
         int nY1 = yyData.length;
         this.nYarrays = nY1;
@@ -684,7 +760,7 @@ public class Regression{
         int nX1 = xxData.length;
         int nX2 = xxData[0].length;
         double[] yData = new double[nY1*nY2];
-        double[] weight = new double[nY1*nY2];
+        double[] yErrors = new double[nY1*nY2];
         double[][] xData = new double[nY1*nY2][nX1];
         int ii=0;
         for(int i=0; i<nY1; i++){
@@ -695,48 +771,104 @@ public class Regression{
             for(int j=0; j<nY2; j++){
                 yData[ii] = yyData[i][j];
                 xData[ii][i] = xxData[i][j];
-                weight[ii] = wWeight[i][j];
+                yErrors[ii] = yyErrors[i][j];
                 ii++;
             }
         }
-
-        weight = this.checkForZeroWeights(weight);
+        yErrors = this.checkForZeroWeights(yErrors);
         if(this.weightOpt)this.weightFlag = 1;
-        this.setDefaultValues(xData, yData, weight);
-	}
-
-	// Enter data with x as 1D array and weights provided
-    public void enterData(double[] xxData, double[] yData, double[] weight){
+        this.setDefaultValues(xData, yData, yErrors);
+    }
+    
+        // Enter data method with x and y as 2D arrays and x and y errors provided
+    public void enterData(double[][] xxData, double[][] yyData, double[][] xxErrors, double[][] yyErrors){
+        this.simplexFlag = 4;
+        this.multipleY = true;
+        int nY1 = yyData.length;
+        this.nYarrays = nY1;
+        int nY2 = yyData[0].length;
+        this.nData0 = nY2;
+        int nX1 = xxData.length;
+        int nX2 = xxData[0].length;
+        double[] yData = new double[nY1*nY2];
+        double[] yErrors = new double[nY1*nY2];
+        double[][] xData = new double[nY1*nY2][nX1];
+        double[][] xErrors = new double[nY1*nY2][nX1];
+        int ii=0;
+        for(int i=0; i<nY1; i++){
+            int nY = yyData[i].length;
+            if(nY!=nY2)throw new IllegalArgumentException("multiple y arrays must be of the same length");
+            int nX = xxData[i].length;
+            if(nY!=nX)throw new IllegalArgumentException("multiple y arrays must be of the same length as the x array length");
+            for(int j=0; j<nY2; j++){
+                yData[ii] = yyData[i][j];
+                xData[ii][i] = xxData[i][j];
+                yErrors[ii] = yyErrors[i][j];
+                xErrors[ii][i] = xxErrors[i][j];
+                ii++;
+            }
+        }
+        this.jointZeroCheck(xErrors, yErrors);
+        this.yErrorsEntered = true;
+        this.xErrorsEntered = true;
+        this.weightOpt = true;
+        this.weightFlag = 1;
+        this.setDefaultValues(Conv.copy(xData), Conv.copy(yData), Conv.copy(xErrors), Conv.copy(yErrors));
+        this.setDefaultValues(xData, yData, yErrors);
+    }
+    
+    // Enter data method with x as 1D array and y errors provided
+    public void enterData(double[] xxData, double[] yData, double[] yErrors){
+        this.simplexFlag = 1;
         this.nData0 = yData.length;
         int n = xxData.length;
-        int m = weight.length;
+        int m = yErrors.length;
         double[][] xData = new double[1][n];
         for(int i=0; i<n; i++){
             xData[0][i]=xxData[i];
         }
-
-        weight = this.checkForZeroWeights(weight);
+        yErrors = this.checkForZeroWeights(yErrors);
         if(this.weightOpt)this.weightFlag = 1;
-        this.setDefaultValues(xData, yData, weight);
-	}
-
-	// Enter data with x as 1D array and y as 2D array and weights provided
-    public void enterData(double[] xxData, double[][] yyData, double[][] wWeight){
-
+        this.setDefaultValues(Conv.copy(xData), Conv.copy(yData), Conv.copy(yErrors));
+    }
+    
+    // Enter data method with x as 1D array and x and y errors provided
+    public void enterData(double[] xxData, double[] yData, double[] xxErrors, double[] yErrors){
+        this.simplexFlag = 3;
+        this.nData0 = yData.length;
+        int n = xxData.length;
+        int m = yErrors.length;
+        double[][] xData = new double[1][n];
+        double[][] xErrors = new double[1][n];
+        for(int i=0; i<n; i++){
+            xData[0][i]=xxData[i];
+            xErrors[0][i]=xxErrors[i];
+        }
+        this.jointZeroCheck(xErrors, yErrors);
+        this.xErrorsEntered = true;
+        this.yErrorsEntered = true;
+        this.weightOpt = true;
+        this.weightFlag = 1;
+        this.setDefaultValues(Conv.copy(xData), Conv.copy(yData), Conv.copy(xErrors), Conv.copy(yErrors));
+    }
+    
+    // Enter data method with x as 1D array and y as 2D array and y errors provided
+    public void enterData(double[] xxData, double[][] yyData, double[][] yyErrors){
+        this.simplexFlag = 1;
         this.multipleY = true;
         int nY1 = yyData.length;
         this.nYarrays = nY1;
         int nY2= yyData[0].length;
         this.nData0 = nY2;
         double[] yData = new double[nY1*nY2];
-        double[] weight = new double[nY1*nY2];
+        double[] yErrors = new double[nY1*nY2];
         int ii=0;
         for(int i=0; i<nY1; i++){
             int nY = yyData[i].length;
             if(nY!=nY2)throw new IllegalArgumentException("multiple y arrays must be of the same length");
             for(int j=0; j<nY2; j++){
                 yData[ii] = yyData[i][j];
-                weight[ii] = wWeight[i][j];
+                yErrors[ii] = yyErrors[i][j];
                 ii++;
             }
         }
@@ -751,34 +883,78 @@ public class Regression{
             }
         }
 
-        weight = this.checkForZeroWeights(weight);
+        yErrors = this.checkForZeroWeights(yErrors);
         if(this.weightOpt)this.weightFlag = 1;
-        this.setDefaultValues(xData, yData, weight);
-	}
+        this.setDefaultValues(xData, yData, yErrors);
+    }
+    
+    // Enter data method with x as 1D array and y as 2D array and x and y errors provided
+    public void enterData(double[] xxData, double[][] yyData, double[] xxErrors, double[][] yyErrors){
+        this.simplexFlag = 4;
+        this.multipleY = true;
+        int nY1 = yyData.length;
+        this.nYarrays = nY1;
+        int nY2= yyData[0].length;
+        this.nData0 = nY2;
+        double[] yData = new double[nY1*nY2];
+        double[] yErrors = new double[nY1*nY2];
+        int ii=0;
+        for(int i=0; i<nY1; i++){
+            int nY = yyData[i].length;
+            if(nY!=nY2)throw new IllegalArgumentException("multiple y arrays must be of the same length");
+            for(int j=0; j<nY2; j++){
+                yData[ii] = yyData[i][j];
+                yErrors[ii] = yyErrors[i][j];
+                ii++;
+            }
+        }
+        int n = xxData.length;
+        if(n!=nY2)throw new IllegalArgumentException("x and y data lengths must be the same");
+        double[][] xData = new double[1][nY1*n];
+        double[][] xErrors = new double[1][nY1*n];
+        ii=0;
+        for(int j=0; j<nY1; j++){
+            for(int i=0; i<n; i++){
+                xData[0][ii]=xxData[i];
+                xErrors[0][ii]=xxErrors[i];
+                ii++;
+            }
+        }
 
-    // Enter data with x as 2D array and no weights provided
+        this.jointZeroCheck(xErrors, yErrors);
+        this.xErrorsEntered = true;
+        this.yErrorsEntered = true;
+        this.weightOpt = true;
+        this.weightFlag = 1;
+        this.setDefaultValues(Conv.copy(xData), Conv.copy(yData), Conv.copy(xErrors), Conv.copy(yErrors));
+   
+    }
+
+    // Enter data method with x as 2D array and no errors provided
     public void enterData(double[][] xData, double[] yData){
         this.nData0 = yData.length;
         int n = yData.length;
-        double[] weight = new double[n];
+        double[] yErrors = new double[n];
 
         this.weightOpt=false;
-        for(int i=0; i<n; i++)weight[i]=1.0D;
         this.weightFlag = 0;
-        setDefaultValues(xData, yData, weight);
-	}
+        for(int i=0; i<n; i++)yErrors[i]=1.0D;
 
-    // Enter data with x and y as 2D arrays and no weights provided
+        setDefaultValues(Conv.copy(xData), Conv.copy(yData), yErrors);
+    }
+
+    // Enter data method with x and y as 2D arrays and no errors provided
     public void enterData(double[][] xxData, double[][] yyData){
         this.multipleY = true;
+        this.simplexFlag = 2;
         int nY1 = yyData.length;
         this.nYarrays = nY1;
         int nY2 = yyData[0].length;
         this.nData0 = nY2;
         int nX1 = xxData.length;
-        int nX2 = xxData[0].length;
         double[] yData = new double[nY1*nY2];
-        double[][] xData = new double[nY1*nY2][nX1];
+        if(nY1!=nX1)throw new IllegalArgumentException("Multiple xData and yData arrays of different overall dimensions not supported");
+        double[][] xData = new double[1][nY1*nY2];
         int ii=0;
         for(int i=0; i<nY1; i++){
             int nY = yyData[i].length;
@@ -787,40 +963,42 @@ public class Regression{
             if(nY!=nX)throw new IllegalArgumentException("multiple y arrays must be of the same length as the x array length");
             for(int j=0; j<nY2; j++){
                 yData[ii] = yyData[i][j];
-                xData[ii][i] = xxData[i][j];
+                xData[0][ii] = xxData[i][j];
                 ii++;
             }
         }
 
         int n = yData.length;
-        double[] weight = new double[n];
+        double[] yErrors = new double[n];
 
         this.weightOpt=false;
-        for(int i=0; i<n; i++)weight[i]=1.0D;
+        for(int i=0; i<n; i++)yErrors[i]=1.0D;
         this.weightFlag = 0;
 
-        setDefaultValues(xData, yData, weight);
-	}
+        setDefaultValues(xData, yData, yErrors);
+    }
 
-    // Enter data with x as 1D array and no weights provided
+    // Enter data method with x as 1D array and no errors provided
     public void enterData(double[] xxData, double[] yData){
+        this.simplexFlag = 1;
         this.nData0 = yData.length;
         int n = xxData.length;
         double[][] xData = new double[1][n];
-        double[] weight = new double[n];
+        double[] yErrors = new double[n];
 
         for(int i=0; i<n; i++)xData[0][i]=xxData[i];
 
         this.weightOpt=false;
-        for(int i=0; i<n; i++)weight[i]=1.0D;
         this.weightFlag = 0;
+        for(int i=0; i<n; i++)yErrors[i]=1.0D;
 
-        setDefaultValues(xData, yData, weight);
-	}
+        setDefaultValues(xData, Conv.copy(yData), yErrors);
+    }
 
-	// Enter data with x as 1D array and y as a 2D array and no weights provided
+    // Enter data method with x as 1D array and y as a 2D array and no errors provided
     public void enterData(double[] xxData, double[][] yyData){
         this.multipleY = true;
+        this.simplexFlag = 2;
         int nY1 = yyData.length;
         this.nYarrays = nY1;
         int nY2= yyData[0].length;
@@ -837,37 +1015,38 @@ public class Regression{
         }
 
         double[][] xData = new double[1][nY1*nY2];
-        double[] weight = new double[nY1*nY2];
+        double[] yErrors = new double[nY1*nY2];
 
         ii=0;
         int n = xxData.length;
         for(int j=0; j<nY1; j++){
             for(int i=0; i<n; i++){
                 xData[0][ii]=xxData[i];
-                weight[ii]=1.0D;
+                yErrors[ii]=1.0D;
                 ii++;
             }
         }
         this.weightOpt=false;
         this.weightFlag = 0;
 
-        this.setDefaultValues(xData, yData, weight);
-	}
+        setDefaultValues(xData, yData, yErrors);
+    }
 
-	// Enter data as a single array that has to be binned
-	// bin width and value of the low point of the first bin provided
+    // Enter data method with  as a single array that has to be binned
+    // bin width and value of the low point of the first bin provided
     public void enterData(double[] xxData, double binWidth, double binZero){
-        double[][] data = Regression.histogramBins(xxData, binWidth, binZero);
+        this.simplexFlag = 1;
+        double[][] data = Regression.histogramBins(Conv.copy(xxData), binWidth, binZero);
         int n = data[0].length;
         this.nData0 = n;
         double[][] xData = new double[1][n];
         double[] yData = new double[n];
-        double[] weight = new double[n];
+        double[] yErrors = new double[n];
         for(int i=0; i<n; i++){
             xData[0][i]=data[0][i];
             yData[i]=data[1][i];
         }
-        boolean flag = setTrueFreqWeights(yData, weight);
+        boolean flag = setTrueFreqWeights(yData, yErrors);
         if(flag){
             this.trueFreq=true;
             this.weightOpt=true;
@@ -878,48 +1057,195 @@ public class Regression{
             this.weightOpt=false;
             this.weightFlag = 0;
         }
-        setDefaultValues(xData, yData, weight);
-	}
+        setDefaultValues(xData, yData, yErrors);
+    }
 
-	// Enter data as a single array that has to be binned
-	// bin width provided
+    // Enter data method with  as a single array that has to be binned
+    // bin width provided
     public void enterData(double[] xxData, double binWidth){
-        double[][] data = Regression.histogramBins(xxData, binWidth);
+        this.simplexFlag = 1;
+        double[][] data = Regression.histogramBins(Conv.copy(xxData), binWidth);
         int n = data[0].length;
         this.nData0 = n;
         double[][] xData = new double[1][n];
         double[] yData = new double[n];
-        double[] weight = new double[n];
+        double[] yErrors = new double[n];
         for(int i=0; i<n; i++){
             xData[0][i]=data[0][i];
             yData[i]=data[1][i];
         }
-        boolean flag = setTrueFreqWeights(yData, weight);
+        boolean flag = setTrueFreqWeights(yData, yErrors);
         if(flag){
             this.trueFreq=true;
             this.weightOpt=true;
-            this.weightFlag = 0;
+            this.weightFlag = 1;
         }
         else{
             this.trueFreq=false;
             this.weightOpt=false;
             this.weightFlag = 0;
         }
-        setDefaultValues(xData, yData, weight);
-	}
+        setDefaultValues(xData, yData, yErrors);
+    }
 
+    
+    // Check entered weight for zeros.
+    // y errors
+    // If more than 40% are zero or less than zero, all weight replaced by unity
+    // If less than 40% are zero or less than zero, the zero or negative weight are replaced by the average of their nearest neighbours
+    protected double[] checkForZeroWeights(double[] yErrors){
+        int flag = 1;
+        boolean weightOptHold = this.weightOpt;
+        this.weightOpt = false;
+        yErrors = this.checkForZeroWeightsCommon(yErrors, yErrors.length, 0, flag);
+        if(this.weightOpt)this.yErrorsEntered = true;
+        if(weightOptHold)this.weightOpt = true;
+        return yErrors;
+    }
+    
+    // Common method for checking entered weight for zeros.
+    // x or y errors
+    // If more than 40% are zero or less than zero, all weight replaced by unity
+    // If less than 40% are zero or less than zero, the zero or negative weight are replaced by the average of their nearest neighbours
+    protected double[] checkForZeroWeightsCommon(double[] error, int nn, int mm, int flag){
+        this.weightOpt=true;
+        int nZeros = 0;
+        int n=error.length;
 
+        for(int i=0; i<n; i++)if(error[i]<=0.0)nZeros++;
+        double perCentZeros = 100.0*(double)nZeros/(double)n;
+        if(perCentZeros>40.0){
+            System.out.println(perCentZeros + "% of the weighting errors are zero or less; all weighting errors set to 1.0");
+            for(int i=0; i<n; i++)error[i]=1.0D;
+            this.weightOpt = false;
+        }
+        else{
+            if(perCentZeros>0.0D){
+                for(int i=0; i<n; i++){
+                    if(error[i]<=0.0){
+                        if(i==0){
+                            int ii=1;
+                            boolean test = true;
+                            while(test){
+                                if(error[ii]>0.0D){
+                                    double ww = error[0];
+                                    error[0] = error[ii];
+                                    if(flag==1){
+                                        System.out.println("y error at point " + i + ", " + ww + ", replaced by "+ error[i]);
+                                    }
+                                    else{
+                                        System.out.println("x error at point " + (i/mm) + "," + (i%mm) + " " + ww + " replaced by "+ error[i]);
+                                    }
+                                    test = false;
+                                }
+                            else{
+                                    ii++;
+                                }
+                            }
+                        }
+                        if(i==(n-1)){
+                            int ii=n-2;
+                            boolean test = true;
+                            while(test){
+                                if(error[ii]>0.0D){
+                                    double ww = error[i];
+                                    error[i] = error[ii];
+                                    if(flag==1){
+                                        System.out.println("y error at point " + i + ", " + ww + ", replaced by "+ error[i]);
+                                    }
+                                    else{
+                                        System.out.println("x error at point " + (i/mm) + "," + (i%mm) + " " + ww + " replaced by "+ error[i]);
+                                    }
+                                    test = false;
+                                }
+                                else{
+                                    ii--;
+                                }
+                            }
+                        }
+                        if(i>0 && i<(n-2)){
+                            double lower = 0.0;
+                            double upper = 0.0;
+                            int ii=i-1;
+                            boolean test = true;
+                            while(test){
+                                if(error[ii]>0.0D){
+                                    lower = error[ii];
+                                    test = false;
+                                }
+                                else{
+                                    ii--;
+                                    if(ii==0)test = false;
+                                }
+                            }
+                            ii=i+1;
+                            test = true;
+                            while(test){
+                                if(error[ii]>0.0D){
+                                    upper = error[ii];
+                                    test = false;
+                                }
+                                else{
+                                    ii++;
+                                    if(ii==(n-1))test = false;
+                                }
+                            }
+                            double ww = error[i];
+                            if(lower==0.0){
+                                error[i] = upper;
+                            }
+                            else{
+                                if(upper==0.0){
+                                    error[i] = lower;
+                                }
+                                else{
+                                    error[i] = (lower + upper)/2.0;
+                                }
+                            }
+                            if(flag==1){
+                                System.out.println("y error at point " + i + ", " + ww + ", replaced by "+ error[i]);
+                            }
+                            else{
+                                System.out.println("x error at point " + (i/mm) + "," + (i%mm) + " " + ww + " replaced by "+ error[i]);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return error;
+    }
+
+    // Joint check for matching x and y weighting error zeros
+    protected void jointZeroCheck(double[][] xErrors, double[] yErrors){
+        int n = xErrors[0].length;
+        int m = yErrors.length;
+        int q = xErrors.length;
+        int zeroSum = 0;
+        if(m!=n)throw new IllegalArgumentException("The number of x weightimg errors, " + n + ", does not match the number of y weighting errors. " + m);
+        for(int i=0; i<n; i++){
+            zeroSum = 0;
+            if(yErrors[i]==0.0)zeroSum++;
+            for(int j=0; j<q; j++){
+                if(xErrors[j][i]==0.0){
+                    zeroSum++;
+                }
+            }
+            if(zeroSum==q+1)throw new IllegalArgumentException("Data point, index, "+i+", has zero x and zero y weighting error values");
+        }
+    } 
+    
     protected static boolean setTrueFreqWeights(double[] yData, double[] weight){
         int nData=yData.length;
         boolean flag = true;
         boolean unityWeight=false;
 
-        // Set all weights to square root of frequency of occurence
+        // Set all weight to square root of frequency of occurence
         for(int ii=0; ii<nData; ii++){
             weight[ii]=Math.sqrt(Math.abs(yData[ii]));
         }
 
-        // Check for zero weights and take average of neighbours as weight if it is zero
+        // Check for zero weight and take average of neighbours as weight if it is zero
         for(int ii=0; ii<nData; ii++){
             double last = 0.0D;
             double next = 0.0D;
@@ -968,32 +1294,101 @@ public class Regression{
     }
 
     // Set data and default values
-    protected void setDefaultValues(double[][] xData, double[] yData, double[] weight){
+    protected void setDefaultValues(double[][] xData, double[] yData, double[] yErrors){
+        this.setDefaultValues(xData, yData,  null, yErrors);
+    }
+    
+    protected void setDefaultValues(double[][] xData, double[] yData, double[][] xErrors, double[] yErrors){
+        boolean check = true;
+        if(xErrors==null)check = false;
         this.nData = yData.length;
         this.nXarrays = xData.length;
-        this.nTerms = this.nXarrays;
+        this.nParam = this.nXarrays;
         this.yData = new double[nData];
         this.yCalc = new double[nData];
+        this.yErrors = new double[nData];
         this.weight = new double[nData];
         this.residual = new double[nData];
         this.residualW = new double[nData];
         this.xData = new double[nXarrays][nData];
-        int n=weight.length;
-        if(n!=this.nData)throw new IllegalArgumentException("The weight and the y data lengths do not agree");
+        if(check)this.xErrors = new double[nXarrays][nData];
+        int n=yErrors.length;
+        if(n!=this.nData)throw new IllegalArgumentException("The y error and the y data lengths do not agree");
         for(int i=0; i<this.nData; i++){
             this.yData[i]=yData[i];
-            this.weight[i]=weight[i];
+            this.yErrors[i]=yErrors[i];
+            this.weight[i] = this.yErrors[i];
         }
         for(int j=0; j<this.nXarrays; j++){
             n=xData[j].length;
             if(n!=this.nData)throw new IllegalArgumentException("An x [" + j + "] length " + n + " and the y data length, " + this.nData + ", do not agree");
-            for(int i=0; i<this.nData; i++){
-                this.xData[j][i]=xData[j][i];
+            if(check){
+                int nn = xErrors[j].length;
+                if(nn!=this.nData)throw new IllegalArgumentException("An x error [" + j + "] length " + n + " and the y data length, " + this.nData + ", do not agree");
+            }
+            for(int i=0; i<this.nData; i++)this.xData[j][i]=xData[j][i];
+            if(check)for(int i=0; i<this.nData; i++)this.xErrors[j][i] = xErrors[j][i];
+        }
+
+        // minimimum and maximum y-values
+        this.minimumY = this.yData[0];
+        this.minimumYindex = 0;
+        this.maximumY = this.yData[0];
+        this.maximumYindex = 0;
+        for(int i=0; i<this.nData; i++){
+            if(this.yData[i]<this.minimumY){
+                this.minimumY = this.yData[i];
+                this.minimumYindex  = i;
+            }
+            if(this.yData[i]>this.maximumY){
+                this.maximumY = this.yData[i];
+                this.maximumYindex  = i;
             }
         }
-	}
+        
+        // effective number of data points
+        this.effectiveNumber();
 
-	// Set standard deviation, variance and covariance denominators to n
+        // Reassess non-linear tolerance fTol
+        // this.reassessFtol();
+    }
+    
+    // Set true error flag
+    public void setErrorsAsSD(){
+        this.trueErrors = true;
+    }
+    
+     public void setErrorsAsScaled(){
+        this.trueErrors = false;
+    }
+    
+    // Calculate effective number
+    protected void effectiveNumber(){
+        double numer = 0.0;
+        double denom = 0.0;
+        double hold = 0.0;
+        for(int i=0; i<this.nData; i++){
+            hold = 1/(weight[i]*weight[i]);
+            numer += hold;
+            denom += hold*hold;
+        }
+        this.nEffective = numer*numer/denom;
+    }
+
+    // Reassess non-linear regression tolerance in light of the data
+    // Not now used
+    private void reassessFtol(){
+
+        // Mean exponent of y-values
+	double meanExp = Math.pow(10, Math.floor(Math.log10((this.minimumY + this.maximumY)/2.0)));
+        
+        // Calculate new fTol
+        double fTolnew = meanExp*this.fTol;
+        if(fTolnew<this.fTol)this.fTol = fTolnew;
+    }
+
+
+    // Set standard deviation, variance and covariance denominators to n
     public static void setDenominatorToN(){
         Stat.setStaticDenominatorToN();
     }
@@ -1027,20 +1422,20 @@ public class Regression{
         return Stat.getCFtolerance();
     }
 
-	// Supress printing of results
-	public void supressPrint(){
-	    this.supressPrint = true;
-	}
+    // Supress printing of results
+    public void supressPrint(){
+        this.supressPrint = true;
+    }
 
-	// Supress plot of calculated versus experimental values
-	public void supressYYplot(){
-	    this.supressYYplot = true;
-	}
+    // Supress plot of calculated versus experimental values
+    public void supressYYplot(){
+        this.supressYYplot = true;
+    }
 
     // Supress convergence and chiSquare error messages
-	public void supressErrorMessages(){
-	    this.supressErrorMessages = true;
-	}
+    public void supressErrorMessages(){
+        this.supressErrorMessages = true;
+    }
 
     // Ignore check on whether degrtees of freedom are greater than zero
     public void ignoreDofFcheck(){
@@ -1159,42 +1554,46 @@ public class Regression{
         this.graphTitle = title;
     }
 
+    
+    // LINEAR AND PARTIALLY LINEAR REGRESSIONS
+    
     // Fit to a constant
     // y = a
     public void constant(){
         if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
         this.lastMethod = 46;
         this.linNonLin = true;
-        this.nTerms = 1;
-        this.degreesOfFreedom = this.nData - this.nTerms;
-	    if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
-        this.best = new double[this.nTerms];
-        this.bestSd = new double[this.nTerms];
-        this.tValues = new double[this.nTerms];
-        this.pValues = new double[this.nTerms];
+        this.nParam = 1;
+        this.degreesOfFreedom = this.nData - this.nParam;
+        if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
+        this.best = new double[this.nParam];
+        this.bestSd = new double[this.nParam];
+        this.tValues = new double[this.nParam];
+        this.pValues = new double[this.nParam];
 
         this.best[0] = Stat.mean(this.yData, this.weight);
         this.bestSd[0] = Stat.standardDeviation(this.yData, this.weight);
         this.tValues[0] = this.best[0]/this.bestSd[0];
 
-		double atv = Math.abs(this.tValues[0]);
+	double atv = Math.abs(this.tValues[0]);
         if(atv!=atv){
-		    this.pValues[0] = Double.NaN;
-	    }
-		else{
-		    this.pValues[0] = 1.0 - Stat.studentTcdf(-atv, atv, this.degreesOfFreedom);
+            this.pValues[0] = Double.NaN;
+	}
+	else{
+            this.pValues[0] = 1.0 - Stat.studentTcdf(-atv, atv, this.degreesOfFreedom);
         }
 
-		this.sumOfSquaresError = 0.0;
-		this.chiSquare = 0.0;
-		for(int i=0; i<this.nData; i++){
-		    this.yCalc[i] = best[0];
-		    this.residual[i] = this.yCalc[i] - this.yData[i];
-		    this.residualW[i] = this.residual[i]/this.weight[i];
-		    this.sumOfSquaresError += this.residual[i]*this.residual[i];
-		    this.chiSquare += this.residualW[i]*this.residualW[i];
-		}
+        this.sumOfSquaresError = 0.0;
+	this.chiSquare = 0.0;
+	for(int i=0; i<this.nData; i++){
+            this.yCalc[i] = best[0];
+            this.residual[i] = this.yCalc[i] - this.yData[i];
+            this.residualW[i] = this.residual[i]/this.weight[i];
+            this.sumOfSquaresError += this.residual[i]*this.residual[i];
+            this.chiSquare += this.residualW[i]*this.residualW[i];
+	}
         this.reducedChiSquare = this.chiSquare/this.degreesOfFreedom;
+        this.calcDurbinWatson();
     }
 
     // Fit to a constant
@@ -1226,37 +1625,138 @@ public class Regression{
     // Multiple linear regression with intercept (including y = ax + b)
     // y = a + b.x1 + c.x2 + d.x3 + . . .
     public void linear(){
+        if(this.xErrorsEntered){
+            this.linearDual();
+        }
+        else{
+            this.linearMono();
+        }
+        
+    }
+        
+        
+    // Multiple linear regression with intercept (including y = ax + b)
+    // y = a + b.x1 + c.x2 + d.x3 + . . .
+    // Either no or only y measurement errors
+    public void linearMono(){
         if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
         this.lastMethod = 0;
         this.linNonLin = true;
-        this.nTerms = this.nXarrays+1;
-        this.degreesOfFreedom = this.nData - this.nTerms;
-	    if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
-        double[][] aa = new double[this.nTerms][this.nData];
+        this.dualErrorsRequired = false;
+        this.nParam = this.nXarrays+1;
+        this.degreesOfFreedom = this.nData - this.nParam;
+	if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
+        double[][] aa = new double[this.nParam][this.nData];
 
         for(int j=0; j<nData; j++)aa[0][j]=1.0D;
-        for(int i=1; i<nTerms; i++){
+        for(int i=1; i<nParam; i++){
             for(int j=0; j<nData; j++){
                 aa[i][j]=this.xData[i-1][j];
             }
         }
-        this.best = new double[this.nTerms];
-        this.bestSd = new double[this.nTerms];
-        this.tValues = new double[this.nTerms];
-        this.pValues = new double[this.nTerms];
+        this.best = new double[this.nParam];
+        this.bestSd = new double[this.nParam];
+        this.tValues = new double[this.nParam];
+        this.pValues = new double[this.nParam];
         this.generalLinear(aa);
         if(!this.ignoreDofFcheck)this.generalLinearStats(aa);
     }
-
+    
+    // Multiple linear regression with intercept (including y = ax + b)
+    // y = a + b.x1 + c.x2 + d.x3 + . . .
+    // both x and y weighting errors
+    // Both x and y measurement errors
+    protected void linearDual(){
+        this.simplexFlag = 3;
+        this.lastMethod = 0;
+        this.userSupplied = false;
+        this.zeroCheck = false;
+        this.nParam = this.nXarrays+1;
+        this.degreesOfFreedom = this.nData - this.nParam;
+	if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
+        this.dualErrorsRequired = true;
+        this.nonLinStatsNeeded = false;
+              
+        // Get initial estimates for non-linear regression from unweighted linear regression
+        Regression regl = new Regression(this.xData, this.yData);
+        regl.linear();
+        double[] start = regl.getBestEstimates();
+      
+        // Non-linear regression      
+        // Create a function to evaluates y and combined weight 
+        LinearXYDEfunction dualFunc = new LinearXYDEfunction();        
+        dualFunc.setNterms(this.nParam);
+        dualFunc.setYerrors(this.yErrors);
+        dualFunc.setXerrors(this.xErrors);
+        
+        this.linNonLin = false;
+        double[] step = new double[this.nParam];
+        for(int i=0; i<this.nParam; i++){
+            step[i] = start[i]*0.1;
+            if(step[i]==0.0)step[i] = Stat.mean(start)*0.1;
+        }
+       
+        this.nelderMead((Object)dualFunc, null, start, step, this.fTol, this.nMax);
+        double[][] aa = new double[this.nParam][this.nData];
+        this.linNonLin = true; 
+        
+        //Statistical analysis
+        for(int j=0; j<nData; j++)aa[0][j]=1.0D;
+        for(int i=1; i<nParam; i++){
+            for(int j=0; j<nData; j++){
+                aa[i][j]=this.xData[i-1][j];
+            }
+        }
+        this.tValues = new double[this.nParam];
+        this.pValues = new double[this.nParam];
+        if(!this.ignoreDofFcheck)this.generalLinearStats(aa);
+        this.dualErrorsRequired = false;
+        this.nonLinStatsNeeded = true;
+    }
+        
+    
+    
     // Multiple linear regression with intercept (including y = ax + b)
     // plus plot and output file
     // y = a + b.x1 + c.x2 + d.x3 + . . .
     // legends provided
     public void linearPlot(String xLegend, String yLegend){
+        if(this.xErrorsEntered){
+            this.linearPlotDual(xLegend, yLegend);
+        }
+        else{
+            this.linearPlotMono(xLegend, yLegend);
+        }
+    }
+    
+    // Multiple linear regression with intercept (including y = ax + b)
+    // plus plot and output file
+    // y = a + b.x1 + c.x2 + d.x3 + . . .
+    // legends provided
+    // Either no or only y measurement errors
+    public void linearPlotMono(String xLegend, String yLegend){
         this.xLegend = xLegend;
         this.yLegend = yLegend;
         this.legendCheck = true;
-        this.linear();
+        this.dualErrorsRequired = false;
+        this.nonLinStatsNeeded = false;
+        this.linearMono();
+        if(!this.supressPrint)this.print();
+        int flag = 0;
+        if(this.xData.length<2)flag = this.plotXY();
+        if(flag!=-2 && !this.supressYYplot)this.plotYY();
+    }
+    
+    // Multiple linear regression with intercept (including y = ax + b)
+    // plus plot and output file
+    // y = a + b.x1 + c.x2 + d.x3 + . . .
+    // legends provided
+    // both x and y measurement errors
+    public void linearPlotDual(String xLegend, String yLegend){
+        this.xLegend = xLegend;
+        this.yLegend = yLegend;
+        this.legendCheck = true;
+        this.linearDual();
         if(!this.supressPrint)this.print();
         int flag = 0;
         if(this.xData.length<2)flag = this.plotXY();
@@ -1268,36 +1768,80 @@ public class Regression{
     // y = a + b.x1 + c.x2 + d.x3 + . . .
     // no legends provided
     public void linearPlot(){
-        this.linear();
+        if(this.xErrorsEntered){
+            this.linearPlotDual();
+        }
+        else{
+            this.linearPlotMono();
+        }
+    }
+    
+    // Multiple linear regression with intercept (including y = ax + b)
+    // plus plot and output file
+    // y = a + b.x1 + c.x2 + d.x3 + . . .
+    // no legends provided
+    // Either no or only y measurement errors
+    public void linearPlotMono(){
+        this.linearMono();
         if(!this.supressPrint)this.print();
         int flag = 0;
         if(this.xData.length<2)flag = this.plotXY();
         if(flag!=-2 && !this.supressYYplot)this.plotYY();
     }
-
+    
     // Multiple linear regression with intercept (including y = ax + b)
+    // plus plot and output file
+    // y = a + b.x1 + c.x2 + d.x3 + . . .
+    // no legends provided
+    // Both x and y measurement errors
+    public void linearPlotDual(){
+        this.linearDual();
+        if(!this.supressPrint)this.print();
+        int flag = 0;
+        this.xErrorsEntered=false;
+        this.simplexFlag = 1;
+        if(this.xData.length<2)flag = this.plotXY();
+        if(flag!=-2 && !this.supressYYplot)this.plotYY();
+        this.xErrorsEntered=true;
+    }
+
+        // Multiple linear regression with intercept (including y = ax + b)
     // y = a + b.x1 + c.x2 + d.x3 + . . .
     // a fixed (argument: intercept)
     public void linear(double intercept){
+        if(this.xErrorsEntered){
+            this.linearDual(intercept);
+        }
+        else{
+            this.linearMono(intercept);
+        }
+    }
+    
+    // Multiple linear regression with intercept (including y = ax + b)
+    // y = a + b.x1 + c.x2 + d.x3 + . . .
+    // a fixed (argument: intercept)
+    // no x errors
+    public void linearMono(double intercept){
         if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
         this.lastMethod = 47;
         this.fixedInterceptL = intercept;
         this.linNonLin = true;
-        this.nTerms = this.nXarrays;
-        this.degreesOfFreedom = this.nData - this.nTerms;
-	    if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
-        double[][] aa = new double[this.nTerms][this.nData];
+        this.dualErrorsRequired = false;
+        this.nParam = this.nXarrays;
+        this.degreesOfFreedom = this.nData - this.nParam;
+	if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
+        double[][] aa = new double[this.nParam][this.nData];
 
         for(int j=0; j<nData; j++)this.yData[j] -= intercept;
-        for(int i=0; i<nTerms; i++){
+        for(int i=0; i<nParam; i++){
             for(int j=0; j<nData; j++){
                 aa[i][j]=this.xData[i][j];
             }
         }
-        this.best = new double[this.nTerms];
-        this.bestSd = new double[this.nTerms];
-        this.tValues = new double[this.nTerms];
-        this.pValues = new double[this.nTerms];
+        this.best = new double[this.nParam];
+        this.bestSd = new double[this.nParam];
+        this.tValues = new double[this.nParam];
+        this.pValues = new double[this.nParam];
         this.generalLinear(aa);
         if(!this.ignoreDofFcheck)this.generalLinearStats(aa);
         for(int j=0; j<nData; j++){
@@ -1306,74 +1850,279 @@ public class Regression{
         }
 
     }
+    
+     // Multiple linear regression with intercept (including y = ax + b)
+    // y = a + b.x1 + c.x2 + d.x3 + . . .
+    // a fixed (argument: intercept)
+    // with x errors
+    public void linearDual(double intercept){
+        if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
+        this.lastMethod = 47;
+        this.simplexFlag = 3;
+        this.fixedInterceptL = intercept;
+        this.dualErrorsRequired = true;
+        this.nonLinStatsNeeded = false;
+        this.nParam = this.nXarrays;
+        this.userSupplied = false;
+        this.zeroCheck = false;
+        this.degreesOfFreedom = this.nData - this.nParam;
+	if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
+        
+        // Use unweighted linear regression to obtain initial estimates for weighted nonlinear regression
+        Regression regl = new Regression(this.xData, this.yData);
+        regl.linear(intercept);
+        double[] start = regl.getBestEstimates();
+               
+        // Non-linear regression      
+        // Create a function to evaluates y and combined weight 
+        LinearIXYDEfunction dualFunc = new LinearIXYDEfunction();        
+        dualFunc.setNparam(this.nParam);
+        dualFunc.setYerrors(this.yErrors);
+        dualFunc.setXerrors(this.xErrors);
+        dualFunc.setIntercept(intercept);
+        
+        this.linNonLin = false;
+        double[] step = new double[this.nParam];
+        for(int i=0; i<this.nParam; i++){
+            step[i] = start[i]*0.1;
+            if(step[i]==0.0)step[i] = Stat.mean(start)*0.1;
+        }
+
+        this.nelderMead((Object)dualFunc, null, start, step, this.fTol, this.nMax);
+        this.linNonLin = true; 
+        
+        //Statistical analysis
+        double[][] aa = new double[this.nParam][this.nData];
+        for(int j=0; j<nData; j++)this.yData[j] -= intercept;
+        for(int i=0; i<nParam; i++){
+            for(int j=0; j<nData; j++){
+                aa[i][j]=this.xData[i][j];
+            }
+        }
+ 
+        this.bestSd = new double[this.nParam];
+        this.tValues = new double[this.nParam];
+        this.pValues = new double[this.nParam];
+      
+        if(!this.ignoreDofFcheck)this.generalLinearStats(aa);
+        
+        for(int j=0; j<nData; j++){
+            this.yData[j] += intercept;
+            this.yCalc[j] += intercept;
+        }
+        this.dualErrorsRequired = false;
+        this.nonLinStatsNeeded = true;
+    }
+
+        // Multiple linear regression with intercept (including y = ax + b)
+    // plus plot and output file
+    // y = a + b.x1 + c.x2 + d.x3 + . . .
+    // a fixed (argument: intercept)
+    // legends provided
+    public void linearPlot(double intercept, String xLegend, String yLegend){
+        if(this.xErrorsEntered){
+            this.linearPlotDual(intercept, xLegend, yLegend);
+        }
+        else{
+            this.linearPlotMono(intercept, xLegend, yLegend);
+        }
+    }
 
     // Multiple linear regression with intercept (including y = ax + b)
     // plus plot and output file
     // y = a + b.x1 + c.x2 + d.x3 + . . .
     // a fixed (argument: intercept)
     // legends provided
-    public void linearPlot(double intercept, String xLegend, String yLegend){
+    // no x errors
+    public void linearPlotMono(double intercept, String xLegend, String yLegend){
         this.xLegend = xLegend;
         this.yLegend = yLegend;
         this.legendCheck = true;
-        this.linear(intercept);
+        this.linearMono(intercept);
         if(!this.supressPrint)this.print();
         int flag = 0;
         if(this.xData.length<2)flag = this.plotXY();
         if(flag!=-2 && !this.supressYYplot)this.plotYY();
     }
+    
+    // Multiple linear regression with intercept (including y = ax + b)
+    // plus plot and output file
+    // y = a + b.x1 + c.x2 + d.x3 + . . .
+    // a fixed (argument: intercept)
+    // legends provided
+    // with x errors
+    public void linearPlotDual(double intercept, String xLegend, String yLegend){
+        this.xLegend = xLegend;
+        this.yLegend = yLegend;
+        this.legendCheck = true;
+        this.linearDual(intercept);
+        this.xErrorsEntered = false;
+        if(!this.supressPrint)this.print();
+        int flag = 0;
+        if(this.xData.length<2)flag = this.plotXY();
+        if(flag!=-2 && !this.supressYYplot)this.plotYY();
+        this.xErrorsEntered = true;
+
+    }
+    
+    // Multiple linear regression with intercept (including y = ax + b)
+    // plus plot and output file
+    // y = a + b.x1 + c.x2 + d.x3 + . . .
+    // a fixed (argument: intercept)
+    // no legends provided
+    // no x errors
+    public void linearPlot(double intercept){
+        if(this.xErrorsEntered){
+            this.linearPlotDual(intercept);
+        }
+        else{
+            this.linearPlotMono(intercept);
+        }
+    }
+
 
     // Multiple linear regression with intercept (including y = ax + b)
     // plus plot and output file
     // y = a + b.x1 + c.x2 + d.x3 + . . .
     // a fixed (argument: intercept)
     // no legends provided
-    public void linearPlot(double intercept){
-        this.linear(intercept);
+    // no x errors
+    public void linearPlotMono(double intercept){
+        this.linearMono(intercept);
         if(!this.supressPrint)this.print();
         int flag = 0;
         if(this.xData.length<2)flag = this.plotXY();
         if(flag!=-2 && !this.supressYYplot)this.plotYY();
     }
+    
+    // Multiple linear regression with intercept (including y = ax + b)
+    // plus plot and output file
+    // y = a + b.x1 + c.x2 + d.x3 + . . .
+    // a fixed (argument: intercept)
+    // no legends provided
+    // with x errors
+    public void linearPlotDual(double intercept){
+        
+        this.xErrorsEntered = true;
+        this.linearDual(intercept);
+        this.linNonLin = true;
+        if(!this.supressPrint)this.print();
+        int flag = 0;
+        this.xErrorsEntered = false;
+        if(this.xData.length<2)flag = this.plotXY();
+        if(flag!=-2 && !this.supressYYplot)this.plotYY();
+        this.xErrorsEntered = true;
+    }
 
-
+    
     // Polynomial fitting
     // y = a + b.x + c.x^2 + d.x^3 + . . .
     public void polynomial(int deg){
+        if(this.xErrorsEntered){
+            this.polynomialDual(deg);
+        }
+        else{
+            this.polynomialMono(deg);
+        }
+    }
+    
+    // Polynomial fitting
+    // y = a + b.x + c.x^2 + d.x^3 + . . .
+    // no x errors
+    protected void polynomialMono(int deg){
         if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
         if(this.nXarrays>1)throw new IllegalArgumentException("This class will only perform a polynomial regression on a single x array");
         if(deg<1)throw new IllegalArgumentException("Polynomial degree must be greater than zero");
         this.lastMethod = 1;
         this.linNonLin = true;
-        this.nTerms =  deg+1;
-        this.degreesOfFreedom = this.nData - this.nTerms;
-	    if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
-        double[][] aa = new double[this.nTerms][this.nData];
+        this.dualErrorsRequired = false;
+        this.nParam =  deg+1;
+        this.degreesOfFreedom = this.nData - this.nParam;
+        if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
+        double[][] aa = new double[this.nParam][this.nData];
 
         for(int j=0; j<nData; j++)aa[0][j]=1.0D;
         for(int j=0; j<nData; j++)aa[1][j]=this.xData[0][j];
 
-        for(int i=2; i<nTerms; i++){
+        for(int i=2; i<nParam; i++){
             for(int j=0; j<nData; j++){
                 aa[i][j]=Math.pow(this.xData[0][j],i);
             }
         }
-        this.best = new double[this.nTerms];
-        this.bestSd = new double[this.nTerms];
-        this.tValues = new double[this.nTerms];
-        this.pValues = new double[this.nTerms];
+        this.best = new double[this.nParam];
+        this.bestSd = new double[this.nParam];
+        this.tValues = new double[this.nParam];
+        this.pValues = new double[this.nParam];
         this.generalLinear(aa);
         if(!this.ignoreDofFcheck)this.generalLinearStats(aa);
     }
+    
+    // Polynomial fitting
+    // y = a + b.x + c.x^2 + d.x^3 + . . .
+    // with x errors
+    protected void polynomialDual(int deg){
+        if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
+        if(this.nXarrays>1)throw new IllegalArgumentException("This class will only perform a polynomial regression on a single x array");
+        if(deg<1)throw new IllegalArgumentException("Polynomial degree must be greater than zero");
+        this.lastMethod = 1;
+        this.linNonLin = true;
+        this.dualErrorsRequired = true;
+        this.nonLinStatsNeeded = false;
+        this.nParam =  deg+1;
+        this.degreesOfFreedom = this.nData - this.nParam;
+        if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
+        
+        // Use unweighted linear regression to obtain initial estimates for weighted nonlinear regression
+        Regression regl = new Regression(this.xData, this.yData);
+        regl.polynomial(deg);
+        double[] start = regl.getBestEstimates();
+               
+        // Non-linear regression      
+        // Create a function to evaluates y and combined weight 
+        PolyXYDEfunction dualFunc = new PolyXYDEfunction();        
+        dualFunc.setDeg(deg);
+        dualFunc.setYerrors(this.yErrors);
+        dualFunc.setXerrors(this.xErrors);
+        
+        this.linNonLin = false;
+        double[] step = new double[this.nParam];
+        for(int i=0; i<this.nParam; i++){
+            step[i] = start[i]*0.1;
+            if(step[i]==0.0)step[i] = Stat.mean(start)*0.1;
+        }
+       
+
+        this.nelderMead((Object)dualFunc, null, start, step, this.fTol, this.nMax);
+        this.linNonLin = true; 
+        
+        //Statistical analysis
+        double[][] aa = new double[this.nParam][this.nData];
+
+        for(int j=0; j<nData; j++)aa[0][j]=1.0D;
+        for(int j=0; j<nData; j++)aa[1][j]=this.xData[0][j];
+
+        for(int i=2; i<nParam; i++){
+            for(int j=0; j<nData; j++){
+                aa[i][j]=Math.pow(this.xData[0][j],i);
+            }
+        }
+        this.bestSd = new double[this.nParam];
+        this.tValues = new double[this.nParam];
+        this.pValues = new double[this.nParam];
+        if(!this.ignoreDofFcheck)this.generalLinearStats(aa);
+        this.dualErrorsRequired = false;
+        this.nonLinStatsNeeded = true;
+    }
+    
 
     // Polynomial fitting plus plot and output file
     // y = a + b.x + c.x^2 + d.x^3 + . . .
     // legends provided
-    public void polynomialPlot(int n, String xLegend, String yLegend){
+    public void polynomialPlot(int deg, String xLegend, String yLegend){
         this.xLegend = xLegend;
         this.yLegend = yLegend;
         this.legendCheck = true;
-        this.polynomial(n);
+        this.polynomial(deg);
         if(!this.supressPrint)this.print();
         int flag = this.plotXY();
         if(flag!=-2 && !this.supressYYplot)this.plotYY();
@@ -1389,33 +2138,48 @@ public class Regression{
         if(flag!=-2 && !this.supressYYplot)this.plotYY();
     }
 
+    
     // Polynomial fitting
     // y = a + b.x + c.x^2 + d.x^3 + . . .
     // a is fixed (argument: intercept)
     public void polynomial(int deg, double intercept){
+        if(this.xErrorsEntered){
+            this.polynomialDual(deg, intercept);
+        }
+        else{
+            this.polynomialMono(deg, intercept);
+        }
+    }
+    
+    // Polynomial fitting
+    // y = a + b.x + c.x^2 + d.x^3 + . . .
+    // a is fixed (argument: intercept)
+    // no x errors    
+    protected void polynomialMono(int deg, double intercept){
         if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
         if(this.nXarrays>1)throw new IllegalArgumentException("This class will only perform a polynomial regression on a single x array");
         if(deg<1)throw new IllegalArgumentException("Polynomial degree must be greater than zero");
         this.lastMethod = 48;
         this.fixedInterceptP = intercept;
         this.linNonLin = true;
-        this.nTerms =  deg;
-        this.degreesOfFreedom = this.nData - this.nTerms;
-	    if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
-        double[][] aa = new double[this.nTerms][this.nData];
+        this.dualErrorsRequired = false;
+        this.nParam =  deg;
+        this.degreesOfFreedom = this.nData - this.nParam;
+        if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
+        double[][] aa = new double[this.nParam][this.nData];
 
         for(int j=0; j<nData; j++)this.yData[j] -= intercept;
         for(int j=0; j<nData; j++)aa[0][j]=this.xData[0][j];
 
-        for(int i=1; i<nTerms; i++){
+        for(int i=1; i<nParam; i++){
             for(int j=0; j<nData; j++){
                 aa[i][j]=Math.pow(this.xData[0][j],i+1);
             }
         }
-        this.best = new double[this.nTerms];
-        this.bestSd = new double[this.nTerms];
-        this.tValues = new double[this.nTerms];
-        this.pValues = new double[this.nTerms];
+        this.best = new double[this.nParam];
+        this.bestSd = new double[this.nParam];
+        this.tValues = new double[this.nParam];
+        this.pValues = new double[this.nParam];
         this.generalLinear(aa);
         if(!this.ignoreDofFcheck)this.generalLinearStats(aa);
         for(int j=0; j<nData; j++){
@@ -1423,7 +2187,70 @@ public class Regression{
             this.yCalc[j] += intercept;
         }
     }
+    
+    
+    // Polynomial fitting
+    // y = a + b.x + c.x^2 + d.x^3 + . . .
+    // a is fixed (argument: intercept)
+    // with x errors    
+    protected void polynomialDual(int deg, double intercept){
+        if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
+        if(this.nXarrays>1)throw new IllegalArgumentException("This class will only perform a polynomial regression on a single x array");
+        if(deg<1)throw new IllegalArgumentException("Polynomial degree must be greater than zero");
+        this.lastMethod = 48;
+        this.fixedInterceptP = intercept;
+        this.linNonLin = true;
+        this.dualErrorsRequired = true;
+        this.nonLinStatsNeeded = false;
+        this.nParam =  deg;
+        this.degreesOfFreedom = this.nData - this.nParam;
+        if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
+        
+        // Use unweighted linear regression to obtain initial estimates for weighted nonlinear regression
+        Regression regl = new Regression(this.xData, this.yData);
+        regl.polynomial(deg, intercept);
+        double[] start = regl.getBestEstimates();
+               
+        // Non-linear regression      
+        // Create a function to evaluates y and combined weight 
+        PolyIXYDEfunction dualFunc = new PolyIXYDEfunction();        
+        dualFunc.setDeg(deg);
+        dualFunc.setIntercept(intercept);
+        dualFunc.setYerrors(this.yErrors);
+        dualFunc.setXerrors(this.xErrors);
+        
+        this.linNonLin = false;
+        double[] step = new double[this.nParam];
+        for(int i=0; i<this.nParam; i++){
+            step[i] = start[i]*0.1;
+            if(step[i]==0.0)step[i] = Stat.mean(start)*0.1;
+        }
+       
+        this.nelderMead((Object)dualFunc, null, start, step, this.fTol, this.nMax);
+        this.linNonLin = true; 
+        
+        //Statistical analysis
+        double[][] aa = new double[this.nParam][this.nData];
 
+        for(int j=0; j<nData; j++)this.yData[j] -= intercept;
+        for(int j=0; j<nData; j++)aa[0][j]=this.xData[0][j];
+
+        for(int i=1; i<nParam; i++){
+            for(int j=0; j<nData; j++){
+                aa[i][j]=Math.pow(this.xData[0][j],i+1);
+            }
+        }
+        this.bestSd = new double[this.nParam];
+        this.tValues = new double[this.nParam];
+        this.pValues = new double[this.nParam];
+        if(!this.ignoreDofFcheck)this.generalLinearStats(aa);
+        for(int j=0; j<nData; j++){
+            this.yData[j] += intercept;
+            this.yCalc[j] += intercept;
+        }
+        this.dualErrorsRequired = false;
+        this.nonLinStatsNeeded = true;
+    }
 
     // Polynomial fitting plus plot and output file
     // y = a + b.x + c.x^2 + d.x^3 + . . .
@@ -1462,113 +2289,138 @@ public class Regression{
         if(this.nXarrays>1)throw new IllegalArgumentException("This class will only perform a polynomial regression on a single x array");
         this.bestPolyFlag = true;
         this.linNonLin = true;
-
+ 
         ArrayList<Object> array0 = null;
-        ArrayList<Object> array1 = new ArrayList<Object>();
+        ArrayList<Double> array1 = new ArrayList<Double>();
 
-        int nAttempts = this.nData-3;
+        int deg = 0;
+        int degBest = 0;
+        int degMax = this.nData-2;
+        int nComp = 0;
+        double fRatio = 0.0;
+        double fProb = 0.0;
+        double fSign = 0.0;
+
+        boolean test0 = true;
+
+        // Regression for a constant value
         Regression reg = new Regression(xData[0], yData);
         reg.constant();
         double chi = reg.getChiSquare();
-        double chiMin = chi;
         double chiLast = chi;
-        int chiMinIndex = 0;
-        array1.add(new Double(chi));
-        reg.linear();
-        chi = reg.getChiSquare();
-        array0 = Regression.testOfAdditionalTerms_ArrayList(chiLast, 0, chi, 1, nData);
-        double fRatio = ((Double)array0.get(0)).doubleValue();
-        double fProb = ((Double)array0.get(1)).doubleValue();
-        array1.add(new Double(chi));
-        array1.add(new Double(fRatio));
-        array1.add(new Double(fProb));
-        if(chiMin>=chi){
-            chiMin = chi;
-            chiMinIndex = 1;
+
+        // Regression for a straight line
+        deg++;
+        if(deg>degMax){
+            test0 = false;
+            System.out.println("Method bestPolynomial requires at least three data points: null  returned");
+            return null;
         }
-        boolean test0 = true;
-        int ii = 2;
-        int iiEnd = nAttempts;
-        boolean testEnd = true;
-        while(test0){
-            chiLast = chi;
-            reg.polynomial(ii);
+        else{
+            reg.linear();
             chi = reg.getChiSquare();
-            array0 = Regression.testOfAdditionalTerms_ArrayList(chiLast, ii-1, chi, ii, nData);
+
+            // first comparison
+            array0 = Regression.testOfAdditionalTerms_ArrayList(chiLast, 0, chi, 1, nData, this.fProbSignificance);
+            nComp++;
             fRatio = ((Double)array0.get(0)).doubleValue();
             fProb = ((Double)array0.get(1)).doubleValue();
+            fSign = ((Double)array0.get(8)).doubleValue();
+
+            array1.add(new Double(chiLast));
             array1.add(new Double(chi));
             array1.add(new Double(fRatio));
             array1.add(new Double(fProb));
-            if(chiMin>=chi){
-                chiMin = chi;
-                chiMinIndex = ii;
-            }
-            if(chi>=chiLast && testEnd){
-                iiEnd = ii + 2;
-                testEnd = false;
-                if(iiEnd>nAttempts)iiEnd = nAttempts;
-            }
-            ii++;
-            if(ii>iiEnd)test0 = false;
-        }
+            array1.add(new Double(fSign));
 
-        double[] chia = new double[iiEnd+1];
-        double[] fRatioa = new double[iiEnd+1];
-        double[] fProba = new double[iiEnd+1];
-        int ipoly = 0;
-        if(chiMin>0){
-            chia[0] = ((Double)array1.get(0)).doubleValue();
-            int jj = 1;
-            for(int i=1; i<=iiEnd; i++){
-                chia[i] = ((Double)array1.get(jj++)).doubleValue();
-                fRatioa[i] = ((Double)array1.get(jj++)).doubleValue();
-                fProba[i] = ((Double)array1.get(jj++)).doubleValue();
-            }
-
-            test0 = true;
-            ii = chiMinIndex;
-            double fProbMin = fProba[ii];
-            ii--;
-            while(test0){
-                if(fProba[ii]>fProbMin){
-                    test0 = false;
-                    ipoly = ii+1;
-                }
-                else{
-                    ii--;
-                    if(ii<0){
-                        test0 = false;
-                        ipoly = 0;
-                    }
-                }
+            // First comparison test
+            if(fRatio<fSign){
+                test0 = false;
+                degBest = 0;
             }
         }
-        this.bestPolynomialDegree = ipoly;
+        // Iterate polynomial fittings and comparisons
+        deg++;
+        if(deg>degMax)test0 = false;
+
+        while(test0){
+            chiLast = chi;
+
+            // polynomial regression
+            reg.polynomial(deg);
+            chi = reg.getChiSquare();
+
+            // comparison
+            array0 = Regression.testOfAdditionalTerms_ArrayList(chiLast, deg-1, chi, deg, nData, this.fProbSignificance);
+            nComp++;
+            fRatio = ((Double)array0.get(0)).doubleValue();
+            fProb = ((Double)array0.get(1)).doubleValue();
+            fSign = ((Double)array0.get(8)).doubleValue();
+
+            array1.add(new Double(chiLast));
+            array1.add(new Double(chi));
+            array1.add(new Double(fRatio));
+            array1.add(new Double(fProb));
+            array1.add(new Double(fSign));
+
+            // comparison test
+            if(fRatio<fSign){
+                test0 = false;
+                degBest = deg - 1;
+            }
+            deg++;
+            if(deg>degMax)test0 = false;
+        }
+
+        this.bestPolynomialDegree = degBest;
 
         // Repack ArrayList
-        int[] deg0s = new int[iiEnd];
-        int[] deg1s = new int[iiEnd];
-        double[] chi0s = new double[iiEnd];
-        double[] chi1s = new double[iiEnd];
-        for(int i=0; i<iiEnd; i++){
+        int[] deg0s = new int[nComp];
+        int[] deg1s = new int[nComp];
+        double[] chi0s = new double[nComp];
+        double[] chi1s = new double[nComp];
+        double[] fRatios = new double[nComp];
+        double[] fProbs = new double[nComp];
+        double[] fSigns = new double[nComp];
+
+
+        for(int i=0; i<nComp; i++){
             deg0s[i] = i;
             deg1s[i] = i+1;
-            chi0s[i] = chia[i];
-            chi1s[i] = chia[i+1];
+            chi0s[i] = (array1.get(5*i)).doubleValue();
+            chi1s[i] = (array1.get(5*i+1)).doubleValue();
+            fRatios[i] = (array1.get(5*i+2)).doubleValue();
+            fProbs[i] = (array1.get(5*i+3)).doubleValue();
+            fSigns[i] = (array1.get(5*i+4)).doubleValue();
         }
+
 
         this.bestPolyArray.clear();
         this.bestPolyArray.add(new Integer(this.bestPolynomialDegree));
-        this.bestPolyArray.add(new Integer(iiEnd+1));
+        this.bestPolyArray.add(new Integer(nComp));
         this.bestPolyArray.add(deg0s);
         this.bestPolyArray.add(deg1s);
         this.bestPolyArray.add(chi0s);
         this.bestPolyArray.add(chi1s);
-        this.bestPolyArray.add(fRatioa);
-        this.bestPolyArray.add(fProba);
+        this.bestPolyArray.add(fRatios);
+        this.bestPolyArray.add(fProbs);
+        this.bestPolyArray.add(fSigns);
+        this.bestPolyArray.add(this.fProbSignificance);
 
-
+        // check for zero chi square
+        boolean testZero = true;
+        int ii = 0;
+        while(testZero){
+            if(chi0s[ii]==0.0){
+                this.bestPolynomialDegree = ii;
+                testZero = false;
+            }
+            else{
+                ii++;
+                if(ii>=nComp)testZero = false;
+            }
+        }
+        
         switch(flag){
         case 0: // No plot
                 switch(this.bestPolynomialDegree){
@@ -1623,126 +2475,148 @@ public class Regression{
 
 
     // Internal method finding the best polynomial fit
-    public ArrayList<Object> polynomialBest(double fixedIntercept, int flag){
+    // Fixed intercept
+    public ArrayList<Object> polynomialBest(double intercept, int flag){
         if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
         if(this.nXarrays>1)throw new IllegalArgumentException("This class will only perform a polynomial regression on a single x array");
         this.bestPolyFlag = true;
         this.linNonLin = true;
-
+        this.dualErrorsRequired = false;
+        
         ArrayList<Object> array0 = null;
-        ArrayList<Object> array1 = new ArrayList<Object>();
+        ArrayList<Double> array1 = new ArrayList<Double>();
 
-        int nAttempts = this.nData-3;
-        Regression reg = new Regression(xData[0], yData);
-        reg.polynomial(1, fixedIntercept);
-        double chi = reg.getChiSquare();
-        double chiMin = chi;
-        double chiLast = chi;
-        int chiMinIndex = 1;
-        array1.add(new Double(chi));
-        reg.polynomial(2, fixedIntercept);
-        chi = reg.getChiSquare();
-        array0 = Regression.testOfAdditionalTerms_ArrayList(chiLast, 0, chi, 1, nData);
-        double fRatio = ((Double)array0.get(0)).doubleValue();
-        double fProb = ((Double)array0.get(1)).doubleValue();
-        array1.add(new Double(chi));
-        array1.add(new Double(fRatio));
-        array1.add(new Double(fProb));
-        if(chiMin>=chi){
-            chiMin = chi;
-            chiMinIndex = 2;
-        }
+        int deg = 1;
+        int degBest = 1;
+        int degMax = this.nData-2;
+        int nComp = 0;
+        double fRatio = 0.0;
+        double fProb = 0.0;
+        double fSign = 0.0;
+
         boolean test0 = true;
-        int ii = 3;
-        int iiEnd = nAttempts;
-        boolean testEnd = true;
+        Regression reg = null;
+        if(this.xErrorsEntered){
+            reg = new Regression(this.xData, this.yData, this.xErrors, this.yErrors);
+        }
+        else{
+            if(this.weightOpt){
+                reg = new Regression(this.xData[0], this.yData, this.yErrors);
+            }
+            else{
+                reg = new Regression(this.xData[0], this.yData);
+            }
+        }
+               
+        // Regression for a straight line
+        double chi = 0.0;
+        double chiLast = 0.0;
+        if(deg>degMax){
+            test0 = false;
+            System.out.println("Method bestPolynomial requires at least three data points: null  returned");
+            return null;
+        }
+        else{
+            reg.linear(intercept);
+            chi = reg.getChiSquare();    
+        }
+
+        // Iterate polynomial fittings and comparisons
+        deg++;
+        if(deg>degMax)test0 = false;
+        if(!test0 && degBest==0)degBest=1;
         while(test0){
             chiLast = chi;
-            reg.polynomial(ii, fixedIntercept);
+
+            // polynomial regression
+            reg.polynomial(deg, intercept);
             chi = reg.getChiSquare();
-            array0 = Regression.testOfAdditionalTerms_ArrayList(chiLast, ii-1, chi, ii, nData);
+
+            // comparison
+            array0 = Regression.testOfAdditionalTerms_ArrayList(chiLast, deg-1, chi, deg, nData, this.fProbSignificance);
+            nComp++;
             fRatio = ((Double)array0.get(0)).doubleValue();
             fProb = ((Double)array0.get(1)).doubleValue();
+            fSign = ((Double)array0.get(8)).doubleValue();
+
+            array1.add(new Double(chiLast));
             array1.add(new Double(chi));
             array1.add(new Double(fRatio));
             array1.add(new Double(fProb));
+            array1.add(new Double(fSign));
 
-            if(chiMin>=chi){
-                chiMin = chi;
-                chiMinIndex = ii;
+            // comparison test
+            if(fRatio<fSign){
+                test0 = false;
+                degBest = deg - 1;
             }
-            if(chi>=chiLast && testEnd){
-                iiEnd = ii + 2;
-                testEnd = false;
-                if(iiEnd>nAttempts)iiEnd = nAttempts;
-            }
-            ii++;
-            if(ii>iiEnd)test0 = false;
+            deg++;
+            if(deg>degMax)test0 = false;
         }
 
-
-        double[] chia = new double[iiEnd];
-        double[] fRatioa = new double[iiEnd];
-        double[] fProba = new double[iiEnd];
-        int ipoly = 0;
-        if(chiMin>0){
-            chia[0] = ((Double)array1.get(0)).doubleValue();
-            int jj = 1;
-            for(int i=1; i<iiEnd; i++){
-                chia[i] = ((Double)array1.get(jj++)).doubleValue();
-                fRatioa[i] = ((Double)array1.get(jj++)).doubleValue();
-                fProba[i] = ((Double)array1.get(jj++)).doubleValue();
-            }
-
-            test0 = true;
-            ii = chiMinIndex;
-            double fProbMin = fProba[ii-1];
-            ii--;
-            while(test0){
-                if(fProba[ii]>fProbMin){
-                    test0 = false;
-                    ipoly = ii+2;
-                }
-                else{
-                    ii--;
-                    if(ii<0){
-                        test0 = false;
-                        ipoly = 0;
-                    }
-                }
-            }
-        }
-        this.bestPolynomialDegree = ipoly;
+        this.bestPolynomialDegree = degBest;
 
         // Repack ArrayList
-        int[] deg0s = new int[iiEnd-1];
-        int[] deg1s = new int[iiEnd-1];
-        double[] chi0s = new double[iiEnd-1];
-        double[] chi1s = new double[iiEnd-1];
-        for(int i=0; i<iiEnd-1; i++){
-            deg0s[i] = i;
-            deg1s[i] = i+1;
-            chi0s[i] = chia[i];
-            chi1s[i] = chia[i+1];
+        int[] deg0s = new int[nComp];
+        int[] deg1s = new int[nComp];
+        double[] chi0s = new double[nComp];
+        double[] chi1s = new double[nComp];
+        double[] fRatios = new double[nComp];
+        double[] fProbs = new double[nComp];
+        double[] fSigns = new double[nComp];
+
+
+        for(int i=0; i<nComp; i++){
+            deg0s[i] = i+1;
+            deg1s[i] = i+2;
+            chi0s[i] = (array1.get(5*i)).doubleValue();
+            chi1s[i] = (array1.get(5*i+1)).doubleValue();
+            fRatios[i] = (array1.get(5*i+2)).doubleValue();
+            fProbs[i] = (array1.get(5*i+3)).doubleValue();
+            fSigns[i] = (array1.get(5*i+4)).doubleValue();
         }
+
 
         this.bestPolyArray.clear();
         this.bestPolyArray.add(new Integer(this.bestPolynomialDegree));
-        this.bestPolyArray.add(new Integer(iiEnd));
+        this.bestPolyArray.add(new Integer(nComp));
         this.bestPolyArray.add(deg0s);
         this.bestPolyArray.add(deg1s);
         this.bestPolyArray.add(chi0s);
         this.bestPolyArray.add(chi1s);
-        this.bestPolyArray.add(fRatioa);
-        this.bestPolyArray.add(fProba);
+        this.bestPolyArray.add(fRatios);
+        this.bestPolyArray.add(fProbs);
+        this.bestPolyArray.add(fSigns);
+        this.bestPolyArray.add(this.fProbSignificance);
 
-
+        // check for zero chi square
+        boolean testZero = true;
+        int ii = 0;
+        while(testZero){
+            if(chi0s[ii]==0.0){
+                this.bestPolynomialDegree = ii+1;
+                testZero = false;
+            }
+            else{
+                ii++;
+                if(ii>=nComp)testZero = false;
+            }
+        }
+        
         switch(flag){
-            case 0: // No plot
-                    this.polynomial(this.bestPolynomialDegree, fixedIntercept);
-                    break;
-            case 1: // Plot
-                    this.polynomialPlot(this.bestPolynomialDegree, fixedIntercept);
+        case 0: // No plot
+                switch(this.bestPolynomialDegree){
+                    case 1: this.linear(intercept);
+                            break;
+                    default: this.polynomial(this.bestPolynomialDegree, intercept);
+                }
+                break;
+        case 1: // Plot
+                switch(this.bestPolynomialDegree){
+                    case 1: this.linearPlot(intercept);
+                            break;
+                    default: this.polynomialPlot(this.bestPolynomialDegree, intercept);
+                }
         }
 
         return this.bestPolyArray;
@@ -1779,40 +2653,78 @@ public class Regression{
     }
 
     // Method for fitting data to a non-integer polynomial
-    // y = a + b.x + c.x^d
+    // y = a[0] + a[1].x + a[2].x^a[n+1] +  a[3].x^a[n+2] + . . . + a[n].x^a[2n-1]
+    // nTerms = n+1;
     // No plotting
+    public void nonIntegerPolynomial(int nTerms){
+        this.fitNonIntegerPolynomial(nTerms, 0);
+    }
+
     public void nonIntegerPolynomial(){
-        this.fitNonIntegerPolynomial(0);
+        this.fitNonIntegerPolynomial(3, 0);
     }
 
+
     // Method for fitting data to a non-integer polynomial
-    // y = a + b.x + c.x^d
+    // y = a[0] + a[1].x + a[2].x^a[n+1] +  a[3].x^a[n+2] + . . . + a[n].x^a[2n-1]
+    // nTerms = n+1;
     // with plotting
+    public void nonIntegerPolynomialPlot(int nTerms){
+        this.fitNonIntegerPolynomial(nTerms, 1);
+    }
+
     public void nonIntegerPolynomialPlot(){
-        this.fitNonIntegerPolynomial(1);
+        this.fitNonIntegerPolynomial(3, 1);
     }
 
     // Method for fitting data to a non-integer polynomial
-    // y = a + b.x + c.x^d
+    // y = a[0] + a[1].x + a[2].x^a[n+1] +  a[3].x^a[n+2] + . . . + a[n].x^a[2n-1]
+    // nTerms = n+1;
     // with plotting and user supplied legends
-    public void nonIntegerPolynomialPlot(String xLegend, String yLegend){
+    public void nonIntegerPolynomialPlot(int nTerms, String xLegend, String yLegend){
         this.xLegend = xLegend;
         this.yLegend = yLegend;
         this.legendCheck = true;
-        this.fitNonIntegerPolynomial(1);
+        this.fitNonIntegerPolynomial(nTerms, 1);
+    }
+
+    public void nonIntegerPolynomialPlot(String xLegend, String yLegend){
+    this.xLegend = xLegend;
+        this.xLegend = xLegend;
+        this.yLegend = yLegend;
+        this.legendCheck = true;
+        this.fitNonIntegerPolynomial(3, 1);
+    }
+
+     // Internal method for fitting data to a non-integer polynomial
+    // y = a[0] + a[1].x + a[2].x^a[n+1] +  a[3].x^a[n+2] + . . . + a[n].x^a[2n-1]
+    // nTerms = n+1;
+    protected void fitNonIntegerPolynomial(int nTerms, int plotFlag){
+        if(this.xErrorsEntered){
+            this.fitNonIntegerPolynomialDual(nTerms, plotFlag);
+        }
+        else{
+            this.fitNonIntegerPolynomialMono(nTerms, plotFlag);
+        }
     }
 
     // Internal method for fitting data to a non-integer polynomial
-    // y = a + b.x + c.x^d
-    protected void fitNonIntegerPolynomial(int plotFlag){
+    // y = a[0] + a[1].x + a[2].x^a[n+1] +  a[3].x^a[n+2] + . . . + a[n].x^a[2n-1]
+    // nTerms = n+1;
+    // no x errors
+    protected void fitNonIntegerPolynomialMono(int nTerms, int plotFlag){
 
         if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
 	    this.lastMethod = 50;
 	    this.userSupplied = false;
 	    this.linNonLin = false;
+            this.dualErrorsRequired = false;
+            this.simplexFlag = 1;
+            this.nonLinStatsNeeded = true;
 	    this.zeroCheck = false;
-	    this.nTerms = 4;
-	    this.degreesOfFreedom = this.nData - this.nTerms;
+	    int deg = nTerms - 1;
+	    this.nParam = 2*nTerms - 1;
+	    this.degreesOfFreedom = this.nData - this.nParam;
 	    if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
 
 	    // order data into ascending order of the abscissae
@@ -1821,24 +2733,37 @@ public class Regression{
         // Estimate of parameters
         Regression reg = new Regression(this.xData[0], this.yData, this.weight);
 
-        reg.polynomial(2);
+        reg.polynomial(deg);
 
-        double[] start = new double[4];
-        double[] step = new double[4];
+        double[] start = new double[this.nParam];
+        double[] step = new double[this.nParam];
 
         double[] best = reg.getBestEstimates();
-        for(int i=0; i<3; i++){
+        double sum = 0.0;
+        for(int i=0; i<nTerms; i++){
             start[i] = best[i];
-            step[i] = start[i]*0.1;
-            if(step[i]==0.0)step[i] = 0.1;
+            sum += start[i];
         }
-        start[3] = 3.0;
-        step[3] = 0.6;
+        sum = sum/nTerms;
+        for(int i=0; i<nTerms; i++){
+            step[i] = start[i]*0.1;
+            if(step[i]==0.0)step[i] = 0.1*sum;
+        }
+        double ii = 1.0;
+        for(int i=nTerms; i<this.nParam; i++){
+            start[i] = ii;
+            step[i] = start[i]*0.1;
+            ii += 1.0;
+        }
 
         // Nelder and Mead Simplex Regression
         NonIntegerPolyFunction f = new NonIntegerPolyFunction();
+        f.setNterms(nTerms);
         Object regFun = (Object)f;
-        this.nelderMead(regFun, start, step, this.fTol, this.nMax);
+        this.simplexFlag = 1;
+        this.nonLinStatsNeeded = true;
+        this.dualErrorsRequired = false;
+        this.nelderMead(regFun, null, start, step, this.fTol, this.nMax);
 
         if(plotFlag==1){
             // Print results
@@ -1849,29 +2774,171 @@ public class Regression{
             if(flag!=-2 && !this.supressYYplot)this.plotYY();
         }
     }
+    
+    // Internal method for fitting data to a non-integer polynomial
+    // y = a[0] + a[1].x + a[2].x^a[n+1] +  a[3].x^a[n+2] + . . . + a[n].x^a[2n-1]
+    // nTerms = n+1;
+    // with x errors
+    protected void fitNonIntegerPolynomialDual(int nTerms, int plotFlag){
+
+        if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
+	    this.lastMethod = 50;
+	    this.userSupplied = false;
+            this.simplexFlag = 3;
+	    this.linNonLin = false;
+            this.dualErrorsRequired = true;
+            this.nonLinStatsNeeded = true;
+	    this.zeroCheck = false;
+	    int deg = nTerms - 1;
+	    this.nParam = 2*nTerms - 1;
+	    this.degreesOfFreedom = this.nData - this.nParam;
+	    if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
+
+	    // order data into ascending order of the abscissae
+        Regression.sort(this.xData[0], this.yData, this.weight);
+
+        // Estimate of parameters
+        Regression reg = new Regression(this.xData[0], this.yData, this.weight);
+
+        reg.polynomial(deg);
+
+        double[] start = new double[this.nParam];
+        double[] step = new double[this.nParam];
+
+        double[] best = reg.getBestEstimates();
+        double sum = 0.0;
+        for(int i=0; i<nTerms; i++){
+            start[i] = best[i];
+            sum += start[i];
+        }
+        sum = sum/nTerms;
+        for(int i=0; i<nTerms; i++){
+            step[i] = start[i]*0.1;
+            if(step[i]==0.0)step[i] = 0.1*sum;
+        }
+        double ii = 1.0;
+        for(int i=nTerms; i<this.nParam; i++){
+            start[i] = ii;
+            step[i] = start[i]*0.1;
+            ii += 1.0;
+        }
+
+        // Nelder and Mead Simplex Regression
+        NonIntegerPolyFunctionDual f = new NonIntegerPolyFunctionDual();
+        f.setNterms(nTerms);
+        f.setYerrors(this.yErrors);
+        f.setXerrors(this.xErrors);
+        Object regFun = (Object)f;
+        this.nelderMead(regFun, null, start, step, this.fTol, this.nMax);
+
+        if(plotFlag==1){
+            // Print results
+            if(!this.supressPrint)this.print();
+
+            // Plot results
+            int flag = this.plotXY(f);
+            if(flag!=-2 && !this.supressYYplot)this.plotYY();
+        }
+        this.dualErrorsRequired = false;
+    }
+    
 
     // Generalised linear regression
     // y = a.f1(x) + b.f2(x) + c.f3(x) + . . .
     public void linearGeneral(){
+        if(this.xErrorsEntered){
+            this.linearGeneralDual();
+        }
+        else{
+            this.linearGeneralMono();
+        }
+    }
+    
+    // Generalised linear regression
+    // y = a.f1(x) + b.f2(x) + c.f3(x) + . . .
+    // no x errors
+    public void linearGeneralMono(){
         if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
         this.lastMethod = 2;
 
         this.linNonLin = true;
-        this.nTerms = this.nXarrays;
-        this.degreesOfFreedom = this.nData - this.nTerms;
-	    if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
-	    this.best = new double[this.nTerms];
-        this.bestSd = new double[this.nTerms];
-        this.tValues = new double[this.nTerms];
-        this.pValues = new double[this.nTerms];
+        this.nParam = this.nXarrays;
+        this.degreesOfFreedom = this.nData - this.nParam;
+	if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
+        this.best = new double[this.nParam];
+        this.bestSd = new double[this.nParam];
+        this.tValues = new double[this.nParam];
+        this.pValues = new double[this.nParam];
         this.generalLinear(this.xData);
         if(!this.ignoreDofFcheck)this.generalLinearStats(this.xData);
+    }
+    
+    
+    // Generalised linear regression
+    // y = a.f1(x) + b.f2(x) + c.f3(x) + . . .
+    // with x errors
+    public void linearGeneralDual(){
+        if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
+        this.lastMethod = 2;
+        this.simplexFlag = 3;
+        this.linNonLin = true;
+        this.userSupplied = false;
+        this.zeroCheck = false;
+        this.nParam = this.nXarrays;
+        this.degreesOfFreedom = this.nData - this.nParam;
+	if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
+        this.best = new double[this.nParam];
+        this.dualErrorsRequired = true;
+        this.nonLinStatsNeeded = false;
+        
+        // Use unweighted linear regression to obtain initial estimates for weighted nonlinear regression
+        Regression regl = new Regression(this.xData, this.yData);
+        regl.linearGeneral();
+        double[] start = regl.getBestEstimates();
+               
+        // Non-linear regression      
+        // Create a function to evaluates y and combined weight 
+        LinearGXYDEfunction dualFunc = new LinearGXYDEfunction();        
+        dualFunc.setNterms(this.nParam);
+        dualFunc.setYerrors(this.yErrors);
+        dualFunc.setXerrors(this.xErrors);
+        
+        this.linNonLin = false;
+        double[] step = new double[this.nParam];
+        for(int i=0; i<this.nParam; i++){
+            step[i] = start[i]*0.1;
+            if(step[i]==0.0)step[i] = Stat.mean(start)*0.1;
+        }
+       
+        this.nelderMead((Object)dualFunc, null, start, step, this.fTol, this.nMax);
+        this.linNonLin = true;
+        
+        //Statistical analysis
+        this.bestSd = new double[this.nParam];
+        this.tValues = new double[this.nParam];
+        this.pValues = new double[this.nParam];
+        if(!this.ignoreDofFcheck)this.generalLinearStats(this.xData);
+        this.dualErrorsRequired = false;
+        this.nonLinStatsNeeded = true;
+    }
+    
+     // Generalised linear regression plus plot and output file
+    // y = a.f1(x) + b.f2(x) + c.f3(x) + . . .
+    // No legends provided
+    public void linearGeneralPlot(String xLegend, String yLegend){
+        if(this.xErrorsEntered){
+            this.linearGeneralPlotDual(xLegend, yLegend);
+        }
+        else{
+            this.linearGeneralPlotMono(xLegend, yLegend);
+        }
     }
 
     // Generalised linear regression plus plot and output file
     // y = a.f1(x) + b.f2(x) + c.f3(x) + . . .
     // legends provided
-    public void linearGeneralPlot(String xLegend, String yLegend){
+    // no x errors
+    public void linearGeneralPlotMono(String xLegend, String yLegend){
         this.xLegend = xLegend;
         this.yLegend = yLegend;
         this.legendCheck = true;
@@ -1879,211 +2946,124 @@ public class Regression{
         if(!this.supressPrint)this.print();
         if(!this.supressYYplot)this.plotYY();
     }
+    
+    // Generalised linear regression plus plot and output file
+    // y = a.f1(x) + b.f2(x) + c.f3(x) + . . .
+    // legends provided
+    // with x errors
+    public void linearGeneralPlotDual(String xLegend, String yLegend){
+        this.xLegend = xLegend;
+        this.yLegend = yLegend;
+        this.legendCheck = true;
+        this.linearGeneralDual();
+        this.linNonLin = true;
+        if(!this.supressPrint)this.print();
+        this.xErrorsEntered = false;
+        if(!this.supressYYplot)this.plotYY();
+        this.xErrorsEntered = true;
+    }
 
+    
     // Generalised linear regression plus plot and output file
     // y = a.f1(x) + b.f2(x) + c.f3(x) + . . .
     // No legends provided
     public void linearGeneralPlot(){
+        if(this.xErrorsEntered){
+            this.linearGeneralPlotDual();
+        }
+        else{
+            this.linearGeneralPlotMono();
+        }
+    }
+    
+    
+        // Generalised linear regression plus plot and output file
+    // y = a.f1(x) + b.f2(x) + c.f3(x) + . . .
+    // No legends provided
+    // no x errors
+    public void linearGeneralPlotMono(){
         this.linearGeneral();
         if(!this.supressPrint)this.print();
         if(!this.supressYYplot)this.plotYY();
     }
-
-	// Generalised linear regression (protected method called by linear(), linearGeneral() and polynomial())
+    
+    // Generalised linear regression plus plot and output file
+    // y = a.f1(x) + b.f2(x) + c.f3(x) + . . .
+    // No legends provided
+    // with x errors
+    public void linearGeneralPlotDual(){
+        this.linearGeneralDual();
+        this.linNonLin = true;
+        if(!this.supressPrint)this.print();
+        this.xErrorsEntered = false;
+        if(!this.supressYYplot)this.plotYY();
+        this.xErrorsEntered = true;
+    }
+        
+    // Generalised linear regression (protected method called by linear(), linearGeneral() and polynomial())
     protected void generalLinear(double[][] xd){
-        if(this.nData<=this.nTerms && !this.ignoreDofFcheck)throw new IllegalArgumentException("Number of unknown parameters is greater than or equal to the number of data points");
+        if(this.nData<=this.nParam && !this.ignoreDofFcheck)throw new IllegalArgumentException("Number of unknown parameters is greater than or equal to the number of data points");
     	double sde=0.0D, sum=0.0D, yCalctemp=0.0D;
-        double[][] a = new double[this.nTerms][this.nTerms];
-        double[][] h = new double[this.nTerms][this.nTerms];
-        double[]b = new double[this.nTerms];
-        double[]coeff = new double[this.nTerms];
+        double[][] a = new double[this.nParam][this.nParam];
+        double[][] h = new double[this.nParam][this.nParam];
+        double[]b = new double[this.nParam];
+        double[]coeff = new double[this.nParam];
 
          // set statistic arrays to NaN if df check ignored
         if(this.ignoreDofFcheck){
-            this.bestSd = new double[this.nTerms];
-	        this.pseudoSd = new double[this.nTerms];
-            this.tValues = new double[this.nTerms];
-            this.pValues = new double[this.nTerms];
+            this.bestSd = new double[this.nParam];
+            this.pseudoSd = new double[this.nParam];
+            this.tValues = new double[this.nParam];
+            this.pValues = new double[this.nParam];
 
-            this.covar = new double[this.nTerms][this.nTerms];
-	        this.corrCoeff = new double[this.nTerms][this.nTerms];;
-	        for(int i=0; i<this.nTerms; i++){
-	            this.bestSd[i] = Double.NaN;
-	            this.pseudoSd[i] = Double.NaN;
-	            for(int j=0; j<this.nTerms; j++){
+            this.covar = new double[this.nParam][this.nParam];
+	    this.corrCoeff = new double[this.nParam][this.nParam];
+	    for(int i=0; i<this.nParam; i++){
+                this.bestSd[i] = Double.NaN;
+	        this.pseudoSd[i] = Double.NaN;
+	        for(int j=0; j<this.nParam; j++){
                     this.covar[i][j] = Double.NaN;
-	                this.corrCoeff[i][j] = Double.NaN;
-	            }
+                    this.corrCoeff[i][j] = Double.NaN;
 	        }
 	    }
-
-		for (int i=0; i<nTerms; ++i){
-			sum=0.0D ;
-			for (int j=0; j<nData; ++j){
-				sum += this.yData[j]*xd[i][j]/Fmath.square(this.weight[j]);
-			}
-			b[i]=sum;
-		}
-		for (int i=0; i<nTerms; ++i){
-			for (int j=0; j<nTerms; ++j){
-				sum=0.0;
-				for (int k=0; k<nData; ++k){
-					sum += xd[i][k]*xd[j][k]/Fmath.square(this.weight[k]);
-				}
-				a[j][i]=sum;
-			}
-		}
-		Matrix aa = new Matrix(a);
-		if(this.supressErrorMessages)aa.supressErrorMessage();
-		coeff = aa.solveLinearSet(b);
-
-	    for(int i=0; i<this.nTerms; i++){
-		    this.best[i] = coeff[i];
-        }
-	}
-
-    // Generalised linear regression statistics (protected method called by linear(), linearGeneral() and polynomial())
-    protected void generalLinearStats(double[][] xd){
-
-	    double sde=0.0D, sum=0.0D, yCalctemp=0.0D;
-        double[][] a = new double[this.nTerms][this.nTerms];
-        double[][] h = new double[this.nTerms][this.nTerms];
-        double[][] stat = new double[this.nTerms][this.nTerms];
-        double[][] cov = new double[this.nTerms][this.nTerms];
-        this.covar = new double[this.nTerms][this.nTerms];
-        this.corrCoeff = new double[this.nTerms][this.nTerms];
-        double[]coeffSd = new double[this.nTerms];
-        double[]coeff = new double[this.nTerms];
-
-        for(int i=0; i<this.nTerms; i++){
-            coeff[i] = this.best[i];
         }
 
-		this.chiSquare=0.0D;
-		this.sumOfSquaresError=0.0D;
-		for (int i=0; i< nData; ++i){
-			yCalctemp=0.0;
-			for (int j=0; j<nTerms; ++j){
-				yCalctemp += coeff[j]*xd[j][i];
-			}
-			this.yCalc[i] = yCalctemp;
-			yCalctemp -= this.yData[i];
-			this.residual[i]=yCalctemp;
-			this.residualW[i]=yCalctemp/weight[i];
-			this.chiSquare += Fmath.square(yCalctemp/this.weight[i]);
-			this.sumOfSquaresError += Fmath.square(yCalctemp);
-		}
-		this.reducedChiSquare = this.chiSquare/(this.degreesOfFreedom);
-		double varY = this.sumOfSquaresError/(this.degreesOfFreedom);
-		double sdY = Math.sqrt(varY);
-
-        if(this.sumOfSquaresError==0.0D){
-             for(int i=0; i<this.nTerms;i++){
-                coeffSd[i]=0.0D;
-		        for(int j=0; j<this.nTerms;j++){
-		            this.covar[i][j]=0.0D;
-		            if(i==j){
-		                this.corrCoeff[i][j]=1.0D;
-		            }
-		            else{
-		                this.corrCoeff[i][j]=0.0D;
-		            }
-		        }
-		    }
+        for (int i=0; i<nParam; ++i){
+            sum=0.0D ;
+            for (int j=0; j<nData; ++j){
+                sum += this.yData[j]*xd[i][j]/Fmath.square(this.weight[j]);
+            }
+            b[i]=sum;
         }
-        else{
-	        for (int i=0; i<this.nTerms; ++i){
-	    	    for (int j=0; j<this.nTerms; ++j){
-	    		    sum=0.0;
-	    		    for (int k=0; k<this.nData; ++k){
-	    		        if (weightOpt){
-	    		            sde = weight[k];
-	    	            }
-	                    else{
-	    		            sde = sdY;
-	                    }
-                        sum += xd[i][k]*xd[j][k]/Fmath.square(sde);
-                    }
-	                h[j][i]=sum;
-	    	    }
-	        }
-		    Matrix hh = new Matrix(h);
-		    if(this.supressErrorMessages)hh.supressErrorMessage();
-		    hh = hh.inverse();
-		    stat = hh.getArrayCopy();
-		    for (int j=0; j<nTerms; ++j){
-		        coeffSd[j] = Math.sqrt(stat[j][j]);
-		    }
-
-	        for(int i=0; i<this.nTerms;i++){
-		        for(int j=0; j<this.nTerms;j++){
-		            this.covar[i][j]=stat[i][j];
-		        }
-		    }
-
-		    for(int i=0; i<this.nTerms;i++){
-		        for(int j=0; j<this.nTerms;j++){
-		            if(i==j){
-		                this.corrCoeff[i][j] = 1.0D;
-		            }
-		            else{
-		                this.corrCoeff[i][j]=covar[i][j]/(coeffSd[i]*coeffSd[j]);
-                    }
+        for (int i=0; i<nParam; ++i){
+            for (int j=0; j<nParam; ++j){
+                sum=0.0;
+                for (int k=0; k<nData; ++k){
+                    sum += xd[i][k]*xd[j][k]/Fmath.square(this.weight[k]);
                 }
-		    }
-		}
-
-	    for(int i=0; i<this.nTerms; i++){
-		    this.bestSd[i] = coeffSd[i];
-		    this.tValues[i] = this.best[i]/this.bestSd[i];
-		    double atv = Math.abs(this.tValues[i]);
-		    if(atv!=atv){
-		        this.pValues[i] = Double.NaN;
-		    }
-		    else{
-		        this.pValues[i] = 1.0 - Stat.studentTcdf(-atv, atv, this.degreesOfFreedom);
-		    }
+                a[j][i]=sum;
+            }
         }
+        Matrix aa = new Matrix(a);
+        if(this.supressErrorMessages)aa.supressErrorMessage();
+        coeff = aa.solveLinearSet(b);
 
-        // Linear correlation coefficient
-        if(this.nXarrays==1 && this.nYarrays==1){
-            this.xyR = Stat.corrCoeff(this.xData[0], this.yData, this.weight);
+        for(int i=0; i<this.nParam; i++){
+            this.best[i] = coeff[i];
         }
-        this.yyR = Stat.corrCoeff(this.yCalc, this.yData, this.weight);
+    }
 
-        // Coefficient of determination
-        this.yMean = Stat.mean(this.yData);
-        this.yWeightedMean = Stat.mean(this.yData, this.weight);
-
-        this.sumOfSquaresTotal = 0.0;
-        for(int i=0; i<this.nData; i++){
-            this.sumOfSquaresTotal += Fmath.square((this.yData[i] - this.yWeightedMean)/weight[i]);
-        }
-
-        this.sumOfSquaresRegrn = this.sumOfSquaresTotal - this.chiSquare;
-        if(this.sumOfSquaresRegrn<0.0)this.sumOfSquaresRegrn=0.0;
-
-        this.multR = this.sumOfSquaresRegrn/this.sumOfSquaresTotal;
-
-        // Calculate adjusted multiple coefficient of determination
-        this.adjustedR = 1.0 - (1.0 - multR)*(this.nData - 1 )/(this.nData - this.nTerms - 1);
-
-        // F-ratio
-        this.multipleF = multR*(this.nData-this.nTerms-1.0)/((1.0D-this.multR)*this.nTerms);
-        if(this.multipleF>=0.0)this.multipleFprob = Stat.fTestProb(this.multipleF, this.nXarrays, this.nData-this.nTerms-1);
-
-	}
-
-
+    // NELDER AND MEAD SIMPLEX MINIMIZATION 
+    
     // Nelder and Mead Simplex Simplex Non-linear Regression
-    protected void nelderMead(Object regFun, double[] start, double[] step, double fTol, int nMax){
+    protected void nelderMead(Object regFun, Object regFunDeriv, double[] start, double[] step, double fTol, int nMax){
+        if(this.xErrorsEntered && !this.dualErrorsRequired)throw new IllegalArgumentException("The data fitting method called does not support independent variable errors - use a constructor that does not include x errors in its argument list");
         int np = start.length;          // number of unknown parameters;
         if(this.maxConstraintIndex>=np)throw new IllegalArgumentException("You have entered more constrained parameters ("+this.maxConstraintIndex+") than minimisation parameters (" + np + ")");
         this.nlrStatus = true;          // -> false if convergence criterion not met
-        this.nTerms = np;               // number of parameters whose best estimates are to be determined
+        this.nParam = np;               // number of parameters whose best estimates are to be determined
         int nnp = np+1;                 // number of simplex apices
         this.lastSSnoConstraint=0.0D;   // last sum of squares without a penalty constraint being applied
-
         if(this.scaleOpt<2)this.scale = new double[np];     // scaling factors
         if(scaleOpt==2 && scale.length!=start.length)throw new IllegalArgumentException("scale array and initial estimate array are of different lengths");
         if(step.length!=start.length)throw new IllegalArgumentException("step array length " + step.length + " and initial estimate array length " + start.length + " are of different");
@@ -2091,41 +3071,44 @@ public class Regression{
         // check for zero step sizes
         for(int i=0; i<np; i++)if(step[i]==0.0D)throw new IllegalArgumentException("step " + i+ " size is zero");
 
+        // Check minimum number of iterations required is not greater than the maximum number of iterations allowed
+        if(this.minIter>this.nMax)this.nMax=this.minIter;
+
         // set statistic arrays to NaN if degrees of freedom check ignored
         if(this.ignoreDofFcheck){
-            this.bestSd = new double[this.nTerms];
-	        this.pseudoSd = new double[this.nTerms];
-            this.tValues = new double[this.nTerms];
-            this.pValues = new double[this.nTerms];
+            this.bestSd = new double[this.nParam];
+	    this.pseudoSd = new double[this.nParam];
+            this.tValues = new double[this.nParam];
+            this.pValues = new double[this.nParam];
 
-            this.covar = new double[this.nTerms][this.nTerms];
-	        this.corrCoeff = new double[this.nTerms][this.nTerms];;
-	        for(int i=0; i<this.nTerms; i++){
-	            this.bestSd[i] = Double.NaN;
-	            this.pseudoSd[i] = Double.NaN;
-	            for(int j=0; j<this.nTerms; j++){
+            this.covar = new double[this.nParam][this.nParam];
+	    this.corrCoeff = new double[this.nParam][this.nParam];;
+	    for(int i=0; i<this.nParam; i++){
+                this.bestSd[i] = Double.NaN;
+                this.pseudoSd[i] = Double.NaN;
+                for(int j=0; j<this.nParam; j++){
                     this.covar[i][j] = Double.NaN;
-	                this.corrCoeff[i][j] = Double.NaN;
-	            }
+                    this.corrCoeff[i][j] = Double.NaN;
 	        }
 	    }
+        }
 
-	    // set up arrays
-	    this.startH = new double[np];           // holding array of unscaled initial start values
-	    this.stepH = new double[np];            // unscaled initial step values
-	    this.startSH = new double[np];          // holding array of scaled initial start values
-	    this.stepSH = new double[np];           // scaled initial step values
-	    double[]pmin = new double[np];          // Nelder and Mead Pmin
-	    this.best = new double[np];             // best estimates array
+        // set up arrays
+        this.startH = new double[np];           // holding array of unscaled initial start values
+        this.stepH = new double[np];            // unscaled initial step values
+        this.startSH = new double[np];          // holding array of scaled initial start values
+        this.stepSH = new double[np];           // scaled initial step values
+        double[]pmin = new double[np];          // Nelder and Mead Pmin
+        this.best = new double[np];             // best estimates array
         this.bestSd = new double[np];           // sd of best estimates array
         this.tValues = new double[np];          // t-value of best estimates array
         this.pValues = new double[np];          // p-value of best estimates array
 
-	    double[][] pp = new double[nnp][nnp];   //Nelder and Mead P
-	    double[] yy = new double[nnp];          //Nelder and Mead y
-	    double[] pbar = new double[nnp];        //Nelder and Mead P with bar superscript
-	    double[] pstar = new double[nnp];       //Nelder and Mead P*
-	    double[] p2star = new double[nnp];      //Nelder and Mead P**
+        double[][] pp = new double[nnp][nnp];   //Nelder and Mead P
+        double[] yy = new double[nnp];          //Nelder and Mead y
+        double[] pbar = new double[nnp];        //Nelder and Mead P with bar superscript
+        double[] pstar = new double[nnp];       //Nelder and Mead P*
+        double[] p2star = new double[nnp];      //Nelder and Mead P**
 
         // mean of absolute values of yData (for testing for minimum)
         double yabsmean=0.0D;
@@ -2188,6 +3171,7 @@ public class Regression{
 
         // Store unscaled start and step values
         for(int i=0; i<np; i++){
+            step[i] = Math.abs(step[i]);
             this.startH[i]=start[i];
             this.stepH[i]=step[i];
         }
@@ -2232,56 +3216,56 @@ public class Regression{
             this.scale[i] = scale[i];
         }
 
-	    // initial simplex
-	    double sho=0.0D;
-	    for (int i=0; i<np; ++i){
- 	        sho=start[i];
-	 	    pstar[i]=sho;
-		    p2star[i]=sho;
-		    pmin[i]=sho;
-	    }
+        // initial simplex
+	double sho=0.0D;
+        for (int i=0; i<np; ++i){
+            sho=start[i];
+            pstar[i]=sho;
+	    p2star[i]=sho;
+	    pmin[i]=sho;
+        }
 
-	    int jcount=this.konvge;  // count of number of restarts still available
+        int jcount=this.konvge;  // count of number of restarts still available
 
-	    for (int i=0; i<np; ++i){
-	        pp[i][nnp-1]=start[i];
-	    }
-	    yy[nnp-1]=this.sumSquares(regFun, start);
-	    for (int j=0; j<np; ++j){
-		    start[j]=start[j]+step[j];
+        for (int i=0; i<np; ++i){
+            pp[i][nnp-1]=start[i];
+        }
+        yy[nnp-1]=this.sumSquares(regFun, start);
+        for (int j=0; j<np; ++j){
+            start[j]=start[j]+step[j];
 
-		    for (int i=0; i<np; ++i)pp[i][j]=start[i];
-		    yy[j]=this.sumSquares(regFun, start);
-		    start[j]=start[j]-step[j];
-	    }
+            for (int i=0; i<np; ++i)pp[i][j]=start[i];
+            yy[j]=this.sumSquares(regFun, start);
+            start[j]=start[j]-step[j];
+        }
 
-	    // loop over allowed number of iterations
+        // loop over allowed number of iterations
 
         double  ynewlo=0.0D;    // current value lowest y
-	    double 	ystar = 0.0D;   // Nelder and Mead y*
-	    double  y2star = 0.0D;  // Nelder and Mead y**
-	    double  ylo = 0.0D;     // Nelder and Mead y(low)
-	    double  fMin;           // function value at minimum
+        double 	ystar = 0.0D;   // Nelder and Mead y*
+        double  y2star = 0.0D;  // Nelder and Mead y**
+	double  ylo = 0.0D;     // Nelder and Mead y(low)
+	double  fMin;           // function value at minimum
 
-	    int ilo=0;              // index of lowest apex
-	    int ihi=0;              // index of highest apex
-	    int ln=0;               // counter for a check on low and high apices
-	    boolean test = true;    // test becomes false on reaching minimum
+        int ilo=0;              // index of lowest apex
+        int ihi=0;              // index of highest apex
+        int ln=0;               // counter for a check on low and high apices
+        boolean test = true;    // test becomes false on reaching minimum
 
-	     // variables used in calculating the variance of the simplex at a putative minimum
-	    double 	curMin = 00D;   // sd of the values at the simplex apices
-	    double  sumnm = 0.0D;   // for calculating the mean of the apical values
-	    double  zn = 0.0D;      // for calculating the summation of their differences from the mean
-	    double  summnm = 0.0D;  // for calculating the variance
+        // variables used in calculating the variance of the simplex at a putative minimum
+        double 	curMin = 00D;   // sd of the values at the simplex apices
+        double  sumnm = 0.0D;   // for calculating the mean of the apical values
+        double  zn = 0.0D;      // for calculating the summation of their differences from the mean
+        double  summnm = 0.0D;  // for calculating the variance
 
-	    while(test){
+        while(test){
 	        // Determine h
 	        ylo=yy[0];
 	        ynewlo=ylo;
-    	    ilo=0;
+                ilo=0;
 	        ihi=0;
 	        for (int i=1; i<nnp; ++i){
-		        if (yy[i]<ylo){
+                    if (yy[i]<ylo){
 			        ylo=yy[i];
 			        ilo=i;
 		        }
@@ -2392,15 +3376,15 @@ public class Regression{
 	        switch(this.minTest){
 	            case 0: // terminate if the standard deviation of the sum of squares [unweighted data] or of the chi square values [weighted data]
 	                    // at the apices of the simplex is less than the tolerance, fTol
-                        if(curMin<fTol)test=false;
+                        if(curMin<fTol && this.nIter>this.minIter)test=false;
                         break;
 	            case 1: // terminate if the reduced chi square [weighted data] or the reduced sum of squares [unweighted data] at the lowest apex
 	                    // of the simplex is less than the mean of the absolute values of the dependent variable (y values) multiplied by the tolerance, fTol.
-                        if(Math.sqrt(ynewlo/this.degreesOfFreedom)<yabsmean*fTol)test=false;
+                        if(Math.sqrt(ynewlo/this.degreesOfFreedom)<yabsmean*fTol && this.nIter>this.minIter)test=false;
                         break;
-                default: throw new IllegalArgumentException("Simplex standard deviation test option " + this.minTest + " not recognised");
-		    }
-            this.sumOfSquaresError=ynewlo;
+                    default: throw new IllegalArgumentException("Simplex standard deviation test option " + this.minTest + " not recognised");
+                }
+                this.sumOfSquaresError=ynewlo;
 	        if(!test){
 	            // temporary store of best estimates
 	            for (int i=0; i<np; ++i)pmin[i]=pp[i][ilo];
@@ -2420,7 +3404,7 @@ public class Regression{
 	            }
 	        }
 
-            // test for reaching allowed number of iterations
+                // test for reaching allowed number of iterations
 	        if(test && this.nIter>this.nMax){
 	            if(!this.supressErrorMessages){
 	                System.out.println("Maximum iteration number reached, in Regression.simplex(...)");
@@ -2437,567 +3421,67 @@ public class Regression{
         }
 
         // final store of the best estimates, function value at the minimum and number of restarts
-	    for (int i=0; i<np; ++i){
+	for (int i=0; i<np; ++i){
             pmin[i] = pp[i][ilo];
             this.best[i] = pmin[i]/this.scale[i];
             this.scale[i]=1.0D; // unscale for statistical methods
         }
     	this.fMin=ynewlo;
     	this.kRestart=this.konvge-jcount;
+        
+        if(this.xErrorsEntered){
+            double[] xd = new double[this.nXarrays];
+            double[] yc = new double[2];          
+            for(int i=0; i<this.nData; i++){
+                for(int j=0; j<this.nXarrays; j++)xd[j] = this.xData[j][i];
+                yc = ((RegressionFunction3)regFun).function(this.best, xd, i);
+                this.yCalc[i] = yc[0];
+                this.weight[i] = Math.sqrt(yc[1]);
+            }
+            this.effectiveNumber();
+        }
 
         // perform statistical analysis if possible and requested
-        if(statFlag){
-            if(!this.ignoreDofFcheck)pseudoLinearStats(regFun);
-        }
-        else{
-            for (int i=0; i<np; ++i){
-                this.bestSd[i] = Double.NaN;
+        if(this.nonLinStatsNeeded){
+            if(statFlag){
+                if(!this.ignoreDofFcheck){
+                    if(this.analyticalDerivative){
+                        pseudoLinearStats(regFun, regFunDeriv);
+                    }
+                    else{
+                        pseudoLinearStats(regFun);
+                    }
+                }
+            }
+            else{
+                for (int i=0; i<np; ++i){
+                    this.bestSd[i] = Double.NaN;
+                }
             }
         }
-	}
-
-    // Nelder and Mead Simplex Simplex Non-linear Regression
-    public void simplex(RegressionFunction g, double[] start, double[] step, double fTol, int nMax){
-        if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays\nsimplex2 should have been called");
-        Object regFun = (Object)g;
-        this.lastMethod=3;
-        this.userSupplied = true;
-        this.linNonLin = false;
-        this.zeroCheck = false;
-        this.degreesOfFreedom = this.nData - start.length;
-        this.nelderMead(regFun, start, step, fTol, nMax);
+ 
     }
-
-
-    // Nelder and Mead Simplex Simplex Non-linear Regression
-    // plus plot and output file
-    public void simplexPlot(RegressionFunction g, double[] start, double[] step, double fTol, int nMax){
-        if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays\nsimplexPlot2 should have been called");
-        Object regFun = (Object)g;
-        this.lastMethod=3;
-        this.userSupplied = true;
-        this.linNonLin = false;
-        this.zeroCheck = false;
-        this.degreesOfFreedom = this.nData - start.length;
-        this.nelderMead(regFun, start, step, fTol, nMax);
-        if(!this.supressPrint)this.print();
-        int flag = 0;
-        if(this.xData.length<2)flag = this.plotXY(g);
-        if(flag!=-2 && !this.supressYYplot)this.plotYY();
-    }
-
-	// Nelder and Mead simplex
-	// Default  maximum iterations
-    public void simplex(RegressionFunction g, double[] start, double[] step, double fTol){
-        if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays\nsimplex2 should have been called");
-        Object regFun = (Object)g;
-        int nMaxx = this.nMax;
-        this.lastMethod=3;
-        this.userSupplied = true;
-        this.linNonLin = false;
-        this.zeroCheck = false;
-        this.degreesOfFreedom = this.nData - start.length;
-        this.nelderMead(regFun, start, step, fTol, nMaxx);
-    }
-
-    // Nelder and Mead Simplex Simplex Non-linear Regression
-    // plus plot and output file
-	// Default  maximum iterations
-    public void simplexPlot(RegressionFunction g, double[] start, double[] step, double fTol){
-        if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays\nsimplexPlot2 should have been called");
-        this.lastMethod=3;
-        this.userSupplied = true;
-        this.linNonLin = false;
-        this.zeroCheck = false;
-        this.simplex(g, start, step, fTol);
-        if(!this.supressPrint)this.print();
-        int flag = 0;
-        if(this.xData.length<2)flag = this.plotXY(g);
-        if(flag!=-2 && !this.supressYYplot)this.plotYY();
-    }
-
-	// Nelder and Mead simplex
-	// Default  tolerance
-    public void simplex(RegressionFunction g, double[] start, double[] step, int nMax){
-        if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays\nsimplex2 should have been called");
-        Object regFun = (Object)g;
-        double fToll = this.fTol;
-        this.lastMethod=3;
-        this.userSupplied = true;
-        this.linNonLin = false;
-        this.zeroCheck = false;
-        this.degreesOfFreedom = this.nData - start.length;
-        this.nelderMead(regFun, start, step, fToll, nMax);
-    }
-
-    // Nelder and Mead Simplex Simplex Non-linear Regression
-    // plus plot and output file
-	// Default  tolerance
-    public void simplexPlot(RegressionFunction g, double[] start, double[] step, int nMax){
-        if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays\nsimplexPlot2 should have been called");
-        this.lastMethod=3;
-        this.userSupplied = true;
-        this.linNonLin = false;
-        this.zeroCheck = false;
-        this.simplex(g, start, step, nMax);
-        if(!this.supressPrint)this.print();
-        int flag = 0;
-        if(this.xData.length<2)flag = this.plotXY(g);
-        if(flag!=-2 && !this.supressYYplot)this.plotYY();
-    }
-
-	// Nelder and Mead simplex
-	// Default  tolerance
-	// Default  maximum iterations
-    public void simplex(RegressionFunction g, double[] start, double[] step){
-        if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays\nsimplex2 should have been called");
-        Object regFun = (Object)g;
-        double fToll = this.fTol;
-        int nMaxx = this.nMax;
-        this.lastMethod=3;
-        this.userSupplied = true;
-        this.linNonLin = false;
-        this.zeroCheck = false;
-        this.degreesOfFreedom = this.nData - start.length;
-        this.nelderMead(regFun, start, step, fToll, nMaxx);
-    }
-
-    // Nelder and Mead Simplex Simplex Non-linear Regression
-    // plus plot and output file
-	// Default  tolerance
-	// Default  maximum iterations
-    public void simplexPlot(RegressionFunction g, double[] start, double[] step){
-        if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays\nsimplexPlot2 should have been called");
-        this.lastMethod=3;
-        this.userSupplied = true;
-        this.linNonLin = false;
-        this.zeroCheck = false;
-        this.simplex(g, start, step);
-        if(!this.supressPrint)this.print();
-        int flag = 0;
-        if(this.xData.length<2)flag = this.plotXY(g);
-        if(flag!=-2 && !this.supressYYplot)this.plotYY();
-    }
-
-	// Nelder and Mead simplex
-	// Default step option - all step[i] = dStep
-    public void simplex(RegressionFunction g, double[] start, double fTol, int nMax){
-        if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays\nsimplex2 should have been called");
-        Object regFun = (Object)g;
-        int n=start.length;
-        double[] stepp = new double[n];
-        for(int i=0; i<n;i++)stepp[i]=this.dStep*start[i];
-        this.lastMethod=3;
-        this.userSupplied = true;
-        this.linNonLin = false;
-        this.zeroCheck = false;
-        this.degreesOfFreedom = this.nData - start.length;
-        this.nelderMead(regFun, start, stepp, fTol, nMax);
-    }
-
-    // Nelder and Mead Simplex Simplex Non-linear Regression
-    // plus plot and output file
-	// Default step option - all step[i] = dStep
-    public void simplexPlot(RegressionFunction g, double[] start, double fTol, int nMax){
-        if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays\nsimplexPlot2 should have been called");
-        this.lastMethod=3;
-        this.userSupplied = true;
-        this.linNonLin = false;
-        this.zeroCheck = false;
-        this.simplex(g, start, fTol, nMax);
-        if(!this.supressPrint)this.print();
-        int flag = 0;
-        if(this.xData.length<2)flag = this.plotXY(g);
-        if(flag!=-2 && !this.supressYYplot)this.plotYY();
-    }
-
-	// Nelder and Mead simplex
-	// Default  maximum iterations
-	// Default step option - all step[i] = dStep
-    public void simplex(RegressionFunction g, double[] start, double fTol){
-        if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays\nsimplex2 should have been called");
-        Object regFun = (Object)g;
-        int n=start.length;
-        int nMaxx = this.nMax;
-        double[] stepp = new double[n];
-        for(int i=0; i<n;i++)stepp[i]=this.dStep*start[i];
-        this.lastMethod=3;
-        this.userSupplied = true;
-        this.linNonLin = false;
-        this.zeroCheck = false;
-        this.degreesOfFreedom = this.nData - start.length;
-        this.nelderMead(regFun, start, stepp, fTol, nMaxx);
-    }
-
-    // Nelder and Mead Simplex Simplex Non-linear Regression
-    // plus plot and output file
-	// Default  maximum iterations
-	// Default step option - all step[i] = dStep
-    public void simplexPlot(RegressionFunction g, double[] start, double fTol){
-        if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays\nsimplexPlot2 should have been called");
-        this.lastMethod=3;
-        this.userSupplied = true;
-        this.linNonLin = false;
-        this.zeroCheck = false;
-        this.simplex(g, start, fTol);
-        if(!this.supressPrint)this.print();
-        int flag = 0;
-        if(this.xData.length<2)flag = this.plotXY(g);
-        if(flag!=-2 && !this.supressYYplot)this.plotYY();
-    }
-
-	// Nelder and Mead simplex
-    // Default  tolerance
-	// Default step option - all step[i] = dStep
-    public void simplex(RegressionFunction g, double[] start, int nMax){
-        if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays\nsimplex2 should have been called");
-        Object regFun = (Object)g;
-        int n=start.length;
-        double fToll = this.fTol;
-        double[] stepp = new double[n];
-        for(int i=0; i<n;i++)stepp[i]=this.dStep*start[i];
-        this.lastMethod=3;
-        this.userSupplied = true;
-        this.zeroCheck = false;
-        this.degreesOfFreedom = this.nData - start.length;
-        this.nelderMead(regFun, start, stepp, fToll, nMax);
-    }
-
-    // Nelder and Mead Simplex Simplex Non-linear Regression
-    // plus plot and output file
-    // Default  tolerance
-	// Default step option - all step[i] = dStep
-    public void simplexPlot(RegressionFunction g, double[] start, int nMax){
-        if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays\nsimplexPlot2 should have been called");
-        this.lastMethod=3;
-        this.userSupplied = true;
-        this.linNonLin = false;
-        this.zeroCheck = false;
-        this.simplex(g, start, nMax);
-        if(!this.supressPrint)this.print();
-        int flag = 0;
-        if(this.xData.length<2)flag = this.plotXY(g);
-        if(flag!=-2 && !this.supressYYplot)this.plotYY();
-    }
-
-	// Nelder and Mead simplex
-    // Default  tolerance
-    // Default  maximum iterations
-	// Default step option - all step[i] = dStep
-    public void simplex(RegressionFunction g, double[] start){
-        if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays\nsimplex2 should have been called");
-        Object regFun = (Object)g;
-        int n=start.length;
-        int nMaxx = this.nMax;
-        double fToll = this.fTol;
-        double[] stepp = new double[n];
-        for(int i=0; i<n;i++)stepp[i]=this.dStep*start[i];
-        this.lastMethod=3;
-        this.userSupplied = true;
-        this.linNonLin = false;
-        this.zeroCheck = false;
-        this.degreesOfFreedom = this.nData - start.length;
-        this.nelderMead(regFun, start, stepp, fToll, nMaxx);
-    }
-
-    // Nelder and Mead Simplex Simplex Non-linear Regression
-    // plus plot and output file
-    // Default  tolerance
-    // Default  maximum iterations
-	// Default step option - all step[i] = dStep
-    public void simplexPlot(RegressionFunction g, double[] start){
-        if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays\nsimplexPlot2 should have been called");
-        this.lastMethod=3;
-        this.userSupplied = true;
-        this.linNonLin = false;
-        this.zeroCheck = false;
-        this.simplex(g, start);
-        if(!this.supressPrint)this.print();
-        int flag = 0;
-        if(this.xData.length<2)flag = this.plotXY(g);
-        if(flag!=-2 && !this.supressYYplot)this.plotYY();
-    }
-
-
-
-    // Nelder and Mead Simplex Simplex2 Non-linear Regression
-    public void simplex2(RegressionFunction2 g, double[] start, double[] step, double fTol, int nMax){
-        if(!this.multipleY)throw new IllegalArgumentException("This method cannot handle singly dimensioned y array\nsimplex should have been called");
-        Object regFun = (Object)g;
-        this.lastMethod=3;
-        this.userSupplied = true;
-        this.linNonLin = false;
-        this.zeroCheck = false;
-        this.degreesOfFreedom = this.nData - start.length;
-        this.nelderMead(regFun, start, step, fTol, nMax);
-    }
-
-
-    // Nelder and Mead Simplex Simplex2 Non-linear Regression
-    // plus plot and output file
-    public void simplexPlot2(RegressionFunction2 g, double[] start, double[] step, double fTol, int nMax){
-        if(!this.multipleY)throw new IllegalArgumentException("This method cannot handle singly dimensioned y array\nsimplex should have been called");
-        Object regFun = (Object)g;
-        this.lastMethod=3;
-        this.userSupplied = true;
-        this.linNonLin = false;
-        this.zeroCheck = false;
-        this.degreesOfFreedom = this.nData - start.length;
-        this.nelderMead(regFun, start, step, fTol, nMax);
-        if(!this.supressPrint)this.print();
-        int flag = 0;
-        if(this.xData.length<2)flag = this.plotXY2(g);
-        if(flag!=-2 && !this.supressYYplot)this.plotYY();
-    }
-
-	// Nelder and Mead simplex
-	// Default  maximum iterations
-    public void simplex2(RegressionFunction2 g, double[] start, double[] step, double fTol){
-        if(!this.multipleY)throw new IllegalArgumentException("This method cannot handle singly dimensioned y array\nsimplex should have been called");
-        Object regFun = (Object)g;
-        int nMaxx = this.nMax;
-        this.lastMethod=3;
-        this.userSupplied = true;
-        this.linNonLin = false;
-        this.zeroCheck = false;
-        this.degreesOfFreedom = this.nData - start.length;
-        this.nelderMead(regFun, start, step, fTol, nMaxx);
-    }
-
-    // Nelder and Mead Simplex Simplex2 Non-linear Regression
-    // plus plot and output file
-	// Default  maximum iterations
-    public void simplexPlot2(RegressionFunction2 g, double[] start, double[] step, double fTol){
-        if(!this.multipleY)throw new IllegalArgumentException("This method cannot handle singly dimensioned y array\nsimplex should have been called");
-        this.lastMethod=3;
-        this.userSupplied = true;
-        this.linNonLin = false;
-        this.zeroCheck = false;
-        this.simplex2(g, start, step, fTol);
-        if(!this.supressPrint)this.print();
-        int flag = 0;
-        if(this.xData.length<2)flag = this.plotXY2(g);
-        if(flag!=-2 && !this.supressYYplot)this.plotYY();
-    }
-
-	// Nelder and Mead simplex
-	// Default  tolerance
-    public void simplex2(RegressionFunction2 g, double[] start, double[] step, int nMax){
-        if(!this.multipleY)throw new IllegalArgumentException("This method cannot handle singly dimensioned y array\nsimplex should have been called");
-        Object regFun = (Object)g;
-        double fToll = this.fTol;
-        this.lastMethod=3;
-        this.userSupplied = true;
-        this.linNonLin = false;
-        this.zeroCheck = false;
-        this.degreesOfFreedom = this.nData - start.length;
-        this.nelderMead(regFun, start, step, fToll, nMax);
-    }
-
-    // Nelder and Mead Simplex Simplex2 Non-linear Regression
-    // plus plot and output file
-	// Default  tolerance
-    public void simplexPlot2(RegressionFunction2 g, double[] start, double[] step, int nMax){
-        if(!this.multipleY)throw new IllegalArgumentException("This method cannot handle singly dimensioned y array\nsimplex should have been called");
-        this.lastMethod=3;
-        this.userSupplied = true;
-        this.linNonLin = false;
-        this.zeroCheck = false;
-        this.simplex2(g, start, step, nMax);
-        if(!this.supressPrint)this.print();
-        int flag = 0;
-        if(this.xData.length<2)flag = this.plotXY2(g);
-        if(flag!=-2 && !this.supressYYplot)this.plotYY();
-    }
-
-	// Nelder and Mead simplex
-	// Default  tolerance
-	// Default  maximum iterations
-    public void simplex2(RegressionFunction2 g, double[] start, double[] step){
-        if(!this.multipleY)throw new IllegalArgumentException("This method cannot handle singly dimensioned y array\nsimplex should have been called");
-        Object regFun = (Object)g;
-        double fToll = this.fTol;
-        int nMaxx = this.nMax;
-        this.lastMethod=3;
-        this.userSupplied = true;
-        this.linNonLin = false;
-        this.zeroCheck = false;
-        this.degreesOfFreedom = this.nData - start.length;
-        this.nelderMead(regFun, start, step, fToll, nMaxx);
-    }
-
-    // Nelder and Mead Simplex Simplex2 Non-linear Regression
-    // plus plot and output file
-	// Default  tolerance
-	// Default  maximum iterations
-    public void simplexPlot2(RegressionFunction2 g, double[] start, double[] step){
-        if(!this.multipleY)throw new IllegalArgumentException("This method cannot handle singly dimensioned y array\nsimplex should have been called");
-        this.lastMethod=3;
-        this.userSupplied = true;
-        this.linNonLin = false;
-        this.zeroCheck = false;
-        this.simplex2(g, start, step);
-        if(!this.supressPrint)this.print();
-        int flag = 0;
-        if(this.xData.length<2)flag = this.plotXY2(g);
-        if(flag!=-2 && !this.supressYYplot)this.plotYY();
-    }
-
-	// Nelder and Mead simplex
-	// Default step option - all step[i] = dStep
-    public void simplex2(RegressionFunction2 g, double[] start, double fTol, int nMax){
-        if(!this.multipleY)throw new IllegalArgumentException("This method cannot handle singly dimensioned y array\nsimplex should have been called");
-        Object regFun = (Object)g;
-        int n=start.length;
-        double[] stepp = new double[n];
-        for(int i=0; i<n;i++)stepp[i]=this.dStep*start[i];
-        this.lastMethod=3;
-        this.userSupplied = true;
-        this.linNonLin = false;
-        this.zeroCheck = false;
-        this.degreesOfFreedom = this.nData - start.length;
-        this.nelderMead(regFun, start, stepp, fTol, nMax);
-    }
-
-    // Nelder and Mead Simplex Simplex2 Non-linear Regression
-    // plus plot and output file
-	// Default step option - all step[i] = dStep
-    public void simplexPlot2(RegressionFunction2 g, double[] start, double fTol, int nMax){
-        if(!this.multipleY)throw new IllegalArgumentException("This method cannot handle singly dimensioned y array\nsimplex should have been called");
-        this.lastMethod=3;
-        this.userSupplied = true;
-        this.linNonLin = false;
-        this.zeroCheck = false;
-        this.simplex2(g, start, fTol, nMax);
-        if(!this.supressPrint)this.print();
-        int flag = 0;
-        if(this.xData.length<2)flag = this.plotXY2(g);
-        if(flag!=-2 && !this.supressYYplot)this.plotYY();
-    }
-
-	// Nelder and Mead simplex
-	// Default  maximum iterations
-	// Default step option - all step[i] = dStep
-    public void simplex2(RegressionFunction2 g, double[] start, double fTol){
-        if(!this.multipleY)throw new IllegalArgumentException("This method cannot handle singly dimensioned y array\nsimplex should have been called");
-        Object regFun = (Object)g;
-        int n=start.length;
-        int nMaxx = this.nMax;
-        double[] stepp = new double[n];
-        for(int i=0; i<n;i++)stepp[i]=this.dStep*start[i];
-        this.lastMethod=3;
-        this.userSupplied = true;
-        this.linNonLin = false;
-        this.zeroCheck = false;
-        this.degreesOfFreedom = this.nData - start.length;
-        this.nelderMead(regFun, start, stepp, fTol, nMaxx);
-    }
-
-    // Nelder and Mead Simplex Simplex2 Non-linear Regression
-    // plus plot and output file
-	// Default  maximum iterations
-	// Default step option - all step[i] = dStep
-    public void simplexPlot2(RegressionFunction2 g, double[] start, double fTol){
-        if(!this.multipleY)throw new IllegalArgumentException("This method cannot handle singly dimensioned y array\nsimplex should have been called");
-        this.lastMethod=3;
-        this.userSupplied = true;
-        this.linNonLin = false;
-        this.zeroCheck = false;
-        this.simplex2(g, start, fTol);
-        if(!this.supressPrint)this.print();
-        int flag = 0;
-        if(this.xData.length<2)flag = this.plotXY2(g);
-        if(flag!=-2 && !this.supressYYplot)this.plotYY();
-    }
-
-	// Nelder and Mead simplex
-    // Default  tolerance
-	// Default step option - all step[i] = dStep
-    public void simplex2(RegressionFunction2 g, double[] start, int nMax){
-        if(!this.multipleY)throw new IllegalArgumentException("This method cannot handle singly dimensioned y array\nsimplex should have been called");
-        Object regFun = (Object)g;
-        int n=start.length;
-        double fToll = this.fTol;
-        double[] stepp = new double[n];
-        for(int i=0; i<n;i++)stepp[i]=this.dStep*start[i];
-        this.lastMethod=3;
-        this.userSupplied = true;
-        this.zeroCheck = false;
-        this.degreesOfFreedom = this.nData - start.length;
-        this.nelderMead(regFun, start, stepp, fToll, nMax);
-    }
-
-    // Nelder and Mead Simplex Simplex2 Non-linear Regression
-    // plus plot and output file
-    // Default  tolerance
-	// Default step option - all step[i] = dStep
-    public void simplexPlot2(RegressionFunction2 g, double[] start, int nMax){
-        if(!this.multipleY)throw new IllegalArgumentException("This method cannot handle singly dimensioned y array\nsimplex should have been called");
-        this.lastMethod=3;
-        this.userSupplied = true;
-        this.linNonLin = false;
-        this.zeroCheck = false;
-        this.simplex2(g, start, nMax);
-        if(!this.supressPrint)this.print();
-        int flag = 0;
-        if(this.xData.length<2)flag = this.plotXY2(g);
-        if(flag!=-2 && !this.supressYYplot)this.plotYY();
-    }
-
-	// Nelder and Mead simplex
-    // Default  tolerance
-    // Default  maximum iterations
-	// Default step option - all step[i] = dStep
-    public void simplex2(RegressionFunction2 g, double[] start){
-        if(!this.multipleY)throw new IllegalArgumentException("This method cannot handle singly dimensioned y array\nsimplex should have been called");
-        Object regFun = (Object)g;
-        int n=start.length;
-        int nMaxx = this.nMax;
-        double fToll = this.fTol;
-        double[] stepp = new double[n];
-        for(int i=0; i<n;i++)stepp[i]=this.dStep*start[i];
-        this.lastMethod=3;
-        this.userSupplied = true;
-        this.linNonLin = false;
-        this.zeroCheck = false;
-        this.degreesOfFreedom = this.nData - start.length;
-        this.nelderMead(regFun, start, stepp, fToll, nMaxx);
-    }
-
-    // Nelder and Mead Simplex Simplex2 Non-linear Regression
-    // plus plot and output file
-    // Default  tolerance
-    // Default  maximum iterations
-	// Default step option - all step[i] = dStep
-    public void simplexPlot2(RegressionFunction2 g, double[] start){
-        if(!this.multipleY)throw new IllegalArgumentException("This method cannot handle singly dimensioned y array\nsimplex should have been called");
-        this.lastMethod=3;
-        this.userSupplied = true;
-        this.linNonLin = false;
-        this.zeroCheck = false;
-        this.simplex2(g, start);
-        if(!this.supressPrint)this.print();
-        int flag = 0;
-        if(this.xData.length<2)flag = this.plotXY2(g);
-        if(flag!=-2 && !this.supressYYplot)this.plotYY();
-    }
-
-    // Calculate the sum of squares of the residuals for non-linear regression
-	protected double sumSquares(Object regFun, double[] x){
-	    RegressionFunction g1 = null;
-	    RegressionFunction2 g2 = null;
-	    if(this.multipleY){
-            g2 = (RegressionFunction2)regFun;
-        }
-        else{
-            g1 = (RegressionFunction)regFun;
+    
+     // Calculate the sum of squares of the residuals for non-linear regression
+    protected double sumSquares(Object regFun, double[] x){
+        RegressionFunction g1 = null;
+	RegressionFunction2 g2 = null;
+        RegressionFunction3 g3 = null;
+        switch(this.simplexFlag){
+            case 1: g1 = (RegressionFunction)regFun;
+                    break;
+            case 2: g2 = (RegressionFunction2)regFun;
+                    break;
+            case 3: 
+            case 4: g3 = (RegressionFunction3)regFun;
+                    break;
         }
 
-	    double ss = -3.0D;
-	    double[] param = new double[this.nTerms];
-	    double[] xd = new double[this.nXarrays];
-	    // rescale for calcultion of the function
-	    for(int i=0; i<this.nTerms; i++)param[i]=x[i]/this.scale[i];
+	double ss = -3.0D;
+	double[] param = new double[this.nParam];
+	double[] xd = new double[this.nXarrays];
+	// rescale for calcultion of the function
+	for(int i=0; i<this.nParam; i++)param[i]=x[i]/this.scale[i];
 
         // single parameter penalty functions
         double tempFunctVal = this.lastSSnoConstraint;
@@ -3077,362 +3561,296 @@ public class Regression{
         // call function calculation and calculate the sum of squares if constraints have not intervened
         if(test){
             ss = 0.0D;
+            double hold = 0.0;
+            double[] yy = null;
             for(int i=0; i<this.nData; i++){
                 for(int j=0; j<nXarrays; j++)xd[j]=this.xData[j][i];
-                if(!this.multipleY){
-                    ss += Fmath.square((this.yData[i] - g1.function(param, xd))/this.weight[i]);
+                switch(this.simplexFlag){
+                        case 1: ss += Fmath.square((this.yData[i] - g1.function(param, xd))/this.weight[i]);
+                                break;
+                        case 2: ss += Fmath.square((this.yData[i] - g2.function(param, xd, i))/this.weight[i]);
+                                break;
+                        case 3: 
+                        case 4: yy = g3.function(param, xd, i);
+                                hold = Fmath.square(this.yData[i] - yy[0]);
+                                this.weight[i] = Math.sqrt(yy[1]);
+                                ss += hold/yy[1];
+                                break;
                 }
-                else{
-                    ss += Fmath.square((this.yData[i] - g2.function(param, xd, i))/this.weight[i]);
-                }
-
             }
-            this.lastSSnoConstraint = ss;
-
+            this.lastSSnoConstraint = ss;          
         }
 
-	    // return sum of squares
-	    return ss;
-	}
+	// return sum of squares
+    	return ss;
+	
+    }
 
-
-	// add a single parameter constraint boundary for the non-linear regression
-	public void addConstraint(int paramIndex, int conDir, double constraint){
-	    this.penalty=true;
+    // CONSTRAINT METHODS
+    
+    // add a single parameter constraint boundary for the non-linear regression
+    public void addConstraint(int paramIndex, int conDir, double constraint){  
+        this.penalty=true;
 
         // First element reserved for method number if other methods than 'cliff' are added later
-		if(this.penalties.isEmpty())this.penalties.add(new Integer(this.constraintMethod));
+	if(this.penalties.isEmpty())this.penalties.add(new Integer(this.constraintMethod));
 
-		// add constraint
-	    if(penalties.size()==1){
-		    this.penalties.add(new Integer(1));
-		}
-		else{
-		    int nPC = ((Integer)this.penalties.get(1)).intValue();
+	// add constraint
+	if(penalties.size()==1){
+            this.penalties.add(new Integer(1));
+	}
+	else{
+            int nPC = ((Integer)this.penalties.get(1)).intValue();
             nPC++;
             this.penalties.set(1, new Integer(nPC));
-		}
-		this.penalties.add(new Integer(paramIndex));
- 	    this.penalties.add(new Integer(conDir));
- 	    this.penalties.add(new Double(constraint));
- 	    if(paramIndex>this.maxConstraintIndex)this.maxConstraintIndex = paramIndex;
- 	}
+	} 
+	this.penalties.add(new Integer(paramIndex));
+        this.constrainedSingle.add(new Integer(paramIndex));
+ 	this.penalties.add(new Integer(conDir));
+        String chold = "";
+        switch(conDir){
+            case -1: chold = "must be >= " + constraint;
+                     break;
+            case 0:  chold = "must = " + constraint;
+                     break;
+            case +1: chold = "must be <= " + constraint;
+                     break;
+            default: throw new IllegalArgumentException("Constraint direction " + conDir + " not recognised");
+        }
+        this.constrainedSingle.add(chold);
+        
+ 	this.penalties.add(new Double(constraint));
+ 	if(paramIndex>this.maxConstraintIndex)this.maxConstraintIndex = paramIndex;
+        
+    }
 
 
     // add a multiple parameter constraint boundary for the non-linear regression
-	public void addConstraint(int[] paramIndices, int[] plusOrMinus, int conDir, double constraint){
+    public void addConstraint(int[] paramIndices, int[] plusOrMinus, int conDir, double constraint){
 	    ArrayMaths am = new ArrayMaths(plusOrMinus);
 	    double[] dpom = am.getArray_as_double();
 	    addConstraint(paramIndices, dpom, conDir, constraint);
-	}
+    }
 
     // add a multiple parameter constraint boundary for the non-linear regression
-	public void addConstraint(int[] paramIndices, double[] plusOrMinus, int conDir, double constraint){
-	    int nCon = paramIndices.length;
-	    int nPorM = plusOrMinus.length;
-	    if(nCon!=nPorM)throw new IllegalArgumentException("num of parameters, " + nCon + ", does not equal number of parameter signs, " + nPorM);
-	    this.sumPenalty=true;
+    public void addConstraint(int[] paramIndices, double[] plusOrMinus, int conDir, double constraint){
+        int nCon = paramIndices.length;
+	int nPorM = plusOrMinus.length;
+	if(nCon!=nPorM)throw new IllegalArgumentException("num of parameters, " + nCon + ", does not equal number of parameter signs, " + nPorM);
+	this.sumPenalty=true;
 
         // First element reserved for method number if other methods than 'cliff' are added later
-		if(this.sumPenalties.isEmpty())this.sumPenalties.add(new Integer(this.constraintMethod));
+        if(this.sumPenalties.isEmpty())this.sumPenalties.add(new Integer(this.constraintMethod));
 
     	// add constraint
-		if(sumPenalties.size()==1){
-		    this.sumPenalties.add(new Integer(1));
-		}
-		else{
-		    int nPC = ((Integer)this.sumPenalties.get(1)).intValue();
+	if(sumPenalties.size()==1){
+            this.sumPenalties.add(new Integer(1));
+	}
+	else{
+            int nPC = ((Integer)this.sumPenalties.get(1)).intValue();
             nPC++;
             this.sumPenalties.set(1, new Integer(nPC));
-		}
-		this.sumPenalties.add(new Integer(nCon));
-		this.sumPenalties.add(paramIndices);
-		this.sumPenalties.add(plusOrMinus);
- 	    this.sumPenalties.add(new Integer(conDir));
- 	    this.sumPenalties.add(new Double(constraint));
- 	    ArrayMaths am = new ArrayMaths(paramIndices);
- 	    int maxI = am.getMaximum_as_int();
- 	    if(maxI>this.maxConstraintIndex)this.maxConstraintIndex = maxI;
- 	}
+	}
+	this.sumPenalties.add(new Integer(nCon));
+	this.sumPenalties.add(paramIndices);
+	this.sumPenalties.add(plusOrMinus);
+ 	this.sumPenalties.add(new Integer(conDir));
+ 	this.sumPenalties.add(new Double(constraint));
+ 	ArrayMaths am = new ArrayMaths(paramIndices);
+ 	int maxI = am.getMaximum_as_int();
+ 	if(maxI>this.maxConstraintIndex)this.maxConstraintIndex = maxI;
+        String chold = "";
+        for(int i=0; i<paramIndices.length; i++){
+            int ii = paramIndices[i];
+            if(plusOrMinus[i]>=0){
+                if(i>0)chold += " + ";
+            }
+            else{
+                if(i>0){
+                    chold += " - "; 
+                }
+                else{
+                   chold += "-"; 
+                }
+            }       
+            chold += "p[" + ii + "]." + Math.abs(plusOrMinus[i]);
+        }
+        switch(conDir){
+                case -1: chold += " >= " + constraint;
+                     break;
+                case 0:  chold += " = " + constraint;
+                     break;
+                case +1: chold += " <= " + constraint;
+                     break;
+                default: throw new IllegalArgumentException("Constraint direction " + conDir + " not recognised");
+        }
+        
+        for(int i=0; i<paramIndices.length; i++){
+            this.constrainedMultiple.add(new Integer(paramIndices[i]));
+            this.constrainedMultiple.add(chold);
+        }
+    }
 
 
-	// remove all constraint boundaries for the non-linear regression
-	public void removeConstraints(){
+    // remove all constraint boundaries for the non-linear regression
+    public void removeConstraints(){
 
 	    // check if single parameter constraints already set
 	    if(!this.penalties.isEmpty()){
-		    int m=this.penalties.size();
+                int m=this.penalties.size();
 
-		    // remove single parameter constraints
+		// remove single parameter constraints
     		for(int i=m-1; i>=0; i--){
-		        this.penalties.remove(i);
-		    }
+                    this.penalties.remove(i);
 		}
-		this.penalty = false;
-		this.nConstraints = 0;
+            }
+            this.penalty = false;
+            this.nConstraints = 0;
+            this.constrainedSingle.clear();
 
 	    // check if mutiple parameter constraints already set
 	    if(!this.sumPenalties.isEmpty()){
-		    int m=this.sumPenalties.size();
+                int m=this.sumPenalties.size();
 
-		    // remove multiple parameter constraints
+		// remove multiple parameter constraints
     		for(int i=m-1; i>=0; i--){
-		        this.sumPenalties.remove(i);
-		    }
+                    this.sumPenalties.remove(i);
 		}
-		this.sumPenalty = false;
-		this.nSumConstraints = 0;
-		this.maxConstraintIndex = -1;
-	}
+            }
+            this.sumPenalty = false;
+            this.nSumConstraints = 0;
+            this.maxConstraintIndex = -1;
+            this.constrainedMultiple.clear();
+    }
 
 
 	// Reset the tolerance used in a fixed value constraint
 	public void setConstraintTolerance(double tolerance){
 	    this.constraintTolerance = tolerance;
 	}
+    
+    // STATISTICAL ANALYSES
+        
+    // Statistical analyses for linear models
+        
+    // Generalised linear regression statistics
+    protected void generalLinearStats(double[][] xd){
 
+	double sde=0.0D, sum=0.0D, yCalctemp=0.0D;
+        double[][] a = new double[this.nParam][this.nParam];
+        double[][] h = new double[this.nParam][this.nParam];
+        double[][] stat = new double[this.nParam][this.nParam];
+        double[][] cov = new double[this.nParam][this.nParam];
+        this.covar = new double[this.nParam][this.nParam];
+        this.corrCoeff = new double[this.nParam][this.nParam];
+        double[]coeffSd = new double[this.nParam];
+        double[]coeff = new double[this.nParam];
 
-	//  linear statistics applied to a non-linear regression
-    protected int pseudoLinearStats(Object regFun){
-	    double	f1 = 0.0D, f2 = 0.0D, f3 = 0.0D, f4 = 0.0D; // intermdiate values in numerical differentiation
-	    int	flag = 0;       // returned as 0 if method fully successful;
-	                        // negative if partially successful or unsuccessful: check posVarFlag and invertFlag
-	                        //  -1  posVarFlag or invertFlag is false;
-	                        //  -2  posVarFlag and invertFlag are false
-	    int np = this.nTerms;
+        for(int i=0; i<this.nParam; i++){
+            coeff[i] = this.best[i];
+        }
 
-	    double[] f = new double[np];
-    	double[] pmin = new double[np];
-    	double[] coeffSd = new double[np];
-    	double[] xd = new double[this.nXarrays];
-	    double[][]stat = new double[np][np];
-	    pseudoSd = new double[np];
-
-	    Double temp = null;
-
-	    this.grad = new double[np][2];
-	    this.covar = new double[np][np];
-        this.corrCoeff = new double[np][np];
-
-        // get best estimates
-	    pmin = Conv.copy(best);
-
-        // gradient both sides of the minimum
-        double hold0 = 1.0D;
-        double hold1 = 1.0D;
-	    for (int i=0;i<np; ++i){
-		    for (int k=0;k<np; ++k){
-			    f[k]=pmin[k];
-		    }
-		    hold0=pmin[i];
-            if(hold0==0.0D){
-                hold0=this.stepH[i];
-                this.zeroCheck=true;
+	this.chiSquare=0.0D;
+	this.sumOfSquaresError=0.0D;
+	for (int i=0; i< nData; ++i){
+            yCalctemp=0.0;
+            for (int j=0; j<nParam; ++j){
+                yCalctemp += coeff[j]*xd[j][i];
             }
-		    f[i]=hold0*(1.0D - this.delta);
-	        this.lastSSnoConstraint=this.sumOfSquaresError;
-		    f1=sumSquares(regFun, f);
-		    f[i]=hold0*(1.0 + this.delta);
-	        this.lastSSnoConstraint=this.sumOfSquaresError;
-		    f2=sumSquares(regFun, f);
-		    this.grad[i][0]=(this.fMin-f1)/Math.abs(this.delta*hold0);
-		    this.grad[i][1]=(f2-this.fMin)/Math.abs(this.delta*hold0);
-	    }
+            this.yCalc[i] = yCalctemp;
+            yCalctemp -= this.yData[i];
+            this.residual[i] = yCalctemp;
+            this.sumOfSquaresError += Fmath.square(yCalctemp);
+        }
+        
+        double varY = this.sumOfSquaresError/(this.degreesOfFreedom);
+	double sdY = Math.sqrt(varY);
 
-        // second patial derivatives at the minimum
-	    this.lastSSnoConstraint=this.sumOfSquaresError;
-	    for (int i=0;i<np; ++i){
-		    for (int j=0;j<np; ++j){
-			    for (int k=0;k<np; ++k){
-				    f[k]=pmin[k];
-			    }
-			    hold0=f[i];
-                if(hold0==0.0D){
-                    hold0=this.stepH[i];
-                    this.zeroCheck=true;
+        if(this.weightOpt && !this.trueErrors){
+            double wave = 0.0;
+            for(int i=0; i<this.nData; i++)wave = this.weight[i]*this.weight[i];
+            wave /= this.degreesOfFreedom;
+            double wfac = Math.sqrt(varY/wave);
+            for(int i=0; i<this.nData; i++)this.weight[i] = this.weight[i]*wfac;            
+        }
+        
+        for (int i=0; i< nData; ++i){
+            this.residualW[i]=this.residual[i]/weight[i];
+            this.chiSquare += Fmath.square(this.residual[i]/this.weight[i]);
+            
+	}
+        this.reducedChiSquare = this.chiSquare/(this.degreesOfFreedom);
+	
+        
+        if(this.sumOfSquaresError==0.0D){
+             for(int i=0; i<this.nParam;i++){
+                coeffSd[i]=0.0D;
+                for(int j=0; j<this.nParam;j++){
+                    this.covar[i][j]=0.0D;
+                    if(i==j){
+                        this.corrCoeff[i][j]=1.0D;
+                    }
+		    else{
+                        this.corrCoeff[i][j]=0.0D;
+                    }
                 }
-			    f[i]=hold0*(1.0 + this.delta/2.0D);
-			    hold0=f[j];
-                if(hold0==0.0D){
-                    hold0=this.stepH[j];
-                    this.zeroCheck=true;
+            }
+        }
+        else{
+            for (int i=0; i<this.nParam; ++i){
+                for (int j=0; j<this.nParam; ++j){
+                    sum=0.0;
+                    for (int k=0; k<this.nData; ++k){
+                        if (weightOpt){
+                            sde = weight[k];
+                        }
+	                else{
+                            sde = sdY;
+                        }
+                        sum += xd[i][k]*xd[j][k]/Fmath.square(sde);
+                    }
+                    h[j][i]=sum;
                 }
-			    f[j]=hold0*(1.0 + this.delta/2.0D);
-        	    this.lastSSnoConstraint=this.sumOfSquaresError;
-			    f1=sumSquares(regFun, f);
-			    f[i]=pmin[i];
-			    f[j]=pmin[j];
-			    hold0=f[i];
-                if(hold0==0.0D){
-                    hold0=this.stepH[i];
-                    this.zeroCheck=true;
-                }
- 			    f[i]=hold0*(1.0 - this.delta/2.0D);
-			    hold0=f[j];
-                if(hold0==0.0D){
-                    hold0=this.stepH[j];
-                    this.zeroCheck=true;
-                }
- 		        f[j]=hold0*(1.0 + this.delta/2.0D);
-	            this.lastSSnoConstraint=this.sumOfSquaresError;
-			    f2=sumSquares(regFun, f);
-			    f[i]=pmin[i];
-			    f[j]=pmin[j];
-			    hold0=f[i];
-                if(hold0==0.0D){
-                    hold0=this.stepH[i];
-                    this.zeroCheck=true;
-                }
-    		    f[i]=hold0*(1.0 + this.delta/2.0D);
-    		    hold0=f[j];
-                if(hold0==0.0D){
-                    hold0=this.stepH[j];
-                    this.zeroCheck=true;
-                }
-			    f[j]=hold0*(1.0 - this.delta/2.0D);
-	            this.lastSSnoConstraint=this.sumOfSquaresError;
-			    f3=sumSquares(regFun, f);
-			    f[i]=pmin[i];
-			    f[j]=pmin[j];
-			    hold0=f[i];
-                if(hold0==0.0D){
-                    hold0=this.stepH[i];
-                    this.zeroCheck=true;
-                }
-			    f[i]=hold0*(1.0 - this.delta/2.0D);
-			    hold0=f[j];
-                if(hold0==0.0D){
-                    hold0=this.stepH[j];
-                    this.zeroCheck=true;
-                }
-			    f[j]=hold0*(1.0 - this.delta/2.0D);
-	            this.lastSSnoConstraint=this.sumOfSquaresError;
-			    f4=sumSquares(regFun, f);
-			    stat[i][j]=(f1-f2-f3+f4)/(this.delta*this.delta);
-		    }
-	    }
+            }
+            Matrix hh = new Matrix(h);
+            if(this.supressErrorMessages)hh.supressErrorMessage();
+            hh = hh.inverse();
+            stat = hh.getArrayCopy();
+            for (int j=0; j<nParam; ++j){
+                coeffSd[j] = Math.sqrt(stat[j][j]);
+            }
 
-        double ss=0.0D;
-        double sc=0.0D;
-	    for(int i=0; i<this.nData; i++){
-            for(int j=0; j<nXarrays; j++)xd[j]=this.xData[j][i];
-            if(this.multipleY){
-	            this.yCalc[i] = ((RegressionFunction2)regFun).function(pmin, xd, i);
-	        }
-	        else{
-	            this.yCalc[i] = ((RegressionFunction)regFun).function(pmin, xd);
-	        }
-	        this.residual[i] = this.yCalc[i]-this.yData[i];
-	        ss += Fmath.square(this.residual[i]);
-	        this.residualW[i] = this.residual[i]/this.weight[i];
-	        sc += Fmath.square(this.residualW[i]);
-	    }
-	    this.sumOfSquaresError = ss;
-	    double varY = ss/(this.nData-np);
-	    double sdY = Math.sqrt(varY);
-	    this.chiSquare=sc;
-	    this.reducedChiSquare=sc/(this.nData-np);
+            for(int i=0; i<this.nParam;i++){
+                for(int j=0; j<this.nParam;j++){
+                    this.covar[i][j]=stat[i][j];
+                }
+            }
 
-        // calculate reduced sum of squares
-        double red=1.0D;
-        if(!this.weightOpt && !this.trueFreq)red=this.sumOfSquaresError/(this.nData-np);
+            for(int i=0; i<this.nParam;i++){
+                for(int j=0; j<this.nParam;j++){
+                    if(i==j){
+                        this.corrCoeff[i][j] = 1.0D;
+                    }
+                    else{
+                        this.corrCoeff[i][j]=covar[i][j]/(coeffSd[i]*coeffSd[j]);
+                    }
+                }
+            }
+	}
 
-        // calculate pseudo errors  -  reduced sum of squares over second partial derivative
-        for(int i=0; i<np; i++){
-            pseudoSd[i] = (2.0D*this.delta*red*Math.abs(pmin[i]))/(grad[i][1]-grad[i][0]);
-            if(pseudoSd[i]>=0.0D){
-                pseudoSd[i] = Math.sqrt(pseudoSd[i]);
+	for(int i=0; i<this.nParam; i++){
+            this.bestSd[i] = coeffSd[i];
+            this.tValues[i] = this.best[i]/this.bestSd[i];
+            double atv = Math.abs(this.tValues[i]);
+            if(atv!=atv){
+                this.pValues[i] = Double.NaN;
             }
             else{
-                pseudoSd[i] = Double.NaN;
+                this.pValues[i] = 1.0 - Stat.studentTcdf(-atv, atv, this.degreesOfFreedom);
             }
         }
 
-        // calculate covariance matrix
-	    if(np==1){
-	        hold0=pmin[0];
-            if(hold0==0.0D)hold0=this.stepH[0];
-	        stat[0][0]=1.0D/stat[0][0];
-		    this.covar[0][0] = stat[0][0]*red*hold0*hold0;
-		    if(covar[0][0]>=0.0D){
-			    coeffSd[0]=Math.sqrt(this.covar[0][0]);
-			    corrCoeff[0][0]=1.0D;
-			}
-	        else{
-			    coeffSd[0]=Double.NaN;
-			    corrCoeff[0][0]=Double.NaN;
-			    this.posVarFlag=false;
-			}
-		}
-		else{
-            Matrix cov = new Matrix(stat);
-		    if(this.supressErrorMessages)cov.supressErrorMessage();
-		    double determinant = cov.determinant();
-		    if(determinant==0){
-		        this.invertFlag=false;
-		    }
-		    else{
-                cov = cov.inverse();
-                this.invertFlag = cov.getMatrixCheck();
-            }
-            if(this.invertFlag==false)flag--;
-            stat = cov.getArrayCopy();
-
-	        this.posVarFlag=true;
-	        if (this.invertFlag){
-		        for (int i=0; i<np; ++i){
-		            hold0=pmin[i];
-                    if(hold0==0.0D)hold0=this.stepH[i];
-			        for (int j=i; j<np;++j){
-			            hold1=pmin[j];
-                        if(hold1==0.0D)hold1=this.stepH[j];
-				        this.covar[i][j] = 2.0D*stat[i][j]*red*hold0*hold1;
-				        this.covar[j][i] = this.covar[i][j];
-			        }
-			        if(covar[i][i]>=0.0D){
-			            coeffSd[i]=Math.sqrt(this.covar[i][i]);
-			        }
-			        else{
-			            coeffSd[i]=Double.NaN;
-			            this.posVarFlag=false;
-			        }
-		        }
-
-		        for (int i=0; i<np; ++i){
-			        for (int j=0; j<np; ++j){
-			            if((coeffSd[i]!= Double.NaN) && (coeffSd[j]!= Double.NaN)){
-			                this.corrCoeff[i][j] = this.covar[i][j]/(coeffSd[i]*coeffSd[j]);
-			            }
-			            else{
-			                this.corrCoeff[i][j]= Double.NaN;
-			            }
-			        }
-		        }
- 	        }
- 	        else{
-		        for (int i=0; i<np; ++i){
-			        for (int j=0; j<np;++j){
-			            this.covar[i][j] = Double.NaN;
-			            this.corrCoeff[i][j] = Double.NaN;
-			        }
-			        coeffSd[i]=Double.NaN;
-		        }
-		    }
-		}
-	    if(this.posVarFlag==false)flag--;
-
-	    for(int i=0; i<this.nTerms; i++){
-		    this.bestSd[i] = coeffSd[i];
-		    this.tValues[i] = this.best[i]/this.bestSd[i];
-		    double atv = Math.abs(this.tValues[i]);
-		    if(atv!=atv){
-		        this.pValues[i] = Double.NaN;
-		    }
-		    else{
-		        this.pValues[i] = 1.0 - Stat.studentTcdf(-atv, atv, this.degreesOfFreedom);
-		    }
-	    }
-
+        // Linear correlation coefficient
         if(this.nXarrays==1 && this.nYarrays==1){
             this.xyR = Stat.corrCoeff(this.xData[0], this.yData, this.weight);
         }
@@ -3453,15 +3871,1801 @@ public class Regression{
         this.multR = this.sumOfSquaresRegrn/this.sumOfSquaresTotal;
 
         // Calculate adjusted multiple coefficient of determination
-        this.adjustedR = 1.0 - (1.0 - this.multR)*(this.nData - 1 )/(this.nData - this.nXarrays - 1);
+        this.adjustedR = Double.NaN;
+        this.multipleF = Double.NaN;
+        if((this.nData - this.nParam - 1)>0){
+            this.adjustedR = 1.0 - (1.0 - multR)*(this.nData - 1 )/(this.nData - this.nParam - 1);
+        }
+
+        // F-ratio
+        this.multipleF = multR*(this.nData-this.nParam-1.0)/((1.0D-this.multR)*this.nParam);
+        if(this.multipleF>=0.0)this.multipleFprob = Stat.fTestProb(this.multipleF, this.nXarrays, this.nData-this.nParam-1);
+
+        // Durbin Watson d statistic
+        this.calcDurbinWatson();
+        
+        // Variance of the observations
+        this.varianceOfObservations();
+    }
+        
+    //  linear statistics applied to a non-linear regression
+    //  analytical Hessian derivatives
+    protected int pseudoLinearStats(Object regFun, Object regFunDeriv){
+            double	f1 = 0.0D, f2 = 0.0D; // intermdiate values in step gradient calculation
+	    int	flag = 0;       // returned as 0 if method fully successful;
+	                        // negative if partially successful or unsuccessful: check posVarFlag and invertFlag
+	                        //  -1  posVarFlag or invertFlag is false;
+	                        //  -2  posVarFlag and invertFlag are false
+	    int np = this.nParam;
+
+	    double[] f = new double[np];
+            double[] pmin = new double[np];
+            double[] coeffSd = new double[np];
+            double[] xd = new double[this.nXarrays];
+	    double[][]stat = new double[np][np];
+	    pseudoSd = new double[np];
+
+            Double temp = null;
+
+	    this.grad = new double[np][2];
+	    this.covar = new double[np][np];
+            this.corrCoeff = new double[np][np];
+
+            // get best estimates
+	    pmin = Conv.copy(best);
+            
+            // claculate sum ofsquares
+                    double ss=0.0D;
+	for(int i=0; i<this.nData; i++){
+            for(int j=0; j<nXarrays; j++)xd[j]=this.xData[j][i];
+            switch(this.simplexFlag){
+                case 1: this.yCalc[i] = ((RegressionFunction)regFun).function(best, xd);
+                        break;
+                case 2: this.yCalc[i] = ((RegressionFunction2)regFun).function(best, xd, i);
+                        break;
+                case 3: 
+                case 4: double[] yc = ((RegressionFunction3)regFun).function(best, xd, i);
+                        this.yCalc[i] = yc[0];
+                        this.weight[i] = Math.sqrt(yc[1]);
+                        break;
+            }
+            this.residual[i] = this.yCalc[i]-this.yData[i];
+            ss += Fmath.square(this.residual[i]);
+        }
+        this.sumOfSquaresError = ss;
+        double varY = ss/(this.nData-np);
+        double sdY = Math.sqrt(varY);
+
+        if(this.weightOpt && !this.trueErrors){
+            double wave = 0.0;
+            for(int i=0; i<this.nData; i++)wave = this.weight[i]*this.weight[i];
+            wave /= this.degreesOfFreedom;
+            double wfac = Math.sqrt(varY/wave);
+            for(int i=0; i<this.nData; i++)this.weight[i] = this.weight[i]*wfac;            
+        }
+        
+        double sc=0.0D;
+        for(int i=0; i<this.nData; i++){
+            this.residualW[i] = this.residual[i]/this.weight[i];
+            sc += Fmath.square(this.residualW[i]);
+        }
+        
+        this.chiSquare=sc;
+        this.reducedChiSquare=sc/(this.nData-np);
+        
+        // calculate reduced sum of squares
+        double red=1.0D;
+        if(!this.weightOpt && !this.trueFreq)red=this.sumOfSquaresError/(this.nData-np);
+
+
+            // gradient both sides of the minimum (numerical)
+            double hold0 = 1.0D;
+	    for (int i=0;i<np; ++i){
+                for (int k=0;k<np; ++k){
+                    f[k]=pmin[k];
+                }
+                hold0=pmin[i];
+                if(hold0==0.0D){
+                    hold0=this.stepH[i];
+                    this.zeroCheck=true;
+                }
+                f[i]=hold0*(1.0D - this.delta);
+                this.lastSSnoConstraint=this.sumOfSquaresError;
+                f1=sumSquares(regFun, f);
+                f[i]=hold0*(1.0 + this.delta);
+                this.lastSSnoConstraint=this.sumOfSquaresError;
+                f2=sumSquares(regFun, f);
+                this.grad[i][0]=(this.fMin-f1)/Math.abs(this.delta*hold0);
+                this.grad[i][1]=(f2-this.fMin)/Math.abs(this.delta*hold0);
+	    }
+            
+            // second patial derivatives at the minimum
+	    this.lastSSnoConstraint=this.sumOfSquaresError;
+	   
+            for (int i=0;i<np; ++i){
+                for (int j=0;j<np; ++j){
+                    stat[i][j] = this.secondDerivative(regFun, regFunDeriv, pmin, i, j);
+       
+                }
+            }
+            
+
+
+        // calculate pseudo errors  -  reduced sum of squares over second partial derivative
+        for(int i=0; i<np; i++){
+            pseudoSd[i] = (2.0D*this.delta*red*Math.abs(pmin[i]))/(grad[i][1]-grad[i][0]);
+            if(pseudoSd[i]>=0.0D){
+                pseudoSd[i] = Math.sqrt(pseudoSd[i]);
+            }
+            else{
+                pseudoSd[i] = Double.NaN;
+            }
+        }
+
+        // calculate covariance matrix
+	if(np==1){
+            stat[0][0]=1.0D/stat[0][0];
+            this.covar[0][0] = stat[0][0]*red;
+            if(covar[0][0]>=0.0D){
+                coeffSd[0]=Math.sqrt(this.covar[0][0]);
+                corrCoeff[0][0]=1.0D;
+            }
+	    else{
+                coeffSd[0]=Double.NaN;
+                corrCoeff[0][0]=Double.NaN;
+                this.posVarFlag=false;
+            }
+        }
+        else{
+            Matrix cov = new Matrix(stat);
+            if(this.supressErrorMessages)cov.supressErrorMessage();
+            double determinant = cov.determinant();
+            if(determinant==0){
+                this.invertFlag=false;
+            }
+            else{
+                cov = cov.inverse();
+                this.invertFlag = cov.getMatrixCheck();
+            }
+            if(this.invertFlag==false)flag--;
+            stat = cov.getArrayCopy();
+
+            this.posVarFlag=true;
+            if (this.invertFlag){
+                for (int i=0; i<np; ++i){
+                        for (int j=i; j<np;++j){
+                            this.covar[i][j] = 2.0D*stat[i][j]*red;
+                            this.covar[j][i] = this.covar[i][j];
+                        }
+                        if(covar[i][i]>=0.0D){
+                            coeffSd[i]=Math.sqrt(this.covar[i][i]);
+                        }
+                        else{
+                            coeffSd[i]=Double.NaN;
+                            this.posVarFlag=false;
+                        }
+                }
+
+                for (int i=0; i<np; ++i){
+                    for (int j=0; j<np; ++j){
+                        if((coeffSd[i]!= Double.NaN) && (coeffSd[j]!= Double.NaN)){
+                            this.corrCoeff[i][j] = this.covar[i][j]/(coeffSd[i]*coeffSd[j]);
+                        }
+                        else{
+                            this.corrCoeff[i][j]= Double.NaN;
+                        }
+                    }
+                }
+            }
+            else{
+                for (int i=0; i<np; ++i){
+                    for (int j=0; j<np;++j){
+                        this.covar[i][j] = Double.NaN;
+                        this.corrCoeff[i][j] = Double.NaN;
+                    }
+                    coeffSd[i]=Double.NaN;
+                }
+            }
+        }
+        if(this.posVarFlag==false)flag--;
+
+        for(int i=0; i<this.nParam; i++){
+            this.bestSd[i] = coeffSd[i];
+            this.tValues[i] = this.best[i]/this.bestSd[i];
+            double atv = Math.abs(this.tValues[i]);
+            if(atv!=atv){
+                this.pValues[i] = Double.NaN;
+            }
+            else{
+                this.pValues[i] = 1.0 - Stat.studentTcdf(-atv, atv, this.degreesOfFreedom);
+            }
+        }
+
+        if(this.nXarrays==1 && this.nYarrays==1){
+            this.xyR = Stat.corrCoeff(this.xData[0], this.yData, this.weight);
+        }
+        this.yyR = Stat.corrCoeff(this.yCalc, this.yData, this.weight);
+
+        // Coefficient of determination
+        this.yMean = Stat.mean(this.yData);
+        this.yWeightedMean = Stat.mean(this.yData, this.weight);
+
+       this.sumOfSquaresTotal = 0.0;
+       for(int i=0; i<this.nData; i++){
+            this.sumOfSquaresTotal += Fmath.square((this.yData[i] - this.yWeightedMean)/weight[i]);
+        }
+
+        this.sumOfSquaresRegrn = this.sumOfSquaresTotal - this.chiSquare;
+        if(this.sumOfSquaresRegrn<0.0)this.sumOfSquaresRegrn=0.0;
+
+        this.multR = this.sumOfSquaresRegrn/this.sumOfSquaresTotal;
+
+        // Calculate adjusted multiple coefficient of determination
+        this.adjustedR = Double.NaN;
+        this.multipleF = Double.NaN;
+        if((this.nData - this.nXarrays - 1)>0){
+            this.adjustedR = 1.0 - (1.0 - this.multR)*(this.nData - 1 )/(this.nData - this.nXarrays - 1);
+        }
 
         // F-ratio
         this.multipleF = this.multR*(this.nData-this.nXarrays-1.0)/((1.0D-this.multR)*this.nXarrays);
         if(this.multipleF>=0.0)this.multipleFprob = Stat.fTestProb(this.multipleF, this.nXarrays, this.nData-this.nXarrays-1);
 
-        return flag;
+        // Durbin-Watson d statistic
+        this.calcDurbinWatson();
+        
+        // Variance of the observations
+        this.varianceOfObservations();
+        
+   
 
+        return flag;
+    }    
+    
+    
+	//  linear statistics applied to a non-linear regression
+        //  Numerical differencing Hessian
+        protected int pseudoLinearStats(Object regFun){
+	    double	f1 = 0.0D, f2 = 0.0D, f3 = 0.0D, f4 = 0.0D; // intermdiate values in numerical differentiation
+	    int	flag = 0;       // returned as 0 if method fully successful;
+	                        // negative if partially successful or unsuccessful: check posVarFlag and invertFlag
+	                        //  -1  posVarFlag or invertFlag is false;
+	                        //  -2  posVarFlag and invertFlag are false
+	    int np = this.nParam;
+
+	    double[] f = new double[np];
+            double[] pmin = new double[np];
+            double[] coeffSd = new double[np];
+            double[] xd = new double[this.nXarrays];
+	    double[][]stat = new double[np][np];
+	    pseudoSd = new double[np];
+
+	    Double temp = null;
+
+	    this.grad = new double[np][2];
+	    this.covar = new double[np][np];
+            this.corrCoeff = new double[np][np];
+
+            // get best estimates
+	    pmin = Conv.copy(this.best);
+
+            // gradient both sides of the minimum and first derivative at each data point
+            double hold0 = 1.0D;
+            double hold1 = 1.0D;
+            this.firstDerivs = new double[this.nParam][this.nData];
+	    for (int i=0;i<np; ++i){
+                for (int k=0;k<np; ++k){
+                    f[k]=pmin[k];
+                }
+                hold0=pmin[i];
+                if(hold0==0.0D){
+                    hold0=this.stepH[i];
+                    this.zeroCheck=true;
+                }
+                f[i]=hold0*(1.0D - this.delta);
+                this.lastSSnoConstraint=this.sumOfSquaresError;
+                f1=sumSquares(regFun, f);
+                for(int k=0; k<this.nData; k++){
+                    for(int g=0; g<this.nXarrays; g++)xd[g] = this.xData[g][k];
+                    switch(this.simplexFlag){
+                        case 1: this.firstDerivs[i][k] = -((RegressionFunction)regFun).function(f, xd)/Math.abs(this.delta*2.0*hold0);
+                                break;
+                        case 2: this.firstDerivs[i][k] = -((RegressionFunction2)regFun).function(f, xd, k)/Math.abs(this.delta*2.0*hold0);
+                                break;
+                        case 3:
+                        case 4: this.firstDerivs[i][k] = -(((RegressionFunction3)regFun).function(f, xd, k))[0]/Math.abs(this.delta*2.0*hold0);
+                                break;
+                    }
+                
+                }
+                f[i]=hold0*(1.0 + this.delta);
+                this.lastSSnoConstraint=this.sumOfSquaresError;
+                f2=sumSquares(regFun, f);
+                for(int k=0; k<this.nData; k++){
+                    for(int g=0; g<this.nXarrays; g++)xd[g] = this.xData[g][k];
+                    switch(this.simplexFlag){
+                        case 1: this.firstDerivs[i][k] = -((RegressionFunction)regFun).function(f, xd)/Math.abs(this.delta*2.0*hold0);
+                                break;
+                        case 2: this.firstDerivs[i][k] = -((RegressionFunction2)regFun).function(f, xd, k)/Math.abs(this.delta*2.0*hold0);
+                                break;
+                        case 3:
+                        case 4: this.firstDerivs[i][k] = -(((RegressionFunction3)regFun).function(f, xd, k))[0]/Math.abs(this.delta*2.0*hold0);
+                                break;
+                    }
+                }
+                this.grad[i][0]=(this.fMin-f1)/Math.abs(this.delta*hold0);
+                this.grad[i][1]=(f2-this.fMin)/Math.abs(this.delta*hold0);
+	    }
+
+            // second patial derivatives at the minimum
+	    this.lastSSnoConstraint=this.sumOfSquaresError;
+	    for (int i=0;i<np; ++i){
+                for (int j=0;j<np; ++j){
+                    for (int k=0;k<np; ++k){
+                        f[k]=pmin[k];
+                    }
+                    hold0=f[i];
+                    if(hold0==0.0D){
+                    hold0=this.stepH[i];
+                    this.zeroCheck=true;
+                }
+                f[i]=hold0*(1.0 + this.delta/2.0D);
+                hold0=f[j];
+                if(hold0==0.0D){
+                    hold0=this.stepH[j];
+                    this.zeroCheck=true;
+                }
+                f[j]=hold0*(1.0 + this.delta/2.0D);
+        	this.lastSSnoConstraint=this.sumOfSquaresError;
+                f1=sumSquares(regFun, f);
+                f[i]=pmin[i];
+                f[j]=pmin[j];
+		hold0=f[i];
+                if(hold0==0.0D){
+                    hold0=this.stepH[i];
+                    this.zeroCheck=true;
+                }
+                f[i]=hold0*(1.0 - this.delta/2.0D);
+                hold0=f[j];
+                if(hold0==0.0D){
+                    hold0=this.stepH[j];
+                    this.zeroCheck=true;
+                }
+ 		f[j]=hold0*(1.0 + this.delta/2.0D);
+	        this.lastSSnoConstraint=this.sumOfSquaresError;
+                f2=sumSquares(regFun, f);
+                f[i]=pmin[i];
+                f[j]=pmin[j];
+                hold0=f[i];
+                if(hold0==0.0D){
+                    hold0=this.stepH[i];
+                    this.zeroCheck=true;
+                }
+    		f[i]=hold0*(1.0 + this.delta/2.0D);
+    		hold0=f[j];
+                if(hold0==0.0D){
+                    hold0=this.stepH[j];
+                    this.zeroCheck=true;
+                }
+                f[j]=hold0*(1.0 - this.delta/2.0D);
+	        this.lastSSnoConstraint=this.sumOfSquaresError;
+                f3=sumSquares(regFun, f);
+                f[i]=pmin[i];
+                f[j]=pmin[j];
+                hold0=f[i];
+                if(hold0==0.0D){
+                    hold0=this.stepH[i];
+                    this.zeroCheck=true;
+                }
+                f[i]=hold0*(1.0 - this.delta/2.0D);
+                hold0=f[j];
+                if(hold0==0.0D){
+                    hold0=this.stepH[j];
+                    this.zeroCheck=true;
+                }
+                f[j]=hold0*(1.0 - this.delta/2.0D);
+	        this.lastSSnoConstraint=this.sumOfSquaresError;
+                f4=sumSquares(regFun, f);
+                stat[i][j]=(f1-f2-f3+f4)/(this.delta*this.delta);
+            }
+        }
+        double ss=0.0D;
+        double sc=0.0D;
+	for(int i=0; i<this.nData; i++){
+            for(int j=0; j<nXarrays; j++)xd[j]=this.xData[j][i];
+            switch(this.simplexFlag){
+                case 1: this.yCalc[i] = ((RegressionFunction)regFun).function(pmin, xd);
+                        break;
+                case 2: this.yCalc[i] = ((RegressionFunction2)regFun).function(pmin, xd, i);
+                        break;
+                case 3:
+                case 4: double[] yc = ((RegressionFunction3)regFun).function(pmin, xd, i);
+                        this.yCalc[i] = yc[0];
+                        this.weight[i] = Math.sqrt(yc[1]);
+                        break;   
+            }
+    
+            this.residual[i] = this.yCalc[i]-this.yData[i];
+            ss += Fmath.square(this.residual[i]);
+            this.residualW[i] = this.residual[i]/this.weight[i];
+            sc += Fmath.square(this.residualW[i]);
+        }
+        this.sumOfSquaresError = ss;
+        double varY = ss/(this.nData-np);
+        double sdY = Math.sqrt(varY);
+        this.chiSquare=sc;
+        this.reducedChiSquare=sc/(this.nData-np);
+
+        // calculate reduced sum of squares
+        double red=1.0D;
+        if(!this.weightOpt && !this.trueFreq)red=this.sumOfSquaresError/(this.nData-np);
+
+        // calculate pseudo errors  -  reduced sum of squares over second partial derivative
+        for(int i=0; i<np; i++){
+            pseudoSd[i] = (2.0D*this.delta*red*Math.abs(pmin[i]))/(grad[i][1]-grad[i][0]);
+            if(pseudoSd[i]>=0.0D){
+                pseudoSd[i] = Math.sqrt(pseudoSd[i]);
+            }
+            else{
+                pseudoSd[i] = Double.NaN;
+            }
+        }
+
+        // calculate covariance matrix
+	if(np==1){
+            hold0=pmin[0];
+            if(hold0==0.0D)hold0=this.stepH[0];
+	        stat[0][0]=1.0D/stat[0][0];
+		this.covar[0][0] = stat[0][0]*red*hold0*hold0;
+		if(covar[0][0]>=0.0D){
+                    coeffSd[0]=Math.sqrt(this.covar[0][0]);
+                    corrCoeff[0][0]=1.0D;
+                }
+	        else{
+                    coeffSd[0]=Double.NaN;
+                    corrCoeff[0][0]=Double.NaN;
+                    this.posVarFlag=false;
+		}
+            }
+            else{
+                Matrix cov = new Matrix(stat);
+		if(this.supressErrorMessages)cov.supressErrorMessage();
+		    double determinant = cov.determinant();
+		    if(determinant==0){
+		        this.invertFlag=false;
+		    }
+		    else{
+                        cov = cov.inverse();
+                        this.invertFlag = cov.getMatrixCheck();
+                    }
+                    if(this.invertFlag==false)flag--;
+                    stat = cov.getArrayCopy();
+
+                    this.posVarFlag=true;
+                    if (this.invertFlag){
+                        for (int i=0; i<np; ++i){
+                            hold0=pmin[i];
+                            if(hold0==0.0D)hold0=this.stepH[i];
+                            for (int j=i; j<np;++j){
+                                hold1=pmin[j];
+                                if(hold1==0.0D)hold1=this.stepH[j];
+                                this.covar[i][j] = 2.0D*stat[i][j]*red*hold0*hold1;
+                                this.covar[j][i] = this.covar[i][j];
+                            }
+                            if(covar[i][i]>=0.0D){
+                                coeffSd[i]=Math.sqrt(this.covar[i][i]);
+                            }
+                            else{
+                                coeffSd[i]=Double.NaN;
+                                this.posVarFlag=false;
+                            }
+                        }
+
+                        for (int i=0; i<np; ++i){
+                            for (int j=0; j<np; ++j){
+                                if((coeffSd[i]!= Double.NaN) && (coeffSd[j]!= Double.NaN)){
+                                    this.corrCoeff[i][j] = this.covar[i][j]/(coeffSd[i]*coeffSd[j]);
+                                }
+                                else{
+                                    this.corrCoeff[i][j]= Double.NaN;
+                                }
+                            }
+                        }
+                    }
+                    else{
+                        for (int i=0; i<np; ++i){
+                            for (int j=0; j<np;++j){
+                                this.covar[i][j] = Double.NaN;
+                                this.corrCoeff[i][j] = Double.NaN;
+                            }
+                            coeffSd[i]=Double.NaN;
+                        }
+                    }
+                }
+                if(this.posVarFlag==false)flag--;
+
+                for(int i=0; i<this.nParam; i++){
+                    this.bestSd[i] = coeffSd[i];
+                    this.tValues[i] = this.best[i]/this.bestSd[i];
+                    double atv = Math.abs(this.tValues[i]);
+                    if(atv!=atv){
+                        this.pValues[i] = Double.NaN;
+                    }
+                    else{
+                        this.pValues[i] = 1.0 - Stat.studentTcdf(-atv, atv, this.degreesOfFreedom);
+                    }
+                }
+
+                if(this.nXarrays==1 && this.nYarrays==1){
+                this.xyR = Stat.corrCoeff(this.xData[0], this.yData, this.weight);
+            }
+            this.yyR = Stat.corrCoeff(this.yCalc, this.yData, this.weight);
+
+            // Coefficient of determination
+            this.yMean = Stat.mean(this.yData);
+            this.yWeightedMean = Stat.mean(this.yData, this.weight);
+
+            this.sumOfSquaresTotal = 0.0;
+            for(int i=0; i<this.nData; i++){
+                this.sumOfSquaresTotal += Fmath.square((this.yData[i] - this.yWeightedMean)/weight[i]);
+            }
+
+            this.sumOfSquaresRegrn = this.sumOfSquaresTotal - this.chiSquare;
+            if(this.sumOfSquaresRegrn<0.0)this.sumOfSquaresRegrn=0.0;
+
+            this.multR = this.sumOfSquaresRegrn/this.sumOfSquaresTotal;
+
+            // Calculate adjusted multiple coefficient of determination
+            this.adjustedR = Double.NaN;
+            this.multipleF = Double.NaN;
+            if((this.nData - this.nXarrays - 1)>0){
+                this.adjustedR = 1.0 - (1.0 - this.multR)*(this.nData - 1 )/(this.nData - this.nXarrays - 1);
+            }
+
+            // F-ratio
+            this.multipleF = this.multR*(this.nData-this.nXarrays-1.0)/((1.0D-this.multR)*this.nXarrays);
+            if(this.multipleF>=0.0)this.multipleFprob = Stat.fTestProb(this.multipleF, this.nXarrays, this.nData-this.nXarrays-1);
+
+            // Durbin-Watson d statistic
+            this.calcDurbinWatson();
+            
+            // Variance of the observations
+            this.varianceOfObservations();
+            
+            return flag;
+        
 	}
+
+        // Calculates second derivatives for Hessian -> covariance matrices
+        private double secondDerivative(Object regFun, Object regDerivFun, double[] pmin, int ii, int jj){
+            if(ii==0 && jj==0)this.firstDerivs = new double[this.nParam][this.nData];
+            
+            double[] derivs = null;
+            double[] xd = new double[this.nXarrays]; 
+            double sderiv =0.0;
+            switch(this.simplexFlag){
+                
+                case 1:
+                        RegressionDerivativeFunction regd = (RegressionDerivativeFunction)regDerivFun;
+                        RegressionFunction reg = (RegressionFunction)regFun;       
+                        for(int i=0; i<this.nData; i++){
+                            for(int j=0; j<nXarrays; j++)xd[j]=this.xData[j][i];
+                            derivs = regd.function(pmin, xd, ii, jj);         
+                            sderiv += (2.0*derivs[0]*derivs[1] + 2.0*derivs[2]*(reg.function(pmin, xd) - this.yData[i]))/(this.weight[i]*this.weight[i]);
+                            if(ii==0)this.firstDerivs[jj][i] = derivs[1];
+                        }
+                        break;
+                case 2:
+                        RegressionDerivativeFunction2 regd2 = (RegressionDerivativeFunction2)regDerivFun;
+                        RegressionFunction2 reg2 = (RegressionFunction2)regFun;
+                        for(int i=0; i<this.nData; i++){
+                            for(int j=0; j<nXarrays; j++)xd[j]=this.xData[j][i];
+                            derivs = regd2.function(pmin, xd, ii, jj, i);  
+                            sderiv += (2.0*derivs[0]*derivs[1] + 2.0*derivs[2]*(reg2.function(pmin, xd, i) - this.yData[i]))/(this.weight[i]*this.weight[i]);
+                            if(ii==0)this.firstDerivs[jj][i] = derivs[1];
+                        }
+                        break;
+               case 3:
+               case 4:  if(this.derivFlag==1){
+                            RegressionDerivativeFunction regd1 = (RegressionDerivativeFunction)regDerivFun;
+                            RegressionFunction3 reg3 = (RegressionFunction3)regFun;
+                            for(int i=0; i<this.nData; i++){
+                                for(int j=0; j<nXarrays; j++)xd[j]=this.xData[j][i];
+                                derivs = regd1.function(pmin, xd, ii, jj);  
+                                sderiv += (2.0*derivs[0]*derivs[1] + 2.0*derivs[2]*((reg3.function(pmin, xd, i))[0] - this.yData[i]))/(this.weight[i]*this.weight[i]);
+                                if(ii==0)this.firstDerivs[jj][i] = derivs[1];
+                            }
+                        }
+                        else{
+                            RegressionDerivativeFunction2 regd22 = (RegressionDerivativeFunction2)regDerivFun;
+                            RegressionFunction3 reg3 = (RegressionFunction3)regFun;
+                            for(int i=0; i<this.nData; i++){
+                                for(int j=0; j<nXarrays; j++)xd[j]=this.xData[j][i];
+                                derivs = regd22.function(pmin, xd, ii, jj, i);  
+                                sderiv += (2.0*derivs[0]*derivs[1] + 2.0*derivs[2]*((reg3.function(pmin, xd, i))[0] - this.yData[i]))/(this.weight[i]*this.weight[i]);
+                                if(ii==0)this.firstDerivs[jj][i] = derivs[1];
+                            }
+                        }
+                        break;
+            }
+            
+                       
+            return sderiv;
+        }
+
+        // Common statistial methods
+        
+	// Calculate the DurbinWatson d statistic
+	protected void calcDurbinWatson(){
+	    double dNumer = 0.0;
+	    double temp = 0.0;
+	    for(int i=1; i<this.nData; i++){
+	        temp = this.residual[i]-this.residual[i-1];
+	        dNumer += temp*temp;
+	    }
+	    double dDenom = 0.0;
+	    for(int i=0; i<this.nData; i++)dDenom += this.residual[i]*this.residual[i];
+	    this.dDurbinWatson = dNumer/dDenom;
+	    this.dDurbinWatsonDone = true;
+	}
+
+	// Return the DurbinWatson d statistic
+	protected double getDurbinWatsonD(){
+	    if(!this.dDurbinWatsonDone)this.calcDurbinWatson();
+	    return this.dDurbinWatson;
+	}
+        
+            // Variance of the observations
+    protected void varianceOfObservations(){
+        
+        double w2 = 0.0;
+        double wr2 = 0.0;
+        double s_w2 = 0.0;
+        double s_w2_2 = 0.0;
+        for(int i=0; i<this.nData; i++){
+            w2 = 1.0/this.weight[i];
+            w2 *= w2;
+            wr2 += this.residual[i]*this.residual[i]*w2;
+            s_w2 += w2;
+            s_w2_2 += w2*w2;
+        }
+        
+        this.obsnVariance = wr2*s_w2/(s_w2*s_w2 - this.nParam*s_w2_2);
+    
+    }
+        
+        
+        
+    // METHODS CALLING THE NELDER AND MEAD SIMPLEX OPTIMIZATION REQUIRING A USER SUPPLID FUNCTION
+        
+    // Nelder and Mead Simplex Simplex Non-linear Regression
+    // Numerical differencing Hessian
+    public void simplex(RegressionFunction g, double[] start, double[] step, double fTol, int nMax){
+        this.simplexFlag = 1;
+        this.dualErrorsRequired = false;
+        this.simplex((Object) g, start, step, fTol, nMax);
+    }
+    
+    public void simplex(RegressionFunction2 g, double[] start, double[] step, double fTol, int nMax){
+        this.simplexFlag = 2;
+        this.dualErrorsRequired = false;
+        this.simplex((Object) g, start, step, fTol, nMax);
+    }
+    
+    public void simplex(RegressionFunction3 g, double[] start, double[] step, double fTol, int nMax){
+        this.simplexFlag = 3;
+        if(this.multipleY)this.simplexFlag = 4;
+        this.dualErrorsRequired = true;
+        this.simplex((Object) g, start, step, fTol, nMax);
+    }
+    
+    public void simplex(Object regFun, double[] start, double[] step, double fTol, int nMax){
+        this.analyticalDerivative = false;
+        this.lastMethod = 3;
+        this.userSupplied = true;
+        this.linNonLin = false;
+        this.zeroCheck = false;
+        this.degreesOfFreedom = this.nData - start.length;
+        this.nelderMead(regFun, null, start, step, fTol, nMax);
+    }
+   
+    
+    // Nelder and Mead Simplex Simplex Non-linear Regression
+    // Analytical Hessian second derivatives
+    public void simplex(RegressionFunction g, RegressionDerivativeFunction gd, double[] start, double[] step, double fTol, int nMax){
+        this.simplexFlag = 1;
+        this.dualErrorsRequired = false;
+        this.derivFlag = 1;
+        this.simplex((Object) g, gd, start, step, fTol, nMax);
+    }
+    
+    public void simplex(RegressionFunction2 g, RegressionDerivativeFunction2 gd, double[] start, double[] step, double fTol, int nMax){
+        this.simplexFlag = 2;
+        this.dualErrorsRequired = false;
+        this.derivFlag = 2;
+        this.simplex((Object) g, (Object) gd, start, step, fTol, nMax);
+    }
+    
+    public void simplex(RegressionFunction3 g, RegressionDerivativeFunction gd, double[] start, double[] step, double fTol, int nMax){
+        this.simplexFlag = 3;
+        this.dualErrorsRequired = false;
+        this.derivFlag = 1;
+        if(this.multipleY)this.simplexFlag = 4;
+        this.simplex((Object) g, (Object) gd, start, step, fTol, nMax);
+    }
+    
+    public void simplex(RegressionFunction3 g, RegressionDerivativeFunction2 gd, double[] start, double[] step, double fTol, int nMax){
+        this.simplexFlag = 3;
+        this.derivFlag = 2;
+        if(this.multipleY)this.simplexFlag = 4;
+        this.dualErrorsRequired = true;
+        this.simplex((Object) g, (Object) gd, start, step, fTol, nMax);
+    }
+   
+    public void simplex(Object regFun,  Object regDerivFun, double[] start, double[] step, double fTol, int nMax){        
+        this.analyticalDerivative = true;
+        this.lastMethod = 3;
+        this.userSupplied = true;
+        this.linNonLin = false;
+        this.zeroCheck = false;
+        this.degreesOfFreedom = this.nData - start.length;
+        this.nelderMead(regFun, regDerivFun, start, step, fTol, nMax);
+    }
+
+
+    // Nelder and Mead Simplex Simplex Non-linear Regression
+    // plus plot and output file
+    // Numerical differencing Hessian
+    public void simplexPlot(RegressionFunction g, double[] start, double[] step, double fTol, int nMax){
+         this.simplexFlag = 1;
+         this.dualErrorsRequired = false;
+         this.simplexPlot((Object) g, start, step, fTol, nMax);
+    }
+    
+    public void simplexPlot(RegressionFunction2 g, double[] start, double[] step, double fTol, int nMax){
+         this.simplexFlag = 2;
+         this.dualErrorsRequired = false;
+         this.simplexPlot((Object) g, start, step, fTol, nMax);
+     }
+    
+     public void simplexPlot(RegressionFunction3 g, double[] start, double[] step, double fTol, int nMax){
+         this.simplexFlag = 3;
+         this.dualErrorsRequired = true;
+         if(this.multipleY)this.simplexFlag = 4;
+         this.simplexPlot((Object) g, start, step, fTol, nMax);
+     }
+            
+    public void simplexPlot(Object regFun, double[] start, double[] step, double fTol, int nMax){
+        this.analyticalDerivative = false;
+        this.lastMethod = 3;
+        this.userSupplied = true;
+        this.linNonLin = false;
+        this.zeroCheck = false;
+        this.degreesOfFreedom = this.nData - start.length;
+        this.dualErrorsRequired = true;
+        this.nelderMead(regFun, null, start, step, fTol, nMax);
+        if(!this.supressPrint)this.print();
+        int flag = 0;
+        if(this.xData.length<2 && !this.multipleY)flag = this.plotXY(regFun);
+        if(flag!=-2 && !this.supressYYplot)this.plotYY();
+    }
+    
+    // Nelder and Mead Simplex Simplex Non-linear Regression
+    // plus plot and output file
+    // Analytical Hessian second derivatives
+    public void simplexPlot(RegressionFunction g, RegressionDerivativeFunction gd, double[] start, double[] step, double fTol, int nMax){
+        this.simplexFlag = 1;
+        this.dualErrorsRequired = false;
+        this.derivFlag = 1;
+        this.simplexPlot((Object) g, (Object) gd, start, step, fTol, nMax);
+    }
+    
+    public void simplexPlot(RegressionFunction2 g, RegressionDerivativeFunction2 gd, double[] start, double[] step, double fTol, int nMax){
+        this.simplexFlag = 2;
+        this.derivFlag = 2;
+        this.dualErrorsRequired = false;
+        this.simplexPlot((Object) g, (Object) gd, start, step, fTol, nMax);
+    }
+    
+    public void simplexPlot(RegressionFunction3 g, RegressionDerivativeFunction gd, double[] start, double[] step, double fTol, int nMax){
+        this.simplexFlag = 3;
+        this.derivFlag = 1;
+        this.dualErrorsRequired = true;
+        if(this.multipleY)this.simplexFlag = 4;
+        this.simplexPlot((Object) g, (Object) gd, start, step, fTol, nMax);
+    }
+    
+    public void simplexPlot(RegressionFunction3 g, RegressionDerivativeFunction2 gd, double[] start, double[] step, double fTol, int nMax){
+        this.simplexFlag = 3;
+        this.derivFlag = 2;
+        if(this.multipleY)this.simplexFlag = 4;
+        this.dualErrorsRequired = true;
+        this.simplexPlot((Object) g, (Object) gd, start, step, fTol, nMax);
+    }
+    
+    public void simplexPlot(Object regFun, Object regDerivFun, double[] start, double[] step, double fTol, int nMax){
+        this.analyticalDerivative = true;   
+        this.lastMethod = 3;
+        this.userSupplied = true;
+        this.linNonLin = false;
+        this.zeroCheck = false;
+        this.degreesOfFreedom = this.nData - start.length;
+        this.nelderMead(regFun, regDerivFun, start, step, fTol, nMax);
+        if(!this.supressPrint)this.print();
+        int flag = 0;
+        if(this.xData.length<2 && !this.multipleY)flag = this.plotXY(regFun);
+        if(flag!=-2 && !this.supressYYplot)this.plotYY();
+    }
+
+    
+    // Nelder and Mead simplex
+    // Default  maximum iterations
+    // Numerical differencing Hessian
+    public void simplex(RegressionFunction g, double[] start, double[] step, double fTol){
+        this.simplexFlag = 1;
+        this.dualErrorsRequired = false;
+        this.simplex((Object) g, start, step, fTol);
+    }
+    
+    public void simplex(RegressionFunction2 g, double[] start, double[] step, double fTol){
+        this.simplexFlag = 2;
+        this.dualErrorsRequired = false;
+        this.simplex((Object) g, start, step, fTol);
+    }
+        
+    public void simplex(RegressionFunction3 g, double[] start, double[] step, double fTol){
+        this.simplexFlag = 3;
+        this.dualErrorsRequired = true;
+        if(this.multipleY)this.simplexFlag = 4;
+        this.simplex((Object) g, start, step, fTol);
+    }
+        
+    public void simplex(Object regFun, double[] start, double[] step, double fTol){
+        this.simplex(regFun, start, step, fTol, this.nMax);
+    }
+    
+    // Nelder and Mead simplex
+    // Default  maximum iterations
+    // Analytical Hessian second derivatives
+    public void simplex(RegressionFunction g, RegressionDerivativeFunction gd, double[] start, double[] step, double fTol){
+        this.simplexFlag = 1;
+        this.derivFlag = 1;
+        this.dualErrorsRequired = false;
+        this.simplex((Object) g, (Object) gd, start, step, fTol);
+    }
+    
+    public void simplex(RegressionFunction2 g, RegressionDerivativeFunction2 gd, double[] start, double[] step, double fTol){
+        this.simplexFlag = 2;
+        this.derivFlag = 2;
+        this.dualErrorsRequired = false;
+        this.simplex((Object) g, (Object) gd, start, step, fTol);
+    }
+    
+    public void simplex(RegressionFunction3 g, RegressionDerivativeFunction gd, double[] start, double[] step, double fTol){
+        this.simplexFlag = 3;
+        this.derivFlag = 1;
+        this.dualErrorsRequired = true;
+        if(this.multipleY)this.simplexFlag = 4;
+        this.simplex((Object) g, (Object) gd, start, step, fTol);
+    }
+    
+    public void simplex(RegressionFunction3 g, RegressionDerivativeFunction2 gd, double[] start, double[] step, double fTol){
+        this.simplexFlag = 3;
+        this.derivFlag = 2;
+        if(this.multipleY)this.simplexFlag = 4;
+        this.dualErrorsRequired = true;
+        this.simplex((Object) g, (Object) gd, start, step, fTol);
+    }
+   
+    public void simplex(Object regFun, Object regDerivFun, double[] start, double[] step, double fTol){
+        this.simplex(regFun, regDerivFun, start, step, fTol, this.nMax);
+    }
+
+    // Nelder and Mead Simplex Simplex Non-linear Regression
+    // plus plot and output file
+    // Default  maximum iterations
+    // Numerical differencing Hessian
+    public void simplexPlot(RegressionFunction g, double[] start, double[] step, double fTol){
+        this.simplexFlag = 1;
+        this.dualErrorsRequired = false;
+        this.simplexPlot((Object) g, start, step, fTol);
+    }
+    
+    public void simplexPlot(RegressionFunction2 g, double[] start, double[] step, double fTol){
+        this.simplexFlag = 2;
+        this.dualErrorsRequired = false;
+        this.simplexPlot((Object) g, start, step, fTol);
+    }
+        
+    public void simplexPlot(RegressionFunction3 g, double[] start, double[] step, double fTol){
+        this.simplexFlag = 3;
+        if(this.multipleY)this.simplexFlag = 4;
+        this.dualErrorsRequired = true;
+        this.simplexPlot((Object) g, start, step, fTol);
+    }
+        
+    public void simplexPlot(Object regFun, double[] start, double[] step, double fTol){
+        this.simplexPlot(regFun, start, step, fTol, this.nMax);
+    }
+       
+    
+    // Nelder and Mead Simplex Simplex Non-linear Regression
+    // plus plot and output file
+    // Default  maximum iterations
+    // Analytical Hessian derivatives
+    public void simplexPlot(RegressionFunction g, RegressionDerivativeFunction gd, double[] start, double[] step, double fTol){
+        this.simplexFlag = 1;
+        this.derivFlag = 1;
+        this.dualErrorsRequired = false;
+        this.simplexPlot((Object) g, (Object) gd, start, step, fTol);
+    }
+    
+    public void simplexPlot(RegressionFunction2 g, RegressionDerivativeFunction2 gd, double[] start, double[] step, double fTol){
+        this.simplexFlag = 2;
+        this.derivFlag = 2;
+        this.dualErrorsRequired = false;
+        this.simplexPlot((Object) g, (Object) gd, start, step, fTol);
+    }
+    
+    public void simplexPlot(RegressionFunction3 g, RegressionDerivativeFunction gd, double[] start, double[] step, double fTol){
+        this.simplexFlag = 3;
+        this.derivFlag = 1;
+        if(this.multipleY)this.simplexFlag = 4;
+        this.dualErrorsRequired = true;
+        this.simplexPlot((Object) g, (Object) gd, start, step, fTol);
+    }
+    
+    public void simplexPlot(RegressionFunction3 g, RegressionDerivativeFunction2 gd, double[] start, double[] step, double fTol){
+        this.simplexFlag = 3;
+        this.derivFlag = 2;
+        if(this.multipleY)this.simplexFlag = 4;
+        this.dualErrorsRequired = true;
+        this.simplexPlot((Object) g, (Object) gd, start, step, fTol);
+    }
+   
+    public void simplexPlot(Object regFun, Object regDerivFun, double[] start, double[] step, double fTol){
+        this.simplexPlot(regFun, regDerivFun, start, step, fTol, this.nMax);
+    }
+    
+    
+    // Nelder and Mead Simplex Simplex Non-linear Regression
+    // plus plot and output file
+    // Default  tolerance
+    // Numerical differencing Hessian
+    public void simplex(RegressionFunction g, double[] start, double[] step, int nMax){
+        this.simplexFlag = 1;
+        this.dualErrorsRequired = false;
+        this.simplex((Object) g, start, step, nMax);
+    }
+    
+    public void simplex(RegressionFunction2 g, double[] start, double[] step, int nMax){
+        this.simplexFlag = 2;
+        this.dualErrorsRequired = false;
+        this.simplex((Object) g, start, step, nMax);
+    }
+        
+    public void simplex(RegressionFunction3 g, double[] start, double[] step, int nMax){
+        this.simplexFlag = 3;
+        if(this.multipleY)this.simplexFlag = 4;
+        this.dualErrorsRequired = true;
+        this.simplex((Object) g, start, step, nMax);
+    }
+        
+    public void simplex(Object regFun, double[] start, double[] step, int nMax){
+        this.simplex(regFun, start, step, this.fTol, nMax);
+    }
+    
+    // Nelder and Mead simplex
+    // Default  tolerance
+    // Analytical Hessian second derivatives
+    public void simplex(RegressionFunction g, RegressionDerivativeFunction gd, double[] start, double[] step, int nMax){
+        this.simplexFlag = 1;
+        this.derivFlag = 1;
+        this.dualErrorsRequired = false;
+        this.simplex((Object) g, (Object) gd, start, step, nMax);
+    }
+    
+    public void simplex(RegressionFunction2 g, RegressionDerivativeFunction2 gd, double[] start, double[] step, int nMax){
+        this.simplexFlag = 2;
+        this.derivFlag = 2;
+        this.dualErrorsRequired = false;
+        this.simplex((Object) g, (Object) gd, start, step,  nMax);
+    }
+    
+    public void simplex(RegressionFunction3 g, RegressionDerivativeFunction gd, double[] start, double[] step, int nMax){
+        this.simplexFlag = 3;
+        this.derivFlag = 1;
+        if(this.multipleY)this.simplexFlag = 4;
+        this.dualErrorsRequired = true;
+        this.simplex((Object) g, (Object) gd, start, step,  nMax);
+    }
+    
+    public void simplex(RegressionFunction3 g, RegressionDerivativeFunction2 gd, double[] start, double[] step, int nMax){
+        this.simplexFlag = 3;
+        this.derivFlag = 2;
+        if(this.multipleY)this.simplexFlag = 4;
+        this.dualErrorsRequired = true;
+        this.simplex((Object) g, (Object) gd, start, step,  nMax);
+    }
+   
+    public void simplex(Object regFun, Object regDerivFun, double[] start, double[] step, int nMax){
+        this.simplex(regFun, regDerivFun, start, step, this.fTol,  nMax);
+    }
+
+    // Nelder and Mead Simplex Simplex Non-linear Regression
+    // plus plot and output file
+    // Default  tolerance
+    // Numerical differencing Hessian
+    public void simplexPlot(RegressionFunction g, double[] start, double[] step, int nMax){
+        this.simplexFlag = 1;
+        this.dualErrorsRequired = false;
+        this.simplexPlot((Object) g, start, step, nMax);
+    }
+    
+    public void simplexPlot(RegressionFunction2 g, double[] start, double[] step, int nMax){
+        this.simplexFlag = 2;
+        this.dualErrorsRequired = false;
+        this.simplexPlot((Object) g, start, step, nMax);
+    }
+        
+    public void simplexPlot(RegressionFunction3 g, double[] start, double[] step, int nMax){
+        this.simplexFlag = 3;
+        this.dualErrorsRequired = true;
+        if(this.multipleY)this.simplexFlag = 4;
+        this.simplexPlot((Object) g, start, step, nMax);
+    }
+        
+    public void simplexPlot(Object regFun, double[] start, double[] step, int nMax){
+        this.simplexPlot(regFun, start, step, this.fTol, nMax);
+    }
+        
+    // Nelder and Mead Simplex Simplex Non-linear Regression
+    // plus plot and output file
+    // Default  tolerance
+    // Analytical Hessian derivatives
+    public void simplexPlot(RegressionFunction g, RegressionDerivativeFunction gd, double[] start, double[] step, int nMax){
+        this.simplexFlag = 1;
+        this.derivFlag = 1;
+        this.dualErrorsRequired = false;
+        this.simplexPlot((Object) g, (Object) gd, start, step, nMax);
+    }
+    
+    public void simplexPlot(RegressionFunction2 g, RegressionDerivativeFunction2 gd, double[] start, double[] step, int nMax){
+        this.simplexFlag = 2;
+        this.derivFlag = 2;
+        this.dualErrorsRequired = false;
+        this.simplexPlot((Object) g, (Object) gd, start, step, nMax);
+    }
+    
+    public void simplexPlot(RegressionFunction3 g, RegressionDerivativeFunction gd, double[] start, double[] step, int nMax){
+        this.simplexFlag = 3;
+        this.derivFlag = 1;
+        this.dualErrorsRequired = true;
+        if(this.multipleY)this.simplexFlag = 4;
+        this.simplexPlot((Object) g, (Object) gd, start, step, nMax);
+    }
+    
+    public void simplexPlot(RegressionFunction3 g, RegressionDerivativeFunction2 gd, double[] start, double[] step, int nMax){
+        this.simplexFlag = 3;
+        this.derivFlag = 2;
+        if(this.multipleY)this.simplexFlag = 4;
+        this.dualErrorsRequired = true;
+        this.simplexPlot((Object) g, (Object) gd, start, step, nMax);
+    }
+   
+    public void simplexPlot(Object regFun, Object regDerivFun, double[] start, double[] step, int nMax){
+        this.simplexPlot(regFun, regDerivFun, start, step, this.fTol, nMax);
+    }
+    
+    
+    // Nelder and Mead Simplex Simplex Non-linear Regression
+    // plus plot and output file
+    // Default  tolerance and maximum iterations
+    // Numerical differencing Hessian
+    public void simplex(RegressionFunction g, double[] start, double[] step){
+        this.simplexFlag = 1;
+        this.dualErrorsRequired = false;
+        this.simplex((Object) g, start, step);
+    }
+    
+    public void simplex(RegressionFunction2 g, double[] start, double[] step){
+        this.simplexFlag = 2;
+        this.dualErrorsRequired = false;
+        this.simplex((Object) g, start, step);
+    }
+        
+    public void simplex(RegressionFunction3 g, double[] start, double[] step){
+        this.simplexFlag = 3;
+        this.dualErrorsRequired = true;
+        if(this.multipleY)this.simplexFlag = 4;
+        this.simplex((Object) g, start, step);
+    }
+        
+    public void simplex(Object regFun, double[] start, double[] step){
+        this.simplex(regFun, start, step, this.fTol, this.nMax);
+    }
+    
+    // Nelder and Mead simplex
+    // Default  tolerance and maximum iterations
+    // Analytical Hessian second derivatives
+    public void simplex(RegressionFunction g, RegressionDerivativeFunction gd, double[] start, double[] step){
+        this.simplexFlag = 1;
+        this.derivFlag = 1;
+        this.dualErrorsRequired = false;
+        this.simplex((Object) g, (Object) gd, start, step);
+    }
+    
+    public void simplex(RegressionFunction2 g, RegressionDerivativeFunction2 gd, double[] start, double[] step){
+        this.simplexFlag = 2;
+        this.derivFlag = 2;
+        this.dualErrorsRequired = false;
+        this.simplex((Object) g, (Object) gd, start, step);
+    }
+    
+    public void simplex(RegressionFunction3 g, RegressionDerivativeFunction gd, double[] start, double[] step){
+        this.simplexFlag = 3;
+        this.derivFlag = 1;
+        if(this.multipleY)this.simplexFlag = 4;
+        this.dualErrorsRequired = true;
+        this.simplex((Object) g, (Object) gd, start, step);
+    }
+    
+    public void simplex(RegressionFunction3 g, RegressionDerivativeFunction2 gd, double[] start, double[] step){
+        this.simplexFlag = 3;
+        this.derivFlag = 2;
+        if(this.multipleY)this.simplexFlag = 4;
+        this.dualErrorsRequired = true;
+        this.simplex((Object) g, (Object) gd, start, step);
+    }
+   
+    public void simplex(Object regFun, Object regDerivFun, double[] start, double[] step){
+        this.simplex(regFun, regDerivFun, start, step, this.fTol, this.nMax);
+    }
+
+    // Nelder and Mead Simplex Simplex Non-linear Regression
+    // plus plot and output file
+    // Default  tolerance and maximum iterations
+    // Numerical differencing Hessian
+    public void simplexPlot(RegressionFunction g, double[] start, double[] step){
+        this.simplexFlag = 1;
+        this.dualErrorsRequired = false;
+        this.simplexPlot((Object) g, start, step);
+    }
+    
+    public void simplexPlot(RegressionFunction2 g, double[] start, double[] step){
+        this.simplexFlag = 2;
+        this.dualErrorsRequired = false;
+        this.simplexPlot((Object) g, start, step);
+    }
+        
+    public void simplexPlot(RegressionFunction3 g, double[] start, double[] step){
+        this.simplexFlag = 3;
+        if(this.multipleY)this.simplexFlag = 4;
+        this.dualErrorsRequired = true;
+        this.simplexPlot((Object) g, start, step);
+    }
+        
+    public void simplexPlot(Object regFun, double[] start, double[] step){
+        this.simplexPlot(regFun, start, step, this.fTol, this.nMax);
+    }
+        
+    // Nelder and Mead Simplex Simplex Non-linear Regression
+    // plus plot and output file
+    // Default  tolerance and maximum iterations
+    // Analytical Hessian derivatives
+    public void simplexPlot(RegressionFunction g, RegressionDerivativeFunction gd, double[] start, double[] step){
+        this.simplexFlag = 1;
+        this.derivFlag = 1;
+        this.dualErrorsRequired = false;
+        this.simplexPlot((Object) g, (Object) gd, start, step);
+    }
+    
+    public void simplexPlot(RegressionFunction2 g, RegressionDerivativeFunction2 gd, double[] start, double[] step){
+        this.simplexFlag = 2;
+        this.derivFlag = 2;
+        this.dualErrorsRequired = false;
+        this.simplexPlot((Object) g, (Object) gd, start, step);
+    }
+    
+    public void simplexPlot(RegressionFunction3 g, RegressionDerivativeFunction gd, double[] start, double[] step){
+        this.simplexFlag = 3;
+        this.derivFlag = 1;
+        if(this.multipleY)this.simplexFlag = 4;
+        this.dualErrorsRequired = true;
+        this.simplexPlot((Object) g, (Object) gd, start, step);
+    }
+        
+    public void simplexPlot(RegressionFunction3 g, RegressionDerivativeFunction2 gd, double[] start, double[] step){
+        this.simplexFlag = 3;
+        this.derivFlag = 2;
+        if(this.multipleY)this.simplexFlag = 4;
+        this.dualErrorsRequired = true;
+        this.simplexPlot((Object) g, (Object) gd, start, step);
+    }
+   
+    public void simplexPlot(Object regFun, Object regDerivFun, double[] start, double[] step){
+        this.simplexPlot(regFun, regDerivFun, start, step, this.fTol, this.nMax);
+    }    
+     
+    
+    // Nelder and Mead simplex
+    // Default step option - all step[i] = dStep
+    // Numerical differencing Hessian
+    public void simplex(RegressionFunction g, double[] start, double fTol, int nMax){
+        this.simplexFlag = 1;
+        this.dualErrorsRequired = false;
+        this.simplex((Object) g, start, fTol, nMax);
+    }
+    
+    public void simplex(RegressionFunction2 g, double[] start, double fTol, int nMax){
+        this.simplexFlag = 2;
+        this.dualErrorsRequired = false;
+        this.simplex((Object) g, start, fTol, nMax);
+    }
+    
+    public void simplex(RegressionFunction3 g, double[] start, double fTol, int nMax){
+        this.simplexFlag = 3;
+        if(this.multipleY)this.simplexFlag = 4;
+        this.dualErrorsRequired = true;
+        this.simplex((Object) g, start, fTol, nMax);
+    }
+   
+    public void simplex(Object regFun, double[] start,  double fTol, int nMax){
+        int n=start.length;
+        double[] stepp = new double[n];
+        for(int i=0; i<n;i++)stepp[i]=this.dStep*start[i];
+        this.simplex(regFun, start, stepp, fTol, nMax);
+    }
+   
+    
+    // Nelder and Mead Simplex Simplex Non-linear Regression
+    // default steps
+    // Analytical Hessian second derivatives
+    public void simplex(RegressionFunction g, RegressionDerivativeFunction gd, double[] start, double fTol, int nMax){
+        this.simplexFlag = 1;
+        this.derivFlag = 1;
+        this.dualErrorsRequired = false;
+        this.simplex((Object) g, gd, start, fTol, nMax);
+    }
+    
+    public void simplex(RegressionFunction2 g, RegressionDerivativeFunction2 gd, double[] start, double fTol, int nMax){
+        this.simplexFlag = 2;
+        this.derivFlag = 2;
+        this.dualErrorsRequired = false;
+        this.simplex((Object) g, (Object) gd, start, fTol, nMax);
+    }
+    
+    public void simplex(RegressionFunction3 g, RegressionDerivativeFunction gd, double[] start, double fTol, int nMax){
+        this.simplexFlag = 3;
+        this.derivFlag = 1;
+        if(this.multipleY)this.simplexFlag = 4;
+        this.dualErrorsRequired = true;
+        this.simplex((Object) g, (Object) gd, start, fTol, nMax);
+    }
+      
+    public void simplex(RegressionFunction3 g, RegressionDerivativeFunction2 gd, double[] start, double fTol, int nMax){
+        this.simplexFlag = 3;
+        this.derivFlag = 2;
+        if(this.multipleY)this.simplexFlag = 4;
+        this.dualErrorsRequired = true;
+        this.simplex((Object) g, (Object) gd, start, fTol, nMax);
+    }
+    
+    public void simplex(Object regFun,  Object regDerivFun, double[] start, double fTol, int nMax){
+        int n=start.length;
+        double[] stepp = new double[n];
+        for(int i=0; i<n;i++)stepp[i]=this.dStep*start[i];
+        this.simplex(regFun, regDerivFun, start, stepp, fTol, nMax);
+    }
+
+
+    // Nelder and Mead Simplex Simplex Non-linear Regression
+    // plus plot and output file
+    // default steps
+    // Numerical differencing Hessian
+    public void simplexPlot(RegressionFunction g, double[] start, double fTol, int nMax){
+         this.simplexFlag = 1;
+         this.dualErrorsRequired = false;
+         this.simplexPlot((Object) g, start, fTol, nMax);
+    }
+    
+    public void simplexPlot(RegressionFunction2 g, double[] start, double fTol, int nMax){
+         this.simplexFlag = 2;
+         this.dualErrorsRequired = false;
+         this.simplexPlot((Object) g, start, fTol, nMax);
+    }
+    
+    public void simplexPlot(RegressionFunction3 g, double[] start, double fTol, int nMax){
+         this.simplexFlag = 3;
+         this.dualErrorsRequired = true;
+         if(this.multipleY)this.simplexFlag = 4;
+         this.simplexPlot((Object) g, start, fTol, nMax);
+    }
+     
+    public void simplexPlot(Object regFun, double[] start, double fTol, int nMax){
+        int n=start.length;
+        double[] stepp = new double[n];
+        for(int i=0; i<n;i++)stepp[i]=this.dStep*start[i];
+        this.simplexPlot(regFun, start, stepp, fTol, nMax);
+    }
+    
+    // Nelder and Mead Simplex Simplex Non-linear Regression
+    // plus plot and output file
+    // default steps
+    // Analytical Hessian second derivatives
+    public void simplexPlot(RegressionFunction g, RegressionDerivativeFunction gd, double[] start, double fTol, int nMax){
+        this.simplexFlag = 1;
+        this.derivFlag = 1;
+        this.dualErrorsRequired = false;
+        this.simplexPlot((Object) g, (Object) gd, start, fTol, nMax);
+    }
+    
+    public void simplexPlot(RegressionFunction2 g, RegressionDerivativeFunction2 gd, double[] start, double fTol, int nMax){
+        this.simplexFlag = 2;
+        this.derivFlag = 2;
+        this.dualErrorsRequired = false;
+        this.simplexPlot((Object) g, (Object) gd, start, fTol, nMax);
+    }
+    
+    public void simplexPlot(RegressionFunction3 g, RegressionDerivativeFunction gd, double[] start, double fTol, int nMax){
+        this.simplexFlag = 3;
+        this.derivFlag = 1;
+        if(this.multipleY)this.simplexFlag = 4;
+        this.dualErrorsRequired = true;
+        this.simplexPlot((Object) g, (Object) gd, start, fTol, nMax);
+    }
+    
+    public void simplexPlot(RegressionFunction3 g, RegressionDerivativeFunction2 gd, double[] start, double fTol, int nMax){
+        this.simplexFlag = 3;
+        this.derivFlag = 2;
+        if(this.multipleY)this.simplexFlag = 4;
+        this.dualErrorsRequired = true;
+        this.simplexPlot((Object) g, (Object) gd, start, fTol, nMax);
+    }
+    
+    public void simplexPlot(Object regFun, Object regDerivFun, double[] start, double fTol, int nMax){
+        int n=start.length;
+        double[] stepp = new double[n];
+        for(int i=0; i<n;i++)stepp[i]=this.dStep*start[i];
+        this.simplexPlot(regFun, regDerivFun, start, stepp, fTol, nMax);
+    }
+   
+    
+    // Nelder and Mead simplex
+    // Default  maximum iterations
+    // Default step option - all step[i] = dStep
+    // Numerical differencing Hessian
+    public void simplex(RegressionFunction g, double[] start, double fTol){
+        this.simplexFlag = 1;
+        this.dualErrorsRequired = false;
+        this.simplex((Object) g, start, fTol);
+    }
+    
+    public void simplex(RegressionFunction2 g, double[] start, double fTol){
+        this.simplexFlag = 2;
+        this.dualErrorsRequired = false;
+        this.simplex((Object) g, start, fTol);
+    }
+    
+    public void simplex(RegressionFunction3 g, double[] start, double fTol){
+        this.simplexFlag = 3;
+        if(this.multipleY)this.simplexFlag = 4;
+        this.dualErrorsRequired = true;
+        this.simplex((Object) g, start, fTol);
+    }
+   
+    public void simplex(Object regFun, double[] start,  double fTol){
+        int n=start.length;
+        double[] stepp = new double[n];
+        for(int i=0; i<n;i++)stepp[i]=this.dStep*start[i];
+        this.simplex(regFun, start, stepp, fTol, this.nMax);
+    }
+   
+    
+    // Nelder and Mead Simplex Simplex Non-linear Regression
+    // default steps and maximum iteration
+    // Analytical Hessian second derivatives
+    public void simplex(RegressionFunction g, RegressionDerivativeFunction gd, double[] start, double fTol){
+        this.simplexFlag = 1;
+        this.derivFlag = 1;
+        this.dualErrorsRequired = false;
+        this.simplex((Object) g, (Object) gd, start, fTol);
+    }
+    
+    public void simplex(RegressionFunction2 g, RegressionDerivativeFunction2 gd, double[] start, double fTol){
+        this.simplexFlag = 2;
+        this.derivFlag = 2;
+        this.dualErrorsRequired = false;
+        this.simplex((Object) g, (Object) gd, start, fTol);
+    }
+    
+    public void simplex(RegressionFunction3 g, RegressionDerivativeFunction gd, double[] start, double fTol){
+        this.simplexFlag = 3;
+        this.derivFlag = 1;
+        if(this.multipleY)this.simplexFlag = 4;
+        this.dualErrorsRequired = true;
+        this.simplex((Object) g, (Object) gd, start, fTol);
+    }
+   
+    public void simplex(RegressionFunction3 g, RegressionDerivativeFunction2 gd, double[] start, double fTol){
+        this.simplexFlag = 3;
+        this.derivFlag = 2;
+        if(this.multipleY)this.simplexFlag = 4;
+        this.dualErrorsRequired = true;
+        this.simplex((Object) g, (Object) gd, start, fTol);
+    }
+    
+    public void simplex(Object regFun,  Object regDerivFun, double[] start, double fTol){
+        int n=start.length;
+        double[] stepp = new double[n];
+        for(int i=0; i<n;i++)stepp[i]=this.dStep*start[i];
+        this.simplex(regFun, regDerivFun, start, stepp, fTol, this.nMax);
+    }
+
+
+    // Nelder and Mead Simplex Simplex Non-linear Regression
+    // plus plot and output file
+    // default steps and maximum iteration
+    // Numerical differencing Hessian
+    public void simplexPlot(RegressionFunction g, double[] start, double fTol){
+         this.simplexFlag = 1;
+         this.dualErrorsRequired = false;
+         this.simplexPlot((Object) g, start, fTol);
+    }
+    
+    public void simplexPlot(RegressionFunction2 g, double[] start, double fTol){
+         this.simplexFlag = 2;
+         this.dualErrorsRequired = false;
+         this.simplexPlot((Object) g, start, fTol);
+     }
+    
+     public void simplexPlot(RegressionFunction3 g, double[] start, double fTol){
+         this.simplexFlag = 3;
+         if(this.multipleY)this.simplexFlag = 4;
+         this.dualErrorsRequired = true;
+         this.simplexPlot((Object) g, start, fTol);
+     }
+            
+    public void simplexPlot(Object regFun, double[] start, double fTol){
+        int n=start.length;
+        double[] stepp = new double[n];
+        for(int i=0; i<n;i++)stepp[i]=this.dStep*start[i];
+        this.simplexPlot(regFun, start, stepp, fTol, this.nMax);
+    }
+    
+    // Nelder and Mead Simplex Simplex Non-linear Regression
+    // plus plot and output file
+    // default steps and maximum iteration
+    // Analytical Hessian second derivatives
+    public void simplexPlot(RegressionFunction g, RegressionDerivativeFunction gd, double[] start, double fTol){
+        this.simplexFlag = 1;
+        this.derivFlag = 1;
+        this.dualErrorsRequired = false;
+        this.simplexPlot((Object) g, (Object) gd, start, fTol);
+    }
+    
+    public void simplexPlot(RegressionFunction2 g, RegressionDerivativeFunction2 gd, double[] start, double fTol){
+        this.simplexFlag = 2;
+        this.derivFlag = 2;
+        this.dualErrorsRequired = false;
+        this.simplexPlot((Object) g, (Object) gd, start, fTol);
+    }
+    
+    public void simplexPlot(RegressionFunction3 g, RegressionDerivativeFunction gd, double[] start, double fTol){
+        this.simplexFlag = 3;
+        this.derivFlag = 1;
+        if(this.multipleY)this.simplexFlag = 4;
+        this.dualErrorsRequired = true;
+        this.simplexPlot((Object) g, (Object) gd, start, fTol);
+    }
+    
+    public void simplexPlot(RegressionFunction3 g, RegressionDerivativeFunction2 gd, double[] start, double fTol){
+        this.simplexFlag = 3;
+        this.derivFlag = 2;
+        if(this.multipleY)this.simplexFlag = 4;
+        this.dualErrorsRequired = true;
+        this.simplexPlot((Object) g, (Object) gd, start, fTol);
+    }
+    
+    public void simplexPlot(Object regFun, Object regDerivFun, double[] start, double fTol){
+        int n=start.length;
+        double[] stepp = new double[n];
+        for(int i=0; i<n;i++)stepp[i]=this.dStep*start[i];
+        this.simplexPlot(regFun, regDerivFun, start, stepp, fTol, this.nMax);
+    }    
+    
+   // Nelder and Mead simplex
+    // Default  tolerance
+    // Default step option - all step[i] = dStep
+    // Analytical Hessian derivatives
+    public void simplex(RegressionFunction g, double[] start, int nMax){
+        this.simplexFlag = 1;
+        this.dualErrorsRequired = false;
+        this.simplex((Object) g, start, nMax);
+    }
+    
+    public void simplex(RegressionFunction2 g, double[] start, int nMax){
+        this.simplexFlag = 2;
+        this.dualErrorsRequired = false;
+        this.simplex((Object) g, start, nMax);
+    }
+    
+    public void simplex(RegressionFunction3 g, double[] start, int nMax){
+        this.simplexFlag = 3;
+        if(this.multipleY)this.simplexFlag = 4;
+        this.dualErrorsRequired = true;
+        this.simplex((Object) g, start, nMax);
+    }
+   
+    public void simplex(Object regFun, double[] start, int nMax){
+        int n=start.length;
+        double[] stepp = new double[n];
+        for(int i=0; i<n;i++)stepp[i]=this.dStep*start[i];
+        this.simplex(regFun, start, stepp, this.fTol, nMax);
+    }
+   
+    
+    // Nelder and Mead Simplex Simplex Non-linear Regression
+    // default steps and tolerance
+    // Analytical Hessian second derivatives
+    public void simplex(RegressionFunction g, RegressionDerivativeFunction gd, double[] start, int nMax){
+        this.simplexFlag = 1;
+        this.derivFlag = 1;
+        this.dualErrorsRequired = false;
+        this.simplex((Object) g, (Object) gd, start, nMax);
+    }
+    
+    public void simplex(RegressionFunction2 g, RegressionDerivativeFunction2 gd, double[] start, int nMax){
+        this.simplexFlag = 2;
+        this.derivFlag = 2;
+        this.dualErrorsRequired = false;
+        this.simplex((Object) g, (Object) gd, start, nMax);
+    }
+    
+    public void simplex(RegressionFunction3 g, RegressionDerivativeFunction gd, double[] start, int nMax){
+        this.simplexFlag = 3;
+        this.derivFlag = 1;
+        if(this.multipleY)this.simplexFlag = 4;
+        this.dualErrorsRequired = true;
+        this.simplex((Object) g, (Object) gd, start, nMax);
+    }
+   
+    public void simplex(RegressionFunction3 g, RegressionDerivativeFunction2 gd, double[] start, int nMax){
+        this.simplexFlag = 3;
+        this.derivFlag = 2;
+        if(this.multipleY)this.simplexFlag = 4;
+        this.dualErrorsRequired = true;
+        this.simplex((Object) g, (Object) gd, start, nMax);
+    }
+    
+    public void simplex(Object regFun,  Object regDerivFun, double[] start, int nMax){
+        int n=start.length;
+        double[] stepp = new double[n];
+        for(int i=0; i<n;i++)stepp[i]=this.dStep*start[i];
+        this.simplex(regFun, regDerivFun, start, stepp, this.fTol, nMax);
+    }
+
+    
+    // Nelder and Mead Simplex Simplex Non-linear Regression
+    // plus plot and output file
+    // default steps and tolerance
+    // Numerical differencing Hessian
+    public void simplexPlot(RegressionFunction g, double[] start, int nMax){
+         this.simplexFlag = 1;
+         this.dualErrorsRequired = false;
+         this.simplexPlot((Object) g, start, nMax);
+    }
+    
+    public void simplexPlot(RegressionFunction2 g, double[] start, int nMax){
+         this.simplexFlag = 2;
+         this.dualErrorsRequired = false;
+         this.simplexPlot((Object) g, start, nMax);
+     }
+    
+     public void simplexPlot(RegressionFunction3 g, double[] start, int nMax){
+         this.simplexFlag = 3;
+         this.dualErrorsRequired = true;
+         if(this.multipleY)this.simplexFlag = 4;
+         this.simplexPlot((Object) g, start, nMax);
+     }
+            
+    public void simplexPlot(Object regFun, double[] start, int nMax){
+        int n=start.length;
+        double[] stepp = new double[n];
+        for(int i=0; i<n;i++)stepp[i]=this.dStep*start[i];
+        this.simplexPlot(regFun, start, stepp, this.fTol, nMax);
+    }
+    
+    // Nelder and Mead Simplex Simplex Non-linear Regression
+    // plus plot and output file
+    // default steps and tolerance
+    // Analytical Hessian second derivatives
+    public void simplexPlot(RegressionFunction g, RegressionDerivativeFunction gd, double[] start, int nMax){
+        this.simplexFlag = 1;
+        this.derivFlag = 1;
+        this.dualErrorsRequired = false;
+        this.simplexPlot((Object) g, (Object) gd, start, nMax);
+    }
+    
+    public void simplexPlot(RegressionFunction2 g, RegressionDerivativeFunction2 gd, double[] start, int nMax){
+        this.simplexFlag = 2;
+        this.derivFlag = 2;
+        this.dualErrorsRequired = false;
+        this.simplexPlot((Object) g, (Object) gd, start, nMax);
+    }
+    
+    public void simplexPlot(RegressionFunction3 g, RegressionDerivativeFunction gd, double[] start, int nMax){
+        this.simplexFlag = 3;
+        this.derivFlag = 1;
+        if(this.multipleY)this.simplexFlag = 4;
+        this.dualErrorsRequired = true;
+        this.simplexPlot((Object) g, (Object) gd, start, nMax);
+    }
+    
+    public void simplexPlot(RegressionFunction3 g, RegressionDerivativeFunction2 gd, double[] start, int nMax){
+        this.simplexFlag = 3;
+        this.derivFlag = 2;
+        if(this.multipleY)this.simplexFlag = 4;
+        this.dualErrorsRequired = true;
+        this.simplexPlot((Object) g, (Object) gd, start, nMax);
+    }
+    
+    public void simplexPlot(Object regFun, Object regDerivFun, double[] start, int nMax){
+        int n=start.length;
+        double[] stepp = new double[n];
+        for(int i=0; i<n;i++)stepp[i]=this.dStep*start[i];
+        this.simplexPlot(regFun, regDerivFun, start, stepp, this.fTol, nMax);
+    }
+
+    
+    // Nelder and Mead simplex
+    // Default  tolerance
+    // Default  maximum iterations
+    // Default step option - all step[i] = dStep
+    // Analytical Hessian derivatives
+    public void simplex(RegressionFunction g, double[] start){
+        this.simplexFlag = 1;
+        this.dualErrorsRequired = false;
+        this.simplex((Object) g, start);
+    }
+    
+    public void simplex(RegressionFunction2 g, double[] start){
+        this.simplexFlag = 2;
+        this.dualErrorsRequired = false;
+        this.simplex((Object) g, start);
+    }
+    
+    public void simplex(RegressionFunction3 g, double[] start){
+        this.simplexFlag = 3;
+        if(this.multipleY)this.simplexFlag = 4;
+        this.dualErrorsRequired = true;
+        this.simplex((Object) g, start);
+    }
+   
+    public void simplex(Object regFun, double[] start){
+        int n=start.length;
+        double[] stepp = new double[n];
+        for(int i=0; i<n;i++)stepp[i]=this.dStep*start[i];
+        this.simplex(regFun, start, stepp, this.fTol, this.nMax);
+    }
+   
+    
+    // Nelder and Mead Simplex Simplex Non-linear Regression
+    // default steps, maximum iterations and tolerance
+    // Analytical Hessian second derivatives
+    public void simplex(RegressionFunction g, RegressionDerivativeFunction gd, double[] start){
+        this.simplexFlag = 1;
+        this.derivFlag = 1;
+        this.dualErrorsRequired = false;
+        this.simplex((Object) g, (Object) gd, start);
+    }
+    
+    public void simplex(RegressionFunction2 g, RegressionDerivativeFunction2 gd, double[] start){
+        this.simplexFlag = 2;
+        this.derivFlag = 2;
+        this.dualErrorsRequired = false;
+        this.simplex((Object) g, (Object) gd, start);
+    }
+    
+    public void simplex(RegressionFunction3 g, RegressionDerivativeFunction gd, double[] start){
+        this.simplexFlag = 3;
+        this.derivFlag = 1;
+        if(this.multipleY)this.simplexFlag = 4;
+        this.dualErrorsRequired = true;
+        this.simplex((Object) g, (Object) gd, start);
+    }
+    
+    public void simplex(RegressionFunction3 g, RegressionDerivativeFunction2 gd, double[] start){
+        this.simplexFlag = 3;
+        this.derivFlag = 2;
+        if(this.multipleY)this.simplexFlag = 4;
+        this.dualErrorsRequired = true;
+        this.simplex((Object) g, (Object) gd, start);
+    }
+   
+    public void simplex(Object regFun,  Object regDerivFun, double[] start){
+        int n=start.length;
+        double[] stepp = new double[n];
+        for(int i=0; i<n;i++)stepp[i]=this.dStep*start[i];
+        this.simplex(regFun, regDerivFun, start, stepp, this.fTol, this.nMax);
+    }
+
+    
+    // Nelder and Mead Simplex Simplex Non-linear Regression
+    // plus plot and output file
+    // default steps, maximum iterations and tolerance
+    // Numerical differencing Hessian
+    public void simplexPlot(RegressionFunction g, double[] start){
+         this.simplexFlag = 1;
+         this.dualErrorsRequired = false;
+         this.simplexPlot((Object) g, start);
+    }
+    
+    public void simplexPlot(RegressionFunction2 g, double[] start){
+         this.simplexFlag = 2;
+         this.dualErrorsRequired = false;
+         this.simplexPlot((Object) g, start);
+     }
+    
+     public void simplexPlot(RegressionFunction3 g, double[] start){
+         this.simplexFlag = 3;
+         if(this.multipleY)this.simplexFlag = 4;
+         this.dualErrorsRequired = true;
+         this.simplexPlot((Object) g, start);
+     }
+            
+    public void simplexPlot(Object regFun, double[] start){
+        int n=start.length;
+        double[] stepp = new double[n];
+        for(int i=0; i<n;i++)stepp[i]=this.dStep*start[i];
+        this.simplexPlot(regFun, start, stepp, this.fTol, this.nMax);
+    }
+    
+    // Nelder and Mead Simplex Simplex Non-linear Regression
+    // plus plot and output file
+    // default steps, maximum iterations and tolerance
+    // Analytical Hessian second derivatives
+    public void simplexPlot(RegressionFunction g, RegressionDerivativeFunction gd, double[] start){
+        this.simplexFlag = 1;
+        this.derivFlag = 1;
+        this.dualErrorsRequired = false;
+        this.simplexPlot((Object) g, (Object) gd, start);
+    }
+    
+    public void simplexPlot(RegressionFunction2 g, RegressionDerivativeFunction2 gd, double[] start){
+        this.simplexFlag = 2;
+        this.derivFlag = 2;
+        this.dualErrorsRequired = false;
+        this.simplexPlot((Object) g, (Object) gd, start);
+    }
+    
+    public void simplexPlot(RegressionFunction3 g, RegressionDerivativeFunction gd, double[] start){
+        this.simplexFlag = 3;
+        this.derivFlag = 1;
+        if(this.multipleY)this.simplexFlag = 4;
+        this.dualErrorsRequired = true;
+        this.simplexPlot((Object) g, (Object) gd, start);
+    }
+    
+    public void simplexPlot(RegressionFunction3 g, RegressionDerivativeFunction2 gd, double[] start){
+        this.simplexFlag = 3;
+        this.derivFlag = 2;
+        if(this.multipleY)this.simplexFlag = 4;
+        this.dualErrorsRequired = true;
+        this.simplexPlot((Object) g, (Object) gd, start);
+    }
+    
+    public void simplexPlot(Object regFun, Object regDerivFun, double[] start){
+        int n=start.length;
+        double[] stepp = new double[n];
+        for(int i=0; i<n;i++)stepp[i]=this.dStep*start[i];
+        this.simplexPlot(regFun, regDerivFun, start, stepp, this.fTol, this.nMax);
+    } 
+   
+    
+   	
+                    
+        // PRINT METHODS
 
 	// Print the results of the regression
 	// File name provided
@@ -3476,21 +5680,42 @@ public class Regression{
 	// prec = truncation precision
 	public void print(int prec){
 	    this.prec = prec;
-		String filename="RegressionOutput.txt";
-        this.print(filename);
+            String filename="RegressionOutput.txt";
+            this.print(filename);
 	}
 
     // Print the results of the regression
-	// File name provided
-	// default value for truncation precision
-	public void print(String filename){
-	    if(filename.indexOf('.')==-1)filename = filename+".txt";
-	    FileOutput fout = new FileOutput(filename, 'n');
-	    fout.dateAndTimeln(filename);
-	    fout.println(this.graphTitle);
-	    paraName = new String[this.nTerms];
-	    if(lastMethod==38)paraName = new String[3];
-	    if(this.bestPolyFlag)fout.println("This is the best fit found by the method bestPolynomial");
+    // File name provided
+    // default value for truncation precision
+    public void print(String filename){
+        if(filename.indexOf('.')==-1)filename = filename+".txt";
+	FileOutput fout = new FileOutput(filename, 'n');
+	fout.dateAndTimeln(filename);
+	fout.println(this.graphTitle);
+	paraName = new String[this.nParam];
+        
+        constraintString = new String[this.nParam];
+        for(int i=0; i<this.nParam; i++)constraintString[i] = "none";
+        int nC = constrainedSingle.size()/2;
+        int counter = 0;
+        for(int i=0; i<nC; i++){
+            int ii = (Integer)constrainedSingle.get(counter++);
+            constraintString[ii] = (String)constrainedSingle.get(counter++);
+        }
+        nC = constrainedMultiple.size()/2;
+        counter = 0;
+        for(int i=0; i<nC; i++){
+            int ii = (Integer)constrainedMultiple.get(counter++);
+            if(constraintString[ii].equals("none")){
+                constraintString[ii] = (String)constrainedMultiple.get(counter++);
+            }
+            else{
+                constraintString[ii] += "; " + (String)constrainedMultiple.get(counter++);
+            }
+        }
+        
+	if(this.lastMethod==38)paraName = new String[3];
+	if(this.bestPolyFlag)fout.println("This is the best fit found by the method bestPolynomial");
         if(weightOpt){
             fout.println("Weighted Least Squares Minimisation");
         }
@@ -3499,24 +5724,24 @@ public class Regression{
         }
         switch(this.lastMethod){
 	        case 0: fout.println("Linear Regression with intercept");
-                    fout.println("y = c[0] + c[1]*x1 + c[2]*x2 +c[3]*x3 + . . .");
-                    for(int i=0;i<this.nTerms;i++)this.paraName[i]="c["+i+"]";
-                    this.linearPrint(fout);
+                        fout.println("y = c[0] + c[1]*x1 + c[2]*x2 +c[3]*x3 + . . .");
+                        for(int i=0;i<this.nParam;i++)this.paraName[i]="c["+i+"]";
+                        this.linearPrint(fout);
 	                break;
-	        case 1: fout.println("Polynomial (with degree = " + (nTerms-1) + "), Fitting: Linear Regression");
+	        case 1: fout.println("Polynomial (with degree = " + (nParam-1) + "), Fitting: Linear Regression");
 	                fout.println("y = c[0] + c[1]*x + c[2]*x^2 +c[3]*x^3 + . . .");
-	                for(int i=0;i<this.nTerms;i++)this.paraName[i]="c["+i+"]";
+	                for(int i=0;i<this.nParam;i++)this.paraName[i]="c["+i+"]";
                     this.linearPrint(fout);
 	                break;
 	        case 2: fout.println("Generalised linear regression");
 	                fout.println("y = c[0]*f1(x) + c[1]*f2(x) + c[2]*f3(x) + . . .");
-	                for(int i=0;i<this.nTerms;i++)this.paraName[i]="c["+i+"]";
+	                for(int i=0;i<this.nParam;i++)this.paraName[i]="c["+i+"]";
                     this.linearPrint(fout);
 	                break;
 	        case 3: fout.println("Nelder and Mead Simplex Non-linear Regression");
 	                fout.println("y = f(x1, x2, x3 . . ., c[0], c[1], c[2] . . .");
 	                fout.println("y is non-linear with respect to the c[i]");
-	                for(int i=0;i<this.nTerms;i++)this.paraName[i]="c["+i+"]";
+	                for(int i=0;i<this.nParam;i++)this.paraName[i]="c["+i+"]";
                     this.nonLinearPrint(fout);
 	                break;
 	        case 4: fout.println("Fitting to a Normal (Gaussian) distribution");
@@ -3788,40 +6013,43 @@ public class Regression{
 	                paraName[2]="y scale";
                     this.nonLinearPrint(fout);
                     break;
-            case 39: fout.println("Fitting to a EC50 dose response curve");
-	                fout.println("y = bottom + (top - bottom)/(1 + (x/EC50)^HillSlope)");
+            case 39: fout.println("Fitting to a EC50 dose response curve (four parameter logistic)");
+	                fout.println("y = top + (bottom - top)/(1 + (x/EC50)^HillSlope)");
 	                fout.println("Nelder and Mead Simplex used to fit the data");
-	                paraName[0]="bottom";
-	                paraName[1]="top";
+	                paraName[0]="top";
+	                paraName[1]="bottom";
 	                paraName[2]="EC50";
 	                paraName[3]="Hill Slope";
                     this.nonLinearPrint(fout);
                     break;
-            case 40: fout.println("Fitting to a LogEC50 dose response curve");
-	                fout.println("y = bottom + (top - bottom)/(1 + 10^((logEC50 - x).HillSlope))");
+            case 40: fout.println("Fitting to a EC50 dose response curve (four parameter logistic)");
+	                fout.println("y = top + (bottom - top)/(1 + (x/EC50)^HillSlope) [top and bottom fixed]");
+	                fout.println("bottom = " + this.bottom);
+	                fout.println("top =    " + this.top);
+	                fout.println();
 	                fout.println("Nelder and Mead Simplex used to fit the data");
-	                paraName[0]="bottom";
-	                paraName[1]="top";
-	                paraName[2]="LogEC50";
-	                paraName[3]="Hill Slope";
+	                paraName[0]="EC50";
+	                paraName[1]="Hill Slope";
                     this.nonLinearPrint(fout);
                     break;
             case 41: fout.println("Fitting to a EC50 dose response curve - bottom constrained to be zero or positive");
-	                fout.println("y = bottom + (top - bottom)/(1 + (x/EC50)^HillSlope)");
+	                fout.println("y = top + (bottom - top)/(1 + (x/EC50)^HillSlope)");
 	                fout.println("Nelder and Mead Simplex used to fit the data");
-	                paraName[0]="bottom";
-	                paraName[1]="top";
+	                paraName[0]="top";
+	                paraName[1]="bottom";
 	                paraName[2]="EC50";
 	                paraName[3]="Hill Slope";
                     this.nonLinearPrint(fout);
                     break;
-            case 42: fout.println("Fitting to a LogEC50 dose response curve - bottom constrained to be zero or positive");
-	                fout.println("y = bottom + (top - bottom)/(1 + 10^((logEC50 - x).HillSlope))");
+            case 42: fout.println("Fitting to a five parameter logistic");
+	                fout.println("y = top + (bottom - top)/(1 + (x/C50)^HillSlope)^asymm [top and bottom fixed]");
+	                fout.println("bottom = " + this.bottom);
+	                fout.println("top =    " + this.top);
+	                fout.println();
 	                fout.println("Nelder and Mead Simplex used to fit the data");
-	                paraName[0]="bottom";
-	                paraName[1]="top";
-	                paraName[2]="LogEC50";
-	                paraName[3]="Hill Slope";
+	                paraName[0]="C50";
+	                paraName[1]="HillSlope";
+	                paraName[2]="asymm";
                     this.nonLinearPrint(fout);
                     break;
             case 43: fout.println("Fitting to an exponential");
@@ -3834,9 +6062,10 @@ public class Regression{
             case 44: fout.println("Fitting to multiple exponentials");
 	                fout.println("y = Sum[Ai.exp(Bi.x)], i=1 to n");
 	                fout.println("Nelder and Mead Simplex used to fit the data");
-	                for(int i=0;i<this.nTerms;i+=2){
-	                    this.paraName[i]="A["+(i+1)+"]";
-	                    this.paraName[i+1]="B["+(i+1)+"]";
+                        int ii = 1;
+	                for(int i=0;i<this.nParam;i+=2){
+	                    this.paraName[i]="A["+(ii)+"]";
+	                    this.paraName[i+1]="B["+(ii++)+"]";
 	                }
 	                this.nonLinearPrint(fout);
                     break;
@@ -3855,12 +6084,12 @@ public class Regression{
                     break;
             case 47: fout.println("Linear Regression with fixed intercept");
                     fout.println("y = fixed intercept + c[0]*x1 + c[1]*x2 +c[2]*x3 + . . .     ");
-                    for(int i=0;i<this.nTerms;i++)this.paraName[i]="c["+i+"]";
+                    for(int i=0;i<this.nParam;i++)this.paraName[i]="c["+i+"]";
                     this.linearPrint(fout);
 	                break;
-	        case 48: fout.println("Polynomial (with degree = " + nTerms + ") and fixed intercept, Fitting: Linear Regression");
+	        case 48: fout.println("Polynomial (with degree = " + nParam + ") and fixed intercept, Fitting: Linear Regression");
 	                fout.println("y = fixed intercept + c[0]*x + c[1]*x^2 +c[2]*x^3 + . . .");
-	                for(int i=0;i<this.nTerms;i++)this.paraName[i]="c["+i+"]";
+	                for(int i=0;i<this.nParam;i++)this.paraName[i]="c["+i+"]";
                     this.linearPrint(fout);
 	                break;
 	        case 49: fout.println("Fitting multiple Gaussian distributions");
@@ -3876,9 +6105,28 @@ public class Regression{
                     break;
             case 50: fout.println("Fitting to a non-integer polynomial");
 	                fout.println("y = c[0] + c[1]*x + c[2]*x^c[3]");
-	                for(int i=0;i<this.nTerms;i++)this.paraName[i]="c["+i+"]";
+	                for(int i=0;i<this.nParam;i++)this.paraName[i]="c["+i+"]";
                     this.nonLinearPrint(fout);
 	                break;
+	        case 51: fout.println("Five parameter logistic function");
+	                fout.println("y = top + (bottom - top)/((1 + (x/y50)^HillSlope)^asymm");
+	                fout.println("Nelder and Mead Simplex used to fit the data");
+	                paraName[0]="top";
+	                paraName[1]="bottom";
+	                paraName[2]="y50";
+	                paraName[3]="HillSlope";
+	                paraName[4]="asymm";
+                    this.nonLinearPrint(fout);
+                    break;
+               case 52: fout.println("Fitting to a Shifted Rectangular Hyperbola");
+	                fout.println("y = A.x/(theta + x) + alpha");
+	                fout.println("Nelder and Mead Simplex used to fit the data");
+	                paraName[0]="theta";
+	                paraName[1]="alpha";
+	                paraName[2]="A";
+                    this.nonLinearPrint(fout);
+                    break;
+
             default: throw new IllegalArgumentException("Method number (this.lastMethod) not found");
 
 		    }
@@ -3896,11 +6144,11 @@ public class Regression{
 	// protected method - print linear regression output
 	protected void linearPrint(FileOutput fout){
 
-	    if(this.legendCheck){
+        if(this.legendCheck){
             fout.println();
             fout.println("x1 = " + this.xLegend);
             fout.println("y  = " + this.yLegend);
- 	    }
+ 	}
 
         fout.println();
         if(this.lastMethod==47)fout.println("Fixed Intercept = " + this.fixedInterceptL);
@@ -3919,7 +6167,7 @@ public class Regression{
         fout.printtab("t ", this.field);
         fout.println("P > |t|");
 
-        for(int i=0; i<this.nTerms; i++){
+        for(int i=0; i<this.nParam; i++){
             fout.printtab(this.paraName[i], this.field);
             fout.printtab(Fmath.truncate(best[i],this.prec), this.field);
             fout.printtab(Fmath.truncate(bestSd[i],this.prec), this.field);
@@ -3936,6 +6184,12 @@ public class Regression{
         }
         fout.printtab("y(expl)", this.field);
         fout.printtab("y(calc)", this.field);
+        if(this.xErrorsEntered){
+            for(int i=0; i<this.nXarrays; i++){
+                fout.printtab("x error", this.field);
+            }
+            fout.printtab("y error", this.field);
+        }
         fout.printtab("weight", this.field);
         fout.printtab("residual", this.field);
         fout.println("residual");
@@ -3945,6 +6199,12 @@ public class Regression{
         }
         fout.printtab(" ", this.field);
         fout.printtab(" ", this.field);
+        if(this.xErrorsEntered){
+            for(int i=0; i<this.nXarrays; i++){
+                fout.printtab("x"+String.valueOf(i+ii), this.field);
+            }
+            fout.printtab(" ", this.field);
+        }   
         fout.printtab(" ", this.field);
         fout.printtab("(unweighted)", this.field);
         fout.println("(weighted)");
@@ -3956,6 +6216,12 @@ public class Regression{
             }
             fout.printtab(Fmath.truncate(this.yData[i],this.prec), this.field);
             fout.printtab(Fmath.truncate(this.yCalc[i],this.prec), this.field);
+            if(this.xErrorsEntered){
+                for(int j=0; j<this.nXarrays; j++){
+                    fout.printtab(Fmath.truncate(this.xErrors[j][i],this.prec), this.field);
+                }
+                fout.printtab(Fmath.truncate(this.yErrors[i],this.prec), this.field);
+            }
             fout.printtab(Fmath.truncate(this.weight[i],this.prec), this.field);
             fout.printtab(Fmath.truncate(this.residual[i],this.prec), this.field);
             fout.println(Fmath.truncate(this.residualW[i],this.prec));
@@ -3984,7 +6250,7 @@ public class Regression{
 	            fout.println("Correlation: x - y data");
 		        fout.printtab(this.weightWord[this.weightFlag] + "Linear Correlation Coefficient (R)");
 	            fout.println(Fmath.truncate(this.xyR,this.prec));
-	            if(this.xyR<=1.0D){
+	            if(Math.abs(this.xyR)<=1.0D){
 		            fout.printtab(this.weightWord[this.weightFlag] + "Linear Correlation Coefficient Probability");
 		            fout.println(Fmath.truncate(Stat.linearCorrCoeffProb(this.xyR, this.nData-2),this.prec));
                 }
@@ -3994,21 +6260,22 @@ public class Regression{
     	    fout.println("Correlation: y(experimental) - y(calculated)");
             fout.printtab(this.weightWord[this.weightFlag] + "Linear Correlation Coefficient");
 	        fout.println(Fmath.truncate(this.yyR, this.prec));
-		    fout.printtab(this.weightWord[this.weightFlag] + "Linear Correlation Coefficient Probability");
-		    fout.println(Fmath.truncate(Stat.linearCorrCoeffProb(this.yyR, this.nData-2),this.prec));
-
+	        if(Math.abs(this.yyR)<=1.0D){
+		        fout.printtab(this.weightWord[this.weightFlag] + "Linear Correlation Coefficient Probability");
+	            fout.println(Fmath.truncate(Stat.linearCorrCoeffProb(this.yyR, this.nData-2),this.prec));
+            }
             fout.println();
             if(this.chiSquare!=0.0D){
                 fout.println("Correlation coefficients");
                 fout.printtab(" ", this.field);
-                for(int i=0; i<this.nTerms;i++){
+                for(int i=0; i<this.nParam;i++){
                     fout.printtab(paraName[i], this.field);
                 }
                 fout.println();
 
-                for(int j=0; j<this.nTerms;j++){
+                for(int j=0; j<this.nParam;j++){
                     fout.printtab(paraName[j], this.field);
-                    for(int i=0; i<this.nTerms;i++){
+                    for(int i=0; i<this.nParam;i++){
                         fout.printtab(Fmath.truncate(this.corrCoeff[i][j], this.prec), this.field);
                     }
                     fout.println();
@@ -4018,36 +6285,44 @@ public class Regression{
 
         fout.println(" ");
         fout.printtab("Degrees of freedom");
-		fout.println(this.nData - this.nTerms);
+	fout.println(this.nData - this.nParam);
         fout.printtab("Number of data points");
-		fout.println(this.nData);
+	fout.println(this.nData);
         fout.printtab("Number of estimated paramaters");
-		fout.println(this.nTerms);
+	fout.println(this.nParam);
         fout.println();
-
+        fout.printtab("Durbin-Watson d statistic");
+        fout.println(Fmath.truncate(this.getDurbinWatsonD(), this.prec));
+        fout.println();
+        
         if(this.bestPolyFlag){
 
             fout.println("Method bestPolynomial search history");
-            fout.println("F-probability significance level (%): " + this.fProbSignificance*100.0);
+            fout.println("F-probability significance level: " + this.fProbSignificance + " (" + this.fProbSignificance*100.0 + " %)");
             fout.println("Degree of best fit polynomial " + this.bestPolynomialDegree);
             fout.println(" ");
+
             fout.print("Polynomial degree", 2*field);
             fout.print("chi square", 2*field);
             fout.print("F-ratio", field);
-            fout.println("F-probability");
+            fout.print("F-probability", field+2);
+            fout.println("F-value at the");
+
             fout.print("comparison", 2*field);
             fout.print("comparison", 2*field);
             fout.print("   ", field);
-            fout.println("   ");
+            fout.print("   ", field+2);
+            fout.println("significance level");
 
             int nAttempts = (Integer)this.bestPolyArray.get(1);
-            System.out.println((Integer)this.bestPolyArray.get(0) + "  " + nAttempts);
             int[] deg0s = (int[])this.bestPolyArray.get(2);
             int[] deg1s = (int[])this.bestPolyArray.get(3);
             double[] chi0s = (double[])this.bestPolyArray.get(4);
             double[] chi1s = (double[])this.bestPolyArray.get(5);
             double[] fRatios = (double[])this.bestPolyArray.get(6);
             double[] fProbs = (double[])this.bestPolyArray.get(7);
+            double[] fSigns = (double[])this.bestPolyArray.get(8);
+
 
             for(int i=0; i<nAttempts; i++){
                 fout.print(deg0s[i], field);
@@ -4055,7 +6330,9 @@ public class Regression{
                 fout.print(Fmath.truncate(chi0s[i], this.prec), field);
                 fout.print(Fmath.truncate(chi1s[i], this.prec), field);
                 fout.print(Fmath.truncate(fRatios[i], this.prec), field);
-                fout.println(Fmath.truncate(fProbs[i], this.prec));
+                fout.print(Fmath.truncate(fProbs[i], this.prec), field+2);
+                fout.println(Fmath.truncate(fSigns[i], this.prec));
+
             }
 
         }
@@ -4072,22 +6349,45 @@ public class Regression{
         fout.println();
         fout.println("End of file");
 
-		fout.close();
-	}
+	fout.close();
+    }
 
 
-	// protected method - print non-linear regression output
-	protected void nonLinearPrint(FileOutput fout){
-	    if(this.userSupplied){
+    // protected method - print non-linear regression output
+    protected void nonLinearPrint(FileOutput fout){
+        
+        for(int i=0; i<this.nParam; i++){
+            if(!this.constraintString[i].equals("none")){
+                boolean testc = true;
+                String chold = this.constraintString[i];
+                String dhold = "";
+                while(testc){
+                    int pos0 = chold.indexOf("p[");
+                    if(pos0==-1){
+                        dhold += chold;
+                        testc = false;
+                    }
+                    else{
+                        int pos1 = chold.indexOf("]");
+                        int val = Integer.parseInt(chold.substring(pos0+2,pos1));
+                        dhold += chold.substring(0,pos0) + this.paraName[val];
+                        chold = chold.substring(pos1+1);
+                    }
+                }
+                this.constraintString[i] = dhold;
+            }
+        }
+        
+        if(this.userSupplied){
             fout.println();
             fout.println("Initial estimates were supplied by the user");
         }
         else{
             fout.println("Initial estimates were calculated internally");
- 	    }
+ 	}
 
- 	    switch(this.scaleOpt){
- 	        case 1: fout.println();
+ 	switch(this.scaleOpt){
+ 	    case 1: fout.println();
                     fout.println("Initial estimates were scaled to unity within the regression");
                     break;
             case 2: fout.println();
@@ -4099,7 +6399,7 @@ public class Regression{
             fout.println();
             fout.println("x1 = " + this.xLegend);
             fout.println("y  = " + this.yLegend);
- 	    }
+ 	}
 
         fout.println();
         if(!this.nlrStatus){
@@ -4110,7 +6410,7 @@ public class Regression{
 
         fout.println("Estimated parameters");
         fout.println("The statistics are obtained assuming that the model behaves as a linear model about the minimum.");
-        fout.println("The Hessian matrix is calculated as the numerically derived second derivatives of chi square with respect to all pairs of parameters.");
+        if(!this.analyticalDerivative)fout.println("The Hessian matrix is calculated as the numerically derived second derivatives of chi square with respect to all pairs of parameters.");
         if(this.zeroCheck)fout.println("The best estimate/s equal to zero were replaced by the step size in the numerical differentiation!!!");
         fout.println("Consequentlty treat the statistics with great caution");
         if(!this.posVarFlag){
@@ -4129,7 +6429,7 @@ public class Regression{
             fout.println("The ordinate scaling factor [yscale, Ao] has been set equal to " + this.yScaleFactor);
             fout.println(" ");
         }
-        if(lastMethod==35){
+        if(this.lastMethod==35){
             fout.println("The integer rate parameter, k, was varied in unit steps to obtain a minimum sum of squares");
             fout.println("This value of k was " + this.kayValue);
             fout.println(" ");
@@ -4195,7 +6495,7 @@ public class Regression{
             }
         }
         else{
-            for(int i=0; i<this.nTerms; i++){
+            for(int i=0; i<this.nParam; i++){
                 if(this.invertFlag){
                     fout.printtab(this.paraName[i], this.field);
                     fout.printtab(Fmath.truncate(best[i],this.prec), this.field);
@@ -4218,7 +6518,8 @@ public class Regression{
         fout.printtab("Post-min", this.field);
         fout.printtab("Initial", this.field);
         fout.printtab("Fractional", this.field);
-        fout.println("Scaling");
+        fout.printtab("Scaling", this.field);
+        fout.println("Constraint");
 
         fout.printtab(" ", this.field);
         fout.printtab("estimate", this.field);
@@ -4244,20 +6545,22 @@ public class Regression{
                     fout.printtab(Fmath.truncate(this.grad[ii][1],this.prec), this.field);
                     fout.printtab(Fmath.truncate(this.startH[ii],this.prec), this.field);
                     fout.printtab(Fmath.truncate(this.stepH[ii],this.prec), this.field);
-                    fout.println(Fmath.truncate(this.scale[ii],this.prec));
+                    fout.printtab(Fmath.truncate(this.scale[ii],this.prec), this.field);
+                    fout.println(this.constraintString[ii]);
                     ii++;
                 }
             }
         }
         else{
-            for(int i=0; i<this.nTerms; i++){
+            for(int i=0; i<this.nParam; i++){
                 fout.printtab(this.paraName[i], this.field);
                 fout.printtab(Fmath.truncate(best[i],this.prec), this.field);
                 fout.printtab(Fmath.truncate(this.grad[i][0],this.prec), this.field);
                 fout.printtab(Fmath.truncate(this.grad[i][1],this.prec), this.field);
                 fout.printtab(Fmath.truncate(this.startH[i],this.prec), this.field);
                 fout.printtab(Fmath.truncate(this.stepH[i],this.prec), this.field);
-                fout.println(Fmath.truncate(this.scale[i],this.prec));
+                fout.printtab(Fmath.truncate(this.scale[i],this.prec), this.field);
+                fout.println(this.constraintString[i]);
             }
         }
         fout.println();
@@ -4357,18 +6660,19 @@ public class Regression{
                     fout.println(Fmath.truncate(this.multGaussFract[i],this.prec));
                 }
             }
-        }
-        if(this.invertFlag){
-            fout.printtab("yscale", this.field);
-            fout.printtab(Fmath.truncate(this.multGaussScale,this.prec), this.field);
-            fout.printtab(Fmath.truncate(this.multGaussScaleError,this.prec), this.field);
-            fout.printtab(Fmath.truncate(this.multGaussScaleCoeffVar,this.prec), this.field);
-            fout.printtab(Fmath.truncate(this.multGaussScaleTvalue,this.prec), this.field);
-            fout.println(Fmath.truncate(this.multGaussScalePvalue,this.prec));
-        }
-        else{
-            fout.printtab("yscale", this.field);
-            fout.println(Fmath.truncate(this.multGaussScale,this.prec));
+        
+            if(this.invertFlag){
+                fout.printtab("yscale", this.field);
+                fout.printtab(Fmath.truncate(this.multGaussScale,this.prec), this.field);
+                fout.printtab(Fmath.truncate(this.multGaussScaleError,this.prec), this.field);
+                fout.printtab(Fmath.truncate(this.multGaussScaleCoeffVar,this.prec), this.field);
+                fout.printtab(Fmath.truncate(this.multGaussScaleTvalue,this.prec), this.field);
+                fout.println(Fmath.truncate(this.multGaussScalePvalue,this.prec));
+            }
+            else{
+                fout.printtab("yscale", this.field);
+                fout.println(Fmath.truncate(this.multGaussScale,this.prec));
+            }
         }
         fout.println();
 
@@ -4382,6 +6686,12 @@ public class Regression{
 
             fout.printtab("y(expl)", this.field);
             fout.printtab("y(calc)", this.field);
+            if(this.xErrorsEntered){
+                for(int i=0; i<this.nXarrays; i++){
+                    fout.printtab("x errors", this.field);
+                }
+                fout.printtab("y errors", this.field);
+            }
             fout.printtab("weight", this.field);
             fout.printtab("residual", this.field);
             fout.println("residual");
@@ -4391,6 +6701,12 @@ public class Regression{
             }
             fout.printtab(" ", this.field);
             fout.printtab(" ", this.field);
+            if(this.xErrorsEntered){
+                for(int i=0; i<this.nXarrays; i++){
+                    fout.printtab("x"+String.valueOf(i), this.field);
+                }
+                fout.printtab("  ", this.field);
+            }
             fout.printtab(" ", this.field);
             fout.printtab("(unweighted)", this.field);
             fout.println("(weighted)");
@@ -4400,6 +6716,12 @@ public class Regression{
                 }
                 fout.printtab(Fmath.truncate(this.yData[kk],this.prec), this.field);
                 fout.printtab(Fmath.truncate(this.yCalc[kk],this.prec), this.field);
+                if(this.xErrorsEntered){
+                    for(int jj=0; jj<this.nXarrays; jj++){
+                        fout.printtab(Fmath.truncate(this.xErrors[jj][kk],this.prec), this.field);
+                    }
+                    fout.printtab(Fmath.truncate(this.yErrors[kk],this.prec), this.field);
+                }
                 fout.printtab(Fmath.truncate(this.weight[kk],this.prec), this.field);
                 fout.printtab(Fmath.truncate(this.residual[kk],this.prec), this.field);
                 fout.println(Fmath.truncate(this.residualW[kk],this.prec));
@@ -4431,42 +6753,44 @@ public class Regression{
 
         if(this.nXarrays==1 && this.nYarrays==1){
 	        fout.println("Correlation: x - y data");
-		    fout.printtab(this.weightWord[this.weightFlag] + "Linear Correlation Coefficient (R)");
+		fout.printtab(this.weightWord[this.weightFlag] + "Linear Correlation Coefficient (R)");
 	        fout.println(Fmath.truncate(this.xyR,this.prec));
-	        if(this.xyR<=1.0D){
+	        if(Math.abs(this.xyR)<=1.0D){
 		        fout.printtab(this.weightWord[this.weightFlag] + "Linear Correlation Coefficient Probability");
 		        fout.println(Fmath.truncate(Stat.linearCorrCoeffProb(this.xyR, this.nData-2),this.prec));
-            }
+                }
         }
 
     	fout.println(" ");
     	fout.println("Correlation: y(experimental) - y(calculated)");
         fout.printtab(this.weightWord[this.weightFlag] + "Linear Correlation Coefficient");
 	    fout.println(Fmath.truncate(this.yyR, this.prec));
-		fout.printtab(this.weightWord[this.weightFlag] + "Linear Correlation Coefficient Probability");
-		fout.println(Fmath.truncate(Stat.linearCorrCoeffProb(this.yyR, this.nData-2),this.prec));
+	    if(Math.abs(this.yyR)<=1.0D){
+		    fout.printtab(this.weightWord[this.weightFlag] + "Linear Correlation Coefficient Probability");
+		    fout.println(Fmath.truncate(Stat.linearCorrCoeffProb(this.yyR, this.nData-2),this.prec));
+        }
 
     	fout.println(" ");
         fout.printtab("Degrees of freedom");
-		fout.println(this.degreesOfFreedom);
+	fout.println(this.degreesOfFreedom);
         fout.printtab("Number of data points");
-		fout.println(this.nData);
+	fout.println(this.nData);
         fout.printtab("Number of estimated paramaters");
-		fout.println(this.nTerms);
+	fout.println(this.nParam);
 
         fout.println();
 
         if(this.posVarFlag && this.invertFlag && this.chiSquare!=0.0D){
             fout.println("Parameter - parameter correlation coefficients");
             fout.printtab(" ", this.field);
-            for(int i=0; i<this.nTerms;i++){
+            for(int i=0; i<this.nParam;i++){
                 fout.printtab(paraName[i], this.field);
             }
             fout.println();
 
-            for(int j=0; j<this.nTerms;j++){
+            for(int j=0; j<this.nParam;j++){
                 fout.printtab(paraName[j], this.field);
-                for(int i=0; i<this.nTerms;i++){
+                for(int i=0; i<this.nParam;i++){
                     fout.printtab(Fmath.truncate(this.corrCoeff[i][j], this.prec), this.field);
                 }
                 fout.println();
@@ -4487,6 +6811,11 @@ public class Regression{
         fout.println();
 
         fout.println();
+        fout.printtab("Durbin-Watson d statistic");
+        fout.println(Fmath.truncate(this.getDurbinWatsonD(), this.prec));
+        fout.println();
+
+        
         fout.printtab("Number of iterations taken");
         fout.println(this.nIter);
         fout.printtab("Maximum number of iterations allowed");
@@ -4507,16 +6836,20 @@ public class Regression{
             case 2: fout.println("simplex sd < the tolerance times the square root(sum of squares/degrees of freedom");
                     break;
         }
-        fout.println("Step used in numerical differentiation to obtain Hessian matrix");
-        fout.println("d(parameter) = parameter*"+this.delta);
-
+        if(!this.analyticalDerivative){
+            fout.println("Step used in numerical differentiation to obtain Hessian matrix");
+            fout.println("d(parameter) = parameter*"+this.delta);
+        }
         fout.println();
         fout.println("End of file");
 		fout.close();
 	}
 
-	// plot calculated y against experimental y
-	// title provided
+    
+    // PLOT METHODS
+    
+    // plot calculated y against experimental y
+    // title provided
     public void plotYY(String title){
         this.graphTitle = title;
         int ncurves = 2;
@@ -4567,14 +6900,14 @@ public class Regression{
             pg.plot();
         }
     }
-
+    
     //Creates a title
     protected String setGandPtitle(String title){
         String title1 = "";
         switch(this.lastMethod){
 	        case 0: title1 = "Linear regression (with intercept): "+title;
 	                break;
-	        case 1: title1 = "Linear(polynomial with degree = " + (nTerms-1) + ") regression: "+title;
+	        case 1: title1 = "Linear(polynomial with degree = " + (nParam-1) + ") regression: "+title;
 	                break;
 	        case 2: title1 = "General linear regression: "+title;
 	                break;
@@ -4586,17 +6919,17 @@ public class Regression{
 	                break;
 	        case 6:title1 = "Fit to a Poisson distribution: "+title;
 	                break;
-		    case 7: title1 = "Fit to a Two Parameter Minimum Order Statistic Gumbel distribution: "+title;
+		case 7: title1 = "Fit to a Two Parameter Minimum Order Statistic Gumbel distribution: "+title;
 	                break;
-            case 8: title1 = "Fit to a two Parameter Maximum Order Statistic Gumbel distribution: "+title;
+                case 8: title1 = "Fit to a two Parameter Maximum Order Statistic Gumbel distribution: "+title;
 	                break;
 	        case 9: title1 = "Fit to a One Parameter Minimum Order Statistic Gumbel distribution: "+title;
 	                break;
 	        case 10: title1 = "Fit to a One Parameter Maximum Order Statistic Gumbel distribution: "+title;
 	                break;
-            case 11: title1 = "Fit to a Standard Minimum Order Statistic Gumbel distribution: "+title;
+                case 11: title1 = "Fit to a Standard Minimum Order Statistic Gumbel distribution: "+title;
 	                break;
-            case 12: title1 = "Fit to a Standard Maximum Order Statistic Gumbel distribution: "+title;
+                case 12: title1 = "Fit to a Standard Maximum Order Statistic Gumbel distribution: "+title;
 	                break;
 	        case 13:title1 = "Fit to a Three Parameter Frechet distribution: "+title;
 	                break;
@@ -4633,31 +6966,31 @@ public class Regression{
 	        case 29:title1 = "Fit to a Shifted Pareto distribution: "+title;
 	                break;
 	        case 30:title1 = "Fit to a Logistic distribution: "+title;
-                    break;
-            case 31:title1 = "Fit to a Beta distribution - interval [0, 1]: "+title;
-                    break;
-            case 32:title1 = "Fit to a Beta distribution - interval [min, max]: "+title;
-                    break;
-            case 33:title1 = "Fit to a Three Parameter Gamma distribution]: "+title;
-                    break;
-            case 34:title1 = "Fit to a Standard Gamma distribution]: "+title;
-                    break;
-            case 35:title1 = "Fit to an Erlang distribution]: "+title;
-                    break;
-            case 36:title1 = "Fit to an two parameter log-normal distribution]: "+title;
-                    break;
-            case 37:title1 = "Fit to an three parameter log-normal distribution]: "+title;
-                    break;
-            case 38: title1 = "Fit to a Gaussian distribution with fixed parameters: "+title;
+                        break;
+                case 31:title1 = "Fit to a Beta distribution - interval [0, 1]: "+title;
+                        break;
+                case 32:title1 = "Fit to a Beta distribution - interval [min, max]: "+title;
+                        break;
+                case 33:title1 = "Fit to a Three Parameter Gamma distribution]: "+title;
+                        break;
+                case 34:title1 = "Fit to a Standard Gamma distribution]: "+title;
+                        break;
+                case 35:title1 = "Fit to an Erlang distribution]: "+title;
+                        break;
+                case 36:title1 = "Fit to an two parameter log-normal distribution]: "+title;
+                        break;
+                case 37:title1 = "Fit to an three parameter log-normal distribution]: "+title;
+                        break;
+                case 38: title1 = "Fit to a Gaussian distribution with fixed parameters: "+title;
 	                break;
-	        case 39: title1 = "Fit to a EC50 dose response curve: "+title;
+	        case 39: title1 = "Fit to a EC50 dose response curve (four parameter logistic): "+title;
 	                break;
-	        case 40: title1 = "Fit to a LogEC50 dose response curve: "+title;
+	        case 40: title1 = "Fit to a EC50 dose response curve (top and bottom fixed): "+title;
 	                break;
 	        case 41: title1 = "Fit to a EC50 dose response curve - bottom constrained [>= 0]: "+title;
 	                break;
-	        case 42: title1 = "Fit to a LogEC50 dose response curve - bottom constrained [>= 0]: "+title;
-	                break;
+	        case 42: title1 =  "Fitting to a five parameter logistic function (top and bottom fixed)";
+                    break;
 	        case 43: title1 = "Fit to an exponential yscale.exp(A.x): "+title;
 	                break;
 	        case 44: title1 = "Fit to multiple exponentials sum[Ai.exp(Bi.x)]: "+title;
@@ -4668,32 +7001,36 @@ public class Regression{
 	                break;
 	        case 47: title1 = "Linear regression (with fixed intercept): "+title;
 	                break;
-	        case 48: title1 = "Linear(polynomial with degree = " + (nTerms-1) + " and fixed intercept) regression: "+title;
+	        case 48: title1 = "Linear(polynomial with degree = " + (nParam-1) + " and fixed intercept) regression: "+title;
 	                break;
 	        case 49: title1 =  "Fitting multiple Gaussian distributions";
                     break;
-            case 50: title1 =  "Fitting to a non-integer polynomial";
-                    break;
-
-            default: title1 = " "+title;
+                case 50: title1 =  "Fitting to a non-integer polynomial";
+                        break;
+                case 51: title1 =  "Fitting to a five parameter logistic function";
+                        break;
+	        case 52: title1 = "Fit to a shifted Rectangular Hyperbola: "+title;
+	                break;
+                default: title1 = " "+title;
 	    }
+        
 	    return title1;
     }
 
-	// plot calculated y against experimental y
-	// no title provided
+    // plot calculated y against experimental y
+    // no title provided
     public void plotYY(){
         plotYY(this.graphTitle);
     }
 
     // plot experimental x against experimental y and against calculated y
     // linear regression data
-	// title provided
+    // title provided
     protected int plotXY(String title){
         this.graphTitle = title;
         int flag=0;
-        if(!this.linNonLin && this.nTerms>0){
-            System.out.println("You attempted to use Regression.plotXY() for a non-linear regression without providing the function reference (pointer) in the plotXY argument list");
+        if(!this.linNonLin && this.nParam>0){
+            System.out.println("You attempted to use Regression.plotXY() for a non-linear regression without providing the function reference in the plotXY argument list");
             System.out.println("No plot attempted");
             flag=-1;
             return flag;
@@ -4704,55 +7041,72 @@ public class Regression{
 
     // plot experimental x against experimental y and against calculated y
     // Linear regression data
-	// no title provided
+    // no title provided
     public int plotXY(){
-        int flag = plotXY(this.graphTitle);
+        int flag = -2;
+        if(this.multipleY){
+            System.out.println("You attempted to use Regression.plotXY() for a multiply dimensioned y array");
+            System.out.println("No plot attempted");
+        }
+        else{
+            flag = plotXY(this.graphTitle);
+        }
+        return flag;
+    }
+    
+    // plot experimental x against experimental y and against calculated y
+    // non-linear regression data
+    // title provided
+    protected int plotXY(Object regFun, String title){
+        int flag = -2;
+        if(this.multipleY){
+            System.out.println("You attempted to use Regression.plotXY() for a multiply dimensioned y array");
+            System.out.println("No plot attempted");
+        }
+        else{
+            flag = this.plotXYnonlinear(regFun, title);
+        }
         return flag;
     }
 
-    // plot experimental x against experimental y and against calculated y
-    // non-linear regression data
-	// title provided
-	// matching simplex
     protected int plotXY(RegressionFunction g, String title){
-        if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y array\nplotXY2 should have been called");
-        Object regFun = (Object)g;
-        int flag = this.plotXYnonlinear(regFun, title);
-        return flag;
+        return plotXY((Object)g, title);
     }
-
+    
+    protected int plotXY(RegressionFunction2 g, String title){
+        return plotXY((Object)g, title);
+    }
+        
+    protected int plotXY(RegressionFunction3 g, String title){
+        return plotXY((Object)g, title);
+    }
+    
+    
     // plot experimental x against experimental y and against calculated y
     // non-linear regression data
-	// title provided
-	// matching simplex2
-    protected int plotXY2(RegressionFunction2 g, String title){
-        if(!this.multipleY)throw new IllegalArgumentException("This method cannot handle singly dimensioned y array\nsimplex should have been called");
-        this.graphTitle = title;
-        Object regFun = (Object)g;
-        int flag = this.plotXYnonlinear(regFun, title);
+    // no title provided
+    protected int plotXY(Object regFun){
+        int flag = -2;
+        if(this.multipleY){
+            System.out.println("You attempted to use Regression.plotXY() for a multiply dimensioned y array");
+            System.out.println("No plot attempted");
+        }
+        else{
+            flag = this.plotXYnonlinear(regFun, this.graphTitle);
+        }
         return flag;
     }
-
-    // plot experimental x against experimental y and against calculated y
-    // non-linear regression data
-	// no title provided
-	// matches simplex
+    
     protected int plotXY(RegressionFunction g){
-        if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y array\nplotXY2 should have been called");
-        Object regFun = (Object)g;
-        int flag = this.plotXYnonlinear(regFun, this.graphTitle);
-        return flag;
+        return plotXY((Object)g);
     }
-
-    // plot experimental x against experimental y and against calculated y
-    // non-linear regression data
-	// no title provided
-	// matches simplex2
-    protected int plotXY2(RegressionFunction2 g){
-        if(!this.multipleY)throw new IllegalArgumentException("This method cannot handle singly dimensioned y array\nplotXY should have been called");
-        Object regFun = (Object)g;
-        int flag = this.plotXYnonlinear(regFun, this.graphTitle);
-        return flag;
+    
+    protected int plotXY(RegressionFunction2 g){
+        return plotXY((Object)g);
+    }
+    
+    protected int plotXY(RegressionFunction3 g){
+        return plotXY((Object)g);
     }
 
     // Add legends option
@@ -4796,7 +7150,7 @@ public class Regression{
 
         data[2][0]=xmin;
         for(int i=1; i<npoints; i++)data[2][i] = data[2][i-1] + inc;
-        if(this.nTerms==0){
+        if(this.nParam==0){
             switch(this.lastMethod){
 	        case 11: title1 = "No regression: Minimum Order Statistic Standard Gumbel (y = exp(x)exp(-exp(x))): "+this.graphTitle;
                     title2 = " points - experimental values;   line - theoretical curve;   no parameters to be estimated";
@@ -4823,12 +7177,12 @@ public class Regression{
 	                if(weightOpt)title2 = title2 +";   error bars - weighting factors";
 	                for(int i=0; i<npoints; i++)data[3][i] = best[0] + best[1]*data[2][i];
 	                break;
-	        case 1: title1 = "Linear (polynomial with degree = " + (nTerms-1) + ") regression: "+this.graphTitle;
+	        case 1: title1 = "Linear (polynomial with degree = " + (nParam-1) + ") regression: "+this.graphTitle;
 	                title2 = " points - experimental values;   line - best fit curve";
 	                if(weightOpt)title2 = title2 +";   error bars - weighting factors";
 	                for(int i=0; i<npoints; i++){
                         double sum=best[0];
-                        for(int j=1; j<this.nTerms; j++)sum+=best[j]*Math.pow(data[2][i],j);
+                        for(int j=1; j<this.nParam; j++)sum+=best[j]*Math.pow(data[2][i],j);
                         data[3][i] = sum;
                     }
 	                break;
@@ -4864,12 +7218,12 @@ public class Regression{
 	                if(weightOpt)title2 = title2 +";   error bars - weighting factors";
 	                for(int i=0; i<npoints; i++)data[3][i] = this.fixedInterceptL + best[0]*data[2][i];
 	                break;
-	        case 48: title1 = "Linear (polynomial with degree = " + nTerms + ") regression: "+this.graphTitle;
+	        case 48: title1 = "Linear (polynomial with degree = " + nParam + ") regression: "+this.graphTitle;
 	                title2 = "Fixed intercept;   points - experimental values;   line - best fit curve";
 	                if(weightOpt)title2 = title2 +";   error bars - weighting factors";
 	                for(int i=0; i<npoints; i++){
                         double sum=this.fixedInterceptP;
-                        for(int j=0; j<this.nTerms; j++)sum+=best[j]*Math.pow(data[2][i],j+1);
+                        for(int j=0; j<this.nParam; j++)sum+=best[j]*Math.pow(data[2][i],j+1);
                         data[3][i] = sum;
                     }
 	                break;
@@ -4904,19 +7258,22 @@ public class Regression{
 	}
 
     // protected method for plotting experimental x against experimental y and against calculated y
-	// Non-linear regression
-	// title provided
+    // Non-linear regression
+    // title provided
     public int plotXYnonlinear(Object regFun, String title){
         this.graphTitle = title;
         RegressionFunction g1 = null;
-	    RegressionFunction2 g2 = null;
-	    if(this.multipleY){
-            g2 = (RegressionFunction2)regFun;
+	RegressionFunction2 g2 = null;
+        RegressionFunction3 g3 = null;
+	switch(this.simplexFlag){
+            case 1: g1 = (RegressionFunction)regFun;
+                    break;
+            case 2: g2 = (RegressionFunction2)regFun;
+                    break;
+            case 3: 
+            case 4: g3 = (RegressionFunction3)regFun;
+                    break;
         }
-        else{
-            g1 = (RegressionFunction)regFun;
-        }
-
         int flag=0;  //Returned as 0 if plot data can be plotted, -1 if not
 
         if(this.lastMethod<3){
@@ -4924,146 +7281,123 @@ public class Regression{
 	        System.out.println("No plot attempted");
 	        flag=-1;
 	        return flag;
-	    }
+        }
 
-	    if(this.nXarrays>1){
-	        System.out.println("Multiple Linear Regression with more than one independent variable cannot be plotted in two dimensions");
+        if(this.nXarrays>1){
+	    System.out.println("Multiple Linear Regression with more than one independent variable cannot be plotted in two dimensions");
             System.out.println("plotYY() called instead of plotXY()");
             this.plotYY(title);
             flag=-2;
         }
-	    else{
-	        if(this.multipleY){
-	            int ncurves = 2;
-                int npoints = 200;
-                if(npoints<this.nData0)npoints=this.nData0;
-                String title1, title2;
-                int kk=0;
-                double[] wWeight = new double[this.nData0];
-                for(int jj=0; jj<this.nYarrays; jj++){
-                    double[][] data = PlotGraph.data(ncurves, npoints);
-                    for(int i=0; i<this.nData0; i++){
-                        data[0][i] = this.xData[0][kk];
-                        data[1][i] = this.yData[kk];
-                        wWeight[i] = this.weight[kk];
-                        kk++;
-                    }
-                    double xmin =Fmath.minimum(xData[0]);
-                    double xmax =Fmath.maximum(xData[0]);
-                    double inc = (xmax - xmin)/(double)(npoints - 1);
-                    data[2][0]=xmin;
-                    for(int i=1; i<npoints; i++)data[2][i] = data[2][i-1] + inc;
-                    double[] xd = new double[this.nXarrays];
-                    for(int i=0; i<npoints; i++){
-                        xd[0] = data[2][i];
-                        data[3][i] = g2.function(best, xd, jj*this.nData0);
-                    }
-
-                    // Create a title
- 	                title1 = this.setGandPtitle(title);
-    	            title2 = " points - experimental values;   line - best fit curve;  y data array " + jj;
-	                if(weightOpt)title2 = title2 +";   error bars - weighting factors";
-
-                    PlotGraph pg = new PlotGraph(data);
-                    if(plotWindowCloseChoice){
-                        pg.setCloseChoice(2);
-                    }
-                    else{
-                        pg.setCloseChoice(1);
-                    }
-
-                    pg.setGraphTitle(title1);
-                    pg.setGraphTitle2(title2);
-                    pg.setXaxisLegend(this.xLegend);
-                    pg.setYaxisLegend(this.yLegend);
-                    int[] popt = {1,0};
-                    pg.setPoint(popt);
-                    int[] lopt = {0,3};
-                    pg.setLine(lopt);
-                    if(weightOpt)pg.setErrorBars(0,wWeight);
-
-                    pg.plot();
-                }
-	        }
-	        else{
-                int ncurves = 2;
-                int npoints = 200;
-                if(npoints<this.nData0)npoints=this.nData0;
-                if(this.lastMethod==6)npoints=this.nData0;
-                String title1, title2;
-                double[][] data = PlotGraph.data(ncurves, npoints);
-                for(int i=0; i<this.nData0; i++){
+	else{
+            int ncurves = 2;
+            int npoints = 200;
+            if(npoints<this.nData0)npoints=this.nData0;
+            if(this.lastMethod==6)npoints=this.nData0;
+            String title1;
+            String title2;
+            double[][] data = PlotGraph.data(ncurves, npoints);
+            for(int i=0; i<this.nData0; i++){
                     data[0][i] = this.xData[0][i];
                     data[1][i] = this.yData[i];
-                }
-                if(this.lastMethod==6){
+            }
+            if(this.lastMethod==6){
                     double[] xd = new double[this.nXarrays];
                     for(int i=0; i<npoints; i++){
                         data[2][i]=data[0][i];
-                        xd[0] = data[2][i];
+                     xd[0] = data[2][i];
                         data[3][i] = g1.function(best, xd);
                     }
-                }
-                else{
+            }
+            else{
                     double xmin =Fmath.minimum(xData[0]);
                     double xmax =Fmath.maximum(xData[0]);
                     double inc = (xmax - xmin)/(double)(npoints - 1);
                     data[2][0]=xmin;
                     for(int i=1; i<npoints; i++)data[2][i] = data[2][i-1] + inc;
+                    data[2][npoints-1] = xmax;
                     double[] xd = new double[this.nXarrays];
-                    for(int i=0; i<npoints; i++){
-                        xd[0] = data[2][i];
-                        data[3][i] = g1.function(best, xd);
+                    switch(this.simplexFlag){                            
+                            case 1: for(int i=0; i<npoints; i++){
+                                        xd[0] = data[2][i];
+                                        data[3][i] = g1.function(best, xd);
+                                    }
+                                    break;
+                            case 2: CubicSpline cs = new CubicSpline(this.xData[0], this.yCalc);
+                                    for(int i=0; i<npoints; i++)data[3][i] = cs.interpolate(data[2][i]);
+                                    break;   
+                            case 3: 
+                            case 4: boolean testlm = false;
+                                    for(int i = 0; i<nSpecDual; i++)if(this.lastMethod==this.dualMethods[i])testlm = true;
+                                    if(testlm){
+                                       for(int i=0; i<npoints; i++){
+                                            xd[0] = data[2][i];
+                                            data[3][i] = (g3.function(best, xd, -1))[0];
+                                        }
+                                    }
+                                    else{
+                                        CubicSpline cs2 = new CubicSpline(this.xData[0], this.yCalc);
+                                        for(int i=0; i<npoints; i++)data[3][i] = cs2.interpolate(data[2][i]);
+                                    }
+                                    break;  
                     }
-                }
+            }
+        
+            // Create a title
+ 	    title1 = this.setGandPtitle(title);
+    	    title2 = " points - experimental values;   line - best fit curve";
+	    if(weightOpt)title2 = title2 +";   error bars - weighting factors";
 
-                // Create a title
- 	            title1 = this.setGandPtitle(title);
-    	        title2 = " points - experimental values;   line - best fit curve";
-	            if(weightOpt)title2 = title2 +";   error bars - weighting factors";
-
-                PlotGraph pg = new PlotGraph(data);
-                if(plotWindowCloseChoice){
+            PlotGraph pg = new PlotGraph(data);
+            if(plotWindowCloseChoice){
                     pg.setCloseChoice(2);
-                }
-                else{
+            }
+            else{
                     pg.setCloseChoice(1);
-                }
+            }
 
-                pg.setGraphTitle(title1);
-                pg.setGraphTitle2(title2);
-                pg.setXaxisLegend(this.xLegend);
-                pg.setYaxisLegend(this.yLegend);
-                int[] popt = {1,0};
-                pg.setPoint(popt);
-                int[] lopt = {0,3};
-                pg.setLine(lopt);
+            pg.setGraphTitle(title1);
+            pg.setGraphTitle2(title2);
+            pg.setXaxisLegend(this.xLegend);
+            pg.setYaxisLegend(this.yLegend);
+            int[] popt = {1,0};
+            pg.setPoint(popt);
+            int[] lopt = {0,3};
+            pg.setLine(lopt);
 
-                if(weightOpt)pg.setErrorBars(0,this.weight);
+            if(weightOpt)pg.setErrorBars(0,this.weight);
 
-                pg.plot();
-	        }
-	    }
+            pg.plot();
+        }
+    
         return flag;
-	}
+    }
 
     // protected method for plotting experimental x against experimental y and against calculated y
 	// Non-linear regression
 	// all parameters fixed
     public int plotXYfixed(Object regFun, String title){
-        this.graphTitle = title;
-        RegressionFunction g1 = null;
-	    RegressionFunction2 g2 = null;
-	    if(this.multipleY){
-            g2 = (RegressionFunction2)regFun;
+        int flag=0;  //Returned as 0 if plot data can be plotted, -1 if not
+        if(this.multipleY){
+            System.out.println("You attempted to use Regression.plotXY() for a multiply dimensioned y array");
+            System.out.println("No plot attempted");
+            flag = -1;
         }
         else{
-            g1 = (RegressionFunction)regFun;
-        }
+            RegressionFunction g1 = null;
+            RegressionFunction2 g2 = null;
+            RegressionFunction3 g3 = null;
+            switch(this.simplexFlag){
+                case 1: g1 = (RegressionFunction)regFun;
+                        break;
+                case 2: g2 = (RegressionFunction2)regFun;
+                        break;
+                case 3: 
+                case 4: g3 = (RegressionFunction3)regFun;
+                        break;
+            }
 
-        int flag=0;  //Returned as 0 if plot data can be plotted, -1 if not
-
-        if(this.lastMethod<3){
+            if(this.lastMethod<3){
 	        System.out.println("Regression.plotXY(non-linear): lastMethod, "+lastMethod+", either not recognised or cannot be plotted in two dimensions");
 	        System.out.println("No plot attempted");
 	        flag=-1;
@@ -5072,65 +7406,12 @@ public class Regression{
 
 
 	    if(this.nXarrays>1){
-	        System.out.println("Multiple Linear Regression with more than one independent variable cannot be plotted in two dimensions");
-            System.out.println("plotYY() called instead of plotXY()");
-            this.plotYY(title);
-            flag=-2;
-        }
+                System.out.println("Multiple Linear Regression with more than one independent variable cannot be plotted in two dimensions");
+                System.out.println("plotYY() called instead of plotXY()");
+                this.plotYY(title);
+                flag=-2;
+            }
 	    else{
-	        if(this.multipleY){
-	            int ncurves = 2;
-                int npoints = 200;
-                if(npoints<this.nData0)npoints=this.nData0;
-                String title1, title2;
-                int kk=0;
-                double[] wWeight = new double[this.nData0];
-                for(int jj=0; jj<this.nYarrays; jj++){
-                    double[][] data = PlotGraph.data(ncurves, npoints);
-                    for(int i=0; i<this.nData0; i++){
-                        data[0][i] = this.xData[0][kk];
-                        data[1][i] = this.yData[kk];
-                        wWeight[i] = this.weight[kk];
-                        kk++;
-                    }
-                    double xmin =Fmath.minimum(xData[0]);
-                    double xmax =Fmath.maximum(xData[0]);
-                    double inc = (xmax - xmin)/(double)(npoints - 1);
-                    data[2][0]=xmin;
-                    for(int i=1; i<npoints; i++)data[2][i] = data[2][i-1] + inc;
-                    double[] xd = new double[this.nXarrays];
-                    for(int i=0; i<npoints; i++){
-                        xd[0] = data[2][i];
-                        data[3][i] = g2.function(this.values, xd, jj*this.nData0);
-                    }
-
-                    // Create a title
- 	                title1 = this.setGandPtitle(title);
-    	            title2 = " points - experimental values;   line - best fit curve;  y data array " + jj;
-	                if(weightOpt)title2 = title2 +";   error bars - weighting factors";
-
-                    PlotGraph pg = new PlotGraph(data);
-                    if(plotWindowCloseChoice){
-                        pg.setCloseChoice(2);
-                    }
-                    else{
-                        pg.setCloseChoice(1);
-                    }
-
-                    pg.setGraphTitle(title1);
-                    pg.setGraphTitle2(title2);
-                    pg.setXaxisLegend(this.xLegend);
-                    pg.setYaxisLegend(this.yLegend);
-                    int[] popt = {1,0};
-                    pg.setPoint(popt);
-                    int[] lopt = {0,3};
-                    pg.setLine(lopt);
-                    if(weightOpt)pg.setErrorBars(0,wWeight);
-
-                    pg.plot();
-                }
-	        }
-	        else{
                 int ncurves = 2;
                 int npoints = 200;
                 if(npoints<this.nData0)npoints=this.nData0;
@@ -5156,9 +7437,29 @@ public class Regression{
                     data[2][0]=xmin;
                     for(int i=1; i<npoints; i++)data[2][i] = data[2][i-1] + inc;
                     double[] xd = new double[this.nXarrays];
-                    for(int i=0; i<npoints; i++){
-                        xd[0] = data[2][i];
-                        data[3][i] = g1.function(this.values, xd);
+                    switch(this.simplexFlag){                            
+                            case 1: for(int i=0; i<npoints; i++){
+                                        xd[0] = data[2][i];
+                                        data[3][i] = g1.function(best, xd);
+                                    }
+                                    break;
+                            case 2: CubicSpline cs = new CubicSpline(this.xData[0], this.yCalc);
+                                    for(int i=0; i<npoints; i++)data[3][i] = cs.interpolate(data[2][i]);
+                                    break;   
+                            case 3: 
+                            case 4: boolean testlm = false;
+                                    for(int i = 0; i<nSpecDual; i++)if(this.lastMethod==this.dualMethods[i])testlm = true;
+                                    if(testlm){
+                                        for(int i=0; i<npoints; i++){
+                                            xd[0] = data[2][i];
+                                            data[3][i] = (g3.function(best, xd, -1))[0];
+                                        }
+                                    }
+                                    else{
+                                        CubicSpline cs2 = new CubicSpline(this.xData[0], this.yCalc);
+                                        for(int i=0; i<npoints; i++)data[3][i] = cs2.interpolate(data[2][i]);
+                                    }
+                                    break;  
                     }
                 }
 
@@ -5188,12 +7489,25 @@ public class Regression{
                 if(weightOpt)pg.setErrorBars(0,this.weight);
 
                 pg.plot();
-	        }
-	    }
-        return flag;
+            }  
 	}
+        return flag;
+    }
 
-
+    // Get the weight
+    public double[] getWeights(){
+        return this.weight;
+    }
+    // Get the number of parameters
+    public int getNparameters(){
+        return this.nParam;
+    }
+    
+    // Get the number of data points used
+    public int getNdata(){
+        return this.nData;
+    }
+    
     // Get the non-linear regression status
     // true if convergence was achieved
     // false if convergence not achieved before maximum number of iterations
@@ -5216,7 +7530,7 @@ public class Regression{
 
     // Get scaling factors
     public double[] getScale(){
-        return this.scale;
+        return Conv.copy(this.scale);
     }
 
 	// Reset the non-linear regression convergence test option
@@ -5234,6 +7548,11 @@ public class Regression{
 	public double getSimplexSd(){
 	    return this.simplexSd;
 	}
+        
+        // Get variance of the observations
+        public double getVarianceOfObserations(){
+            return this.obsnVariance;
+        }
 
     // Get the best estimates of the unknown parameters
 	public double[] getBestEstimates(){
@@ -5287,9 +7606,9 @@ public class Regression{
 
 	// Get the cofficients of variations of the best estimates of the unknown parameters
 	public double[] getCoeffVar(){
-	    double[] coeffVar = new double[this.nTerms];
+	    double[] coeffVar = new double[this.nParam];
 
-	    for(int i=0; i<this.nTerms; i++){
+	    for(int i=0; i<this.nParam; i++){
     	    coeffVar[i]=bestSd[i]*100.0D/best[i];
  	    }
 	    return coeffVar;
@@ -5357,19 +7676,19 @@ public class Regression{
 	}
 
 	// Get the weighted sum of squares of the residuals
-	// returns sum of squares if no weights have been entered
+	// returns sum of squares if no weight have been entered
     public double getSumOfWeightedResidualSquares(){
 	    return this.chiSquare;
 	}
 
 	// Get the chi square estimate
-	// returns sum of squares if no weights have been entered
+	// returns sum of squares if no weight have been entered
 	public double getChiSquare(){
 		return this.chiSquare;
 	}
 
 	// Get the reduced chi square estimate
-	// Returns reduced sum of squares if no weights have been entered
+	// Returns reduced sum of squares if no weight have been entered
 	public double getReducedChiSquare(){
 	    return this.reducedChiSquare;
 	}
@@ -5413,19 +7732,23 @@ public class Regression{
 
 	// Get the covariance matrix
 	public double[][] getCovMatrix(){
-	    return this.covar;
+	    return Conv.copy(this.covar);
 	}
 
 	// Get the correlation coefficient matrix
 	public double[][] getCorrCoeffMatrix(){
-	    return this.corrCoeff;
+	    return Conv.copy(this.corrCoeff);
 	}
 
+        // get first derivatives
+        public double[][] getFirstDerivatives(){
+            return Conv.copy(this.firstDerivs);
+        }
+        
 	// Get the number of iterations in nonlinear regression
 	public int getNiter(){
 	    return this.nIter;
 	}
-
 
 	// Set the maximum number of iterations allowed in nonlinear regression
 	public void setNmax(int nmax){
@@ -5435,6 +7758,16 @@ public class Regression{
 	// Get the maximum number of iterations allowed in nonlinear regression
 	public int getNmax(){
 	    return this.nMax;
+	}
+
+	// Set the minimum number of iterations required in nonlinear regression
+	public void setNmin(int nmin){
+	    this.minIter = nmin;
+	}
+
+	// Get the minimum number of iterations required in nonlinear regression
+	public int getNmin(){
+	    return this.minIter;
 	}
 
 	// Get the number of restarts in nonlinear regression
@@ -5489,6 +7822,7 @@ public class Regression{
 	// Set the non-linear regression tolerance
 	public void setTolerance(double tol){
 	    this.fTol = tol;
+	    // this.reassessFtol();
 	}
 
 
@@ -5524,28 +7858,56 @@ public class Regression{
 
 
     // Test of an additional terms  {extra sum of squares]
-    // return F-ratio, probability, order check and values provided in order used, as Vector
-    public static Vector<Object> testOfAdditionalTerms(double chiSquareR, int nParametersR, double chiSquareF, int nParametersF, int nPoints){
+    // Enter reduced model parameters first and full model parameters second
+    // returns as a ArrayList:
+    //  F-ratio
+    //  F-ratio probability
+    //  a boolean which = false if model order retained, = true if model order reversed;
+    //  chi-square of the reduced model
+    //  number of parameters of the reduced model
+    //  chi-square of the full model
+    //  number of parameters of the full model
+    //  F-ratio at the chosen significance level (program default value = 0.05)
+    public static ArrayList<Object> testOfAdditionalTerms(double chiSquareR, int nParametersR, double chiSquareF, int nParametersF, int nPoints){
+        return Regression.testOfAdditionalTerms(chiSquareR, nParametersR, chiSquareF, nParametersF, nPoints, 0.05);
+    }
+
+    public static ArrayList<Object> testOfAdditionalTerms(double chiSquareR, int nParametersR, double chiSquareF, int nParametersF, int nPoints, double significance){
         ArrayList<Object> res = Regression.testOfAdditionalTerms_ArrayList(chiSquareR, nParametersR, chiSquareF, nParametersF, nPoints);
-        Vector<Object> ret = null;
+        ArrayList<Object> ret = null;
         if(res!=null){
             int n = ret.size();
-            ret = new Vector<Object>(n);
-            for(int i=0; i<n; i++)ret.addElement(res.get(i));
+            ret = new ArrayList<Object>(n);
+            for(int i=0; i<n; i++)ret.add(res.get(i));
         }
         return ret;
     }
 
     // Test of an additional terms  {extra sum of squares]
-    // return F-ratio, probability, order check and values provided in order used, as Vector
-    public static Vector<Object> testOfAdditionalTerms_Vector(double chiSquareR, int nParametersR, double chiSquareF, int nParametersF, int nPoints){
-        return Regression.testOfAdditionalTerms(chiSquareR, nParametersR, chiSquareF, nParametersF, nPoints);
+    public static ArrayList<Object> testOfAdditionalTerms_ArrayList(double chiSquareR, int nParametersR, double chiSquareF, int nParametersF, int nPoints){
+        return Regression.testOfAdditionalTerms(chiSquareR, nParametersR, chiSquareF, nParametersF, nPoints, 0.05);
     }
 
+    public static ArrayList<Object> testOfAdditionalTerms_ArrayList(double chiSquareR, int nParametersR, double chiSquareF, int nParametersF, int nPoints, double significance){
+        return Regression.testOfAdditionalTerms(chiSquareR, nParametersR, chiSquareF, nParametersF, nPoints, significance);
+    }
 
     // Test of an additional terms  {extra sum of squares]
-    // return F-ratio, probability, order check and values provided in order used, as ArrayList
-    public static ArrayList<Object> testOfAdditionalTerms_ArrayList(double chiSquareR, int nParametersR, double chiSquareF, int nParametersF, int nPoints){
+    // Enter reduced model parameters first and full model parameters second
+    // returns as an ArrayList:
+    //  F-ratio
+    //  F-ratio probability
+    //  a boolean which = false if model order retained, = true if model order reversed;
+    //  chi-square of the reduced model
+    //  number of parameters of the reduced model
+    //  chi-square of the full model
+    //  number of parameters of the full model
+    //  F-ratio at the chosen significance level (program default value = 0.05)
+    //public static ArrayList<Object> testOfAdditionalTerms_ArrayList(double chiSquareR, int nParametersR, double chiSquareF, int nParametersF, int nPoints){
+      //  return Regression.testOfAdditionalTerms_ArrayList(chiSquareR, nParametersR, chiSquareF, nParametersF, nPoints, 0.05);
+    //}
+
+    /*public static ArrayList<Object> testOfAdditionalTerms_ArrayList(double chiSquareR, int nParametersR, double chiSquareF, int nParametersF, int nPoints, double significance){
         int degFreedomR = nPoints - nParametersR;
         int degFreedomF = nPoints - nParametersF;
 
@@ -5587,13 +7949,18 @@ public class Regression{
         arrayl.add(new Double(chiSquareF));
         arrayl.add(new Integer(nParametersF));
         arrayl.add(new Integer(nPoints));
+        arrayl.add(new Double(Stat.fTestValueGivenFprob(significance, degFreedomD, degFreedomF)));
 
         return arrayl;
     }
-
+*/
     // Test of an additional terms  {extra sum of squares]
     // return F-ratio only
-    public double testOfAdditionalTermsFratio(double chiSquareR, int nParametersR, double chiSquareF, int nParametersF, int nPoints){
+    public static double testOfAdditionalTermsFratio(double chiSquareR, int nParametersR, double chiSquareF, int nParametersF, int nPoints){
+        return Regression.testOfAdditionalTermsFratio(chiSquareR, nParametersR, chiSquareF, nParametersF, nPoints, 0.05);
+    }
+
+    public static double testOfAdditionalTermsFratio(double chiSquareR, int nParametersR, double chiSquareF, int nParametersF, int nPoints,  double significance){
         int degFreedomR = nPoints - nParametersR;
         int degFreedomF = nPoints - nParametersF;
 
@@ -5625,7 +7992,11 @@ public class Regression{
 
     // Test of an additional terms  {extra sum of squares]
     // return F-distribution probablity only
-    public double testOfAdditionalTermsFprobability(double chiSquareR, int nParametersR, double chiSquareF, int nParametersF, int nPoints){
+    public static double testOfAdditionalTermsFprobability(double chiSquareR, int nParametersR, double chiSquareF, int nParametersF, int nPoints){
+        return Regression.testOfAdditionalTermsFprobability(chiSquareR, nParametersR, chiSquareF, nParametersF, nPoints, 0.05);
+    }
+
+    public static double testOfAdditionalTermsFprobability(double chiSquareR, int nParametersR, double chiSquareF, int nParametersF, int nPoints, double significance){
         int degFreedomR = nPoints - nParametersR;
         int degFreedomF = nPoints - nParametersF;
 
@@ -5660,12 +8031,14 @@ public class Regression{
         return fProb;
     }
 
-    public double testOfAdditionalTermsFprobabilty(double chiSquareR, int nParametersR, double chiSquareF, int nParametersF, int nPoints){
-        return testOfAdditionalTermsFprobability(chiSquareR, nParametersR, chiSquareF, nParametersF, nPoints);
+    // name typo: kept for compatibility
+    public static double testOfAdditionalTermsFprobabilty(double chiSquareR, int nParametersR, double chiSquareF, int nParametersF, int nPoints){
+        return Regression.testOfAdditionalTermsFprobability(chiSquareR, nParametersR, chiSquareF, nParametersF, nPoints, 0.05);
     }
 
 
     // FIT TO SPECIAL FUNCTIONS
+    
 	// Fit to a Poisson distribution
 	public void poisson(){
 	    this.userSupplied = false;
@@ -5680,12 +8053,12 @@ public class Regression{
 
 	protected void fitPoisson(int plotFlag){
         if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
-	    this.lastMethod=6;
+	    this.lastMethod = 6;
 	    this.linNonLin = false;
 	    this.zeroCheck = false;
-	    this.nTerms=2;
-	    if(!this.scaleFlag)this.nTerms=2;
-	    this.degreesOfFreedom=this.nData - this.nTerms;
+	    this.nParam=2;
+	    if(!this.scaleFlag)this.nParam=2;
+	    this.degreesOfFreedom=this.nData - this.nParam;
 	    if(this.degreesOfFreedom<1)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
 
 	    // Check all abscissae are integers
@@ -5706,8 +8079,8 @@ public class Regression{
 	    double peak = tempd.doubleValue();
 
 	    // Fill arrays needed by the Simplex
-        double[] start = new double[this.nTerms];
-        double[] step = new double[this.nTerms];
+        double[] start = new double[this.nParam];
+        double[] step = new double[this.nParam];
         start[0] = mean;
         if(this.scaleFlag){
             start[1] = peak/(Math.exp(mean*Math.log(mean)-Stat.logFactorial(mean))*Math.exp(-mean));
@@ -5729,11 +8102,14 @@ public class Regression{
 	    // Nelder and Mead Simplex Regression
         PoissonFunction f = new PoissonFunction();
         this.addConstraint(1,-1,0.0D);
-        f.scaleOption = this.scaleFlag;
-        f.scaleFactor = this.yScaleFactor;
-
+        f.setScaleOption(this.scaleFlag);
+        f.setScaleFactor(this.yScaleFactor);
+       
         Object regFun2 = (Object) f;
-        this.nelderMead(regFun2, start, step, this.fTol, this.nMax);
+        this.simplexFlag = 1;
+        this.nonLinStatsNeeded = true;
+        this.dualErrorsRequired = false;
+        this.nelderMead(regFun2, null, start, step, this.fTol, this.nMax);
 
         if(plotFlag==1){
             // Print results
@@ -5774,12 +8150,12 @@ public class Regression{
     // Fit data to a Gaussian (normal) probability function
 	protected void fitGaussian(int plotFlag){
         if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
-	    this.lastMethod=4;
+	    this.lastMethod = 4;
 	    this.linNonLin = false;
 	    this.zeroCheck = false;
-	    this.nTerms=3;
-	    if(!this.scaleFlag)this.nTerms=2;
-	    this.degreesOfFreedom=this.nData - this.nTerms;
+	    this.nParam=3;
+	    if(!this.scaleFlag)this.nParam=2;
+	    this.degreesOfFreedom=this.nData - this.nParam;
 	    if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
 
 	    // order data into ascending order of the abscissae
@@ -5817,8 +8193,8 @@ public class Regression{
 	    ym=ym*sd*Math.sqrt(2.0D*Math.PI);
 
         // Fill arrays needed by the Simplex
-        double[] start = new double[this.nTerms];
-        double[] step = new double[this.nTerms];
+        double[] start = new double[this.nParam];
+        double[] step = new double[this.nParam];
         start[0] = mean;
         start[1] = sd;
         if(this.scaleFlag){
@@ -5842,11 +8218,15 @@ public class Regression{
 	    // Nelder and Mead Simplex Regression
         GaussianFunction f = new GaussianFunction();
         this.addConstraint(1,-1, 0.0D);
-        f.scaleOption = this.scaleFlag;
-        f.scaleFactor = this.yScaleFactor;
+        f.setScaleOption(this.scaleFlag);
+        f.setScaleFactor(this.yScaleFactor);
+
 
         Object regFun2 = (Object)f;
-        this.nelderMead(regFun2, start, step, this.fTol, this.nMax);
+        this.simplexFlag = 1;
+        this.nonLinStatsNeeded = true;
+        this.dualErrorsRequired = false;
+        this.nelderMead(regFun2, null, start, step, this.fTol, this.nMax);
 
         if(plotFlag==1){
             // Print results
@@ -5904,14 +8284,14 @@ public class Regression{
     // parameter order - mean, sd, scale factor
 	protected void fitGaussianFixed(double[] initialEstimates, boolean[] fixed, int plotFlag){
         if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
-	    this.lastMethod=38;
+	    this.lastMethod = 38;
 	    this.values = initialEstimates;
 	    this.fixed = fixed;
 	    this.scaleFlag=true;
 	    this.linNonLin = false;
 	    this.zeroCheck = false;
-	    this.nTerms=3;
-	    this.degreesOfFreedom=this.nData - this.nTerms;
+	    this.nParam=3;
+	    this.degreesOfFreedom=this.nData - this.nParam;
 	    if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
 
 	    // order data into ascending order of the abscissae
@@ -5935,12 +8315,12 @@ public class Regression{
 
         // Create instance of GaussianFunctionFixed
         GaussianFunctionFixed f = new GaussianFunctionFixed();
-        f.fixed = fixed;
-        f.param = initialEstimates;
+        f.setFixed(fixed);
+        f.setParam(initialEstimates);
 
         // Determine unknowns
-        int nT = this.nTerms;
-        for(int i=0; i<this.nTerms; i++)if(fixed[i])nT--;
+        int nT = this.nParam;
+        for(int i=0; i<this.nParam; i++)if(fixed[i])nT--;
         if(nT==0){
             if(plotFlag==0){
                 throw new IllegalArgumentException("At least one parameter must be available for variation by the Regression procedure or GauasianPlot should have been called and not Gaussian");
@@ -5967,7 +8347,7 @@ public class Regression{
             }
         }
         int ii = 0;
-        for(int i=0; i<this.nTerms; i++){
+        for(int i=0; i<this.nParam; i++){
             if(!fixed[i]){
                 start[ii] = initialEstimates[i];
                 step[ii] = start[ii]*0.1D;
@@ -5977,14 +8357,17 @@ public class Regression{
                 ii++;
             }
         }
-        this.nTerms = nT;
+        this.nParam = nT;
 
 	    // Nelder and Mead Simplex Regression
-	    for(int i=0; i<this.nTerms; i++){
+	    for(int i=0; i<this.nParam; i++){
             if(constraint[i])this.addConstraint(i,-1, 0.0D);
         }
         Object regFun2 = (Object)f;
-        if(plotFlag!=3)this.nelderMead(regFun2, start, step, this.fTol, this.nMax);
+        this.simplexFlag = 1;
+        this.nonLinStatsNeeded = true;
+        this.dualErrorsRequired = false;
+        if(plotFlag!=3)this.nelderMead(regFun2, null, start, step, this.fTol, this.nMax);
 
         if(plotFlag==1){
             // Print results
@@ -6012,12 +8395,12 @@ public class Regression{
 	public void multipleGaussiansPlot(int nGaussians, double[] initMeans, double[] initSDs, double[] initFracts){
         if(initMeans.length!=nGaussians)throw new IllegalArgumentException("length of initial means array, " + initMeans.length + ", does not equal the number of Gaussians, " + nGaussians);
         if(initSDs.length!=nGaussians)throw new IllegalArgumentException("length of initial standard deviations array, " + initSDs.length + ", does not equal the number of Gaussians, " + nGaussians);
-        if(initFracts.length!=nGaussians)throw new IllegalArgumentException("length of initial fractional weights array, " + initFracts.length + ", does not equal the number of Gaussians, " + nGaussians);
+        if(initFracts.length!=nGaussians)throw new IllegalArgumentException("length of initial fractional weight array, " + initFracts.length + ", does not equal the number of Gaussians, " + nGaussians);
         double sum = 0.0;
         for(int i=0; i<nGaussians; i++)sum += initFracts[i];
         if(sum!=1.0){
-            System.out.println("Regression method multipleGaussiansPlot: the sum of the initial estimates of the fractional weights, " + sum + ", does not equal 1.0");
-            System.out.println("Program continued using the supplied fractional weights");
+            System.out.println("Regression method multipleGaussiansPlot: the sum of the initial estimates of the fractional weight, " + sum + ", does not equal 1.0");
+            System.out.println("Program continued using the supplied fractional weight");
         }
 	    this.fitMultipleGaussians(nGaussians, initMeans, initSDs, initFracts, 1);
 	}
@@ -6027,13 +8410,13 @@ public class Regression{
 	protected void fitMultipleGaussians(int nGaussians, double[] initMeans, double[] initSDs, double[] initFracts, int plotFlag){
 	    this.nGaussians = nGaussians;
         if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
-	    this.lastMethod=49;
+	    this.lastMethod = 49;
 	    this.linNonLin = false;
 	    this.zeroCheck = false;
-	    this.nTerms=3*this.nGaussians;
+	    this.nParam=3*this.nGaussians;
 	    boolean scaleFlagHold = this.scaleFlag;
 	    this.scaleFlag = false;
-	    this.degreesOfFreedom=this.nData - this.nTerms;
+	    this.degreesOfFreedom=this.nData - this.nParam;
 	    if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
         int nMaxHold = this.nMax;
         if(this.nMax<10000)this.nMax = 10000;
@@ -6073,8 +8456,8 @@ public class Regression{
 
 
         // Fill arrays needed by the Simplex
-        double[] start = new double[this.nTerms];
-        double[] step = new double[this.nTerms];
+        double[] start = new double[this.nParam];
+        double[] step = new double[this.nParam];
         int counter = 0;
         for(int i=0; i<nGaussians; i++){
             start[counter] = initMeans[i];
@@ -6100,11 +8483,11 @@ public class Regression{
         // Nelder and Mead Simplex Regression
         MultipleGaussianFunction f = new MultipleGaussianFunction();
 
-        f.scaleOption = this.scaleFlag;
+        f.setScaleOption(this.scaleFlag);
         double ysf = this.yScaleFactor;
         if(!this.scaleFlag)ysf = 1.0;
-        f.scaleFactor = ysf;
-        f.nGaussians = this.nGaussians;
+        f.setScaleFactor(ysf);
+        f.setNgaussians(this.nGaussians);
 
         // Add constraints
         for(int i=0; i<this.nGaussians; i++){
@@ -6113,7 +8496,10 @@ public class Regression{
         }
 
         Object regFun2 = (Object)f;
-        this.nelderMead(regFun2, start, step, this.fTol, this.nMax);
+        this.simplexFlag = 1;
+        this.nonLinStatsNeeded = true;
+        this.dualErrorsRequired = false;
+        this.nelderMead(regFun2, null, start, step, this.fTol, this.nMax);
 
         this.multGaussFract = new double[this.nGaussians];
         this.multGaussFractErrors = new double[this.nGaussians];
@@ -6228,13 +8614,13 @@ public class Regression{
     // Fit data to a two parameterlog-normal probability function
 	protected void fitLogNormalTwoPar(int plotFlag){
         if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
-	    this.lastMethod=36;
+	    this.lastMethod = 36;
 	    this.userSupplied = false;
 	    this.linNonLin = false;
 	    this.zeroCheck = false;
-	    this.nTerms=3;
-	    if(!this.scaleFlag)this.nTerms=2;
-	    this.degreesOfFreedom=this.nData - this.nTerms;
+	    this.nParam=3;
+	    if(!this.scaleFlag)this.nParam=2;
+	    this.degreesOfFreedom=this.nData - this.nParam;
 	    if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
 
 	    // order data into ascending order of the abscissae
@@ -6279,8 +8665,8 @@ public class Regression{
 	    ym=ym*Math.exp(mu - sigma*sigma/2);
 
         // Fill arrays needed by the Simplex
-        double[] start = new double[this.nTerms];
-        double[] step = new double[this.nTerms];
+        double[] start = new double[this.nParam];
+        double[] step = new double[this.nParam];
         start[0] = mu;
         start[1] = sigma;
         if(this.scaleFlag){
@@ -6315,10 +8701,14 @@ public class Regression{
 	    // Nelder and Mead Simplex Regression
         LogNormalTwoParFunction f = new LogNormalTwoParFunction();
         this.addConstraint(1,-1,0.0D);
-        f.scaleOption = this.scaleFlag;
-        f.scaleFactor = this.yScaleFactor;
+        f.setScaleOption(this.scaleFlag);
+        f.setScaleFactor(this.yScaleFactor);
+
         Object regFun2 = (Object)f;
-        this.nelderMead(regFun2, start, step, this.fTol, this.nMax);
+        this.simplexFlag = 1;
+        this.nonLinStatsNeeded = true;
+        this.dualErrorsRequired = false;
+        this.nelderMead(regFun2, null, start, step, this.fTol, this.nMax);
 
         if(plotFlag==1){
             // Print results
@@ -6352,13 +8742,13 @@ public class Regression{
     // Fit data to a three parameter log-normal probability function
 	protected void fitLogNormalThreePar(int plotFlag){
         if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
-	    this.lastMethod=37;
+	    this.lastMethod = 37;
 	    this.userSupplied = false;
 	    this.linNonLin = false;
 	    this.zeroCheck = false;
-	    this.nTerms=4;
-	    if(!this.scaleFlag)this.nTerms=3;
-	    this.degreesOfFreedom=this.nData - this.nTerms;
+	    this.nParam=4;
+	    if(!this.scaleFlag)this.nParam=3;
+	    this.degreesOfFreedom=this.nData - this.nParam;
 	    if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
 
 	    // order data into ascending order of the abscissae
@@ -6414,8 +8804,8 @@ public class Regression{
 	    ym=ym*(gamma+alpha)*Math.exp(- beta*beta/2);
 
         // Fill arrays needed by the Simplex
-        double[] start = new double[this.nTerms];
-        double[] step = new double[this.nTerms];
+        double[] start = new double[this.nParam];
+        double[] step = new double[this.nParam];
         start[0] = alpha;
         start[1] = beta;
         start[2] = gamma;
@@ -6436,10 +8826,14 @@ public class Regression{
         this.addConstraint(1,-1,0.0D);
         this.addConstraint(2,-1,0.0D);
 
-        f.scaleOption = this.scaleFlag;
-        f.scaleFactor = this.yScaleFactor;
+        f.setScaleOption(this.scaleFlag);
+        f.setScaleFactor(this.yScaleFactor);
+  
         Object regFun2 = (Object)f;
-        this.nelderMead(regFun2, start, step, this.fTol, this.nMax);
+        this.simplexFlag = 1;
+        this.nonLinStatsNeeded = true;
+        this.dualErrorsRequired = false;
+        this.nelderMead(regFun2, null, start, step, this.fTol, this.nMax);
 
         if(plotFlag==1){
             // Print results
@@ -6472,13 +8866,13 @@ public class Regression{
 
 	protected void fitLorentzian(int allTest){
         if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
-	    this.lastMethod=5;
+	    this.lastMethod = 5;
 	    this.userSupplied = false;
 	    this.linNonLin = false;
 	    this.zeroCheck = false;
-	    this.nTerms=3;
-	    if(!this.scaleFlag)this.nTerms=2;
-	    this.degreesOfFreedom=this.nData - this.nTerms;
+	    this.nParam=3;
+	    if(!this.scaleFlag)this.nParam=2;
+	    this.degreesOfFreedom=this.nData - this.nParam;
 	    if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
 
         // order data into ascending order of the abscissae
@@ -6516,8 +8910,8 @@ public class Regression{
 	    ym=ym*sd*Math.PI/2.0D;
 
         // Fill arrays needed by the Simplex
-        double[] start = new double[this.nTerms];
-        double[] step = new double[this.nTerms];
+        double[] start = new double[this.nParam];
+        double[] step = new double[this.nParam];
         start[0] = mean;
         start[1] = sd*0.9D;
         if(this.scaleFlag){
@@ -6541,10 +8935,14 @@ public class Regression{
 	    // Nelder and Mead Simplex Regression
         LorentzianFunction f = new LorentzianFunction();
         this.addConstraint(1,-1,0.0D);
-        f.scaleOption = this.scaleFlag;
-        f.scaleFactor = this.yScaleFactor;
+        f.setScaleOption(this.scaleFlag);
+        f.setScaleFactor(this.yScaleFactor);
+
         Object regFun2 = (Object)f;
-        this.nelderMead(regFun2, start, step, this.fTol, this.nMax);
+        this.simplexFlag = 1;
+        this.nonLinStatsNeeded = true;
+        this.dualErrorsRequired = false;
+        this.nelderMead(regFun2, null, start, step, this.fTol, this.nMax);
 
         if(allTest==1){
             // Print results
@@ -7000,17 +9398,17 @@ public class Regression{
         if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
         this.userSupplied = false;
 	    switch(typeFlag){
-    	    case 0: this.lastMethod=13;
-	                this.nTerms=4;
+    	    case 0: this.lastMethod = 13;
+	                this.nParam=4;
 	                break;
-	        case 1: this.lastMethod=14;
-	                this.nTerms=3;
+	        case 1: this.lastMethod = 14;
+	                this.nParam=3;
 	                break;
-	        case 2: this.lastMethod=15;
-	                this.nTerms=2;
+	        case 2: this.lastMethod = 15;
+	                this.nParam=2;
 	                break;
         }
-	    if(!this.scaleFlag)this.nTerms=this.nTerms-1;
+	    if(!this.scaleFlag)this.nParam=this.nParam-1;
         this.frechetWeibull=true;
         this.fitFrechetWeibull(allTest, typeFlag);
     }
@@ -7020,7 +9418,7 @@ public class Regression{
         if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
 	    this.linNonLin = false;
 	    this.zeroCheck = false;
-	    this.degreesOfFreedom=this.nData - this.nTerms;
+	    this.degreesOfFreedom=this.nData - this.nParam;
 	    if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
 
         // order data into ascending order of the abscissae
@@ -7145,9 +9543,9 @@ public class Regression{
 		this.statFlag=false;
 
         // Fill arrays needed by the Simplex
-        double[] start = new double[this.nTerms];
-        double[] step = new double[this.nTerms];
-        for(int i=0; i<this.nTerms; i++){
+        double[] start = new double[this.nParam];
+        double[] step = new double[this.nParam];
+        for(int i=0; i<this.nParam; i++){
             start[i]=1.0D;
             step[i]=0.2D;
         }
@@ -7195,17 +9593,21 @@ public class Regression{
         // Create instance of loglog function and perform regression
         if(this.frechetWeibull){
             FrechetFunctionTwo f = new FrechetFunctionTwo();
-            f.typeFlag = typeFlag;
+            f.setTypeFlag(typeFlag);
             Object regFun2 = (Object)f;
-        System.out.println("pppp " + start[0] + "   " + start[1] + "   " + start[2]);
-
-            this.nelderMead(regFun2, start, step, this.fTol, this.nMax);
+            this.simplexFlag = 1;
+            this.nonLinStatsNeeded = true;
+            this.dualErrorsRequired = false;
+            this.nelderMead(regFun2, null, start, step, this.fTol, this.nMax);
         }
         else{
             WeibullFunctionTwo f = new WeibullFunctionTwo();
-            f.typeFlag = typeFlag;
+            f.setTypeFlag(typeFlag);
             Object regFun2 = (Object)f;
-            this.nelderMead(regFun2, start, step, this.fTol, this.nMax);
+            this.simplexFlag = 1;
+            this.nonLinStatsNeeded = true;
+            this.dualErrorsRequired = false;
+            this.nelderMead(regFun2, null, start, step, this.fTol, this.nMax);
         }
 
 	    // Get best estimates of loglog regression
@@ -7272,11 +9674,14 @@ public class Regression{
         // Create instance of Frechet function and perform regression
         if(this.frechetWeibull){
             FrechetFunctionOne ff = new FrechetFunctionOne();
-            ff.typeFlag = typeFlag;
-            ff.scaleOption = this.scaleFlag;
-            ff.scaleFactor = this.yScaleFactor;
+            ff.setScaleOption(this.scaleFlag);
+            ff.setScaleFactor(this.yScaleFactor);
+            ff.setTypeFlag(typeFlag);
             Object regFun3 = (Object)ff;
-            this.nelderMead(regFun3, start, step, this.fTol, this.nMax);
+            this.simplexFlag = 1;
+            this.nonLinStatsNeeded = true;
+            this.dualErrorsRequired = false;
+            this.nelderMead(regFun3, null, start, step, this.fTol, this.nMax);
             if(allTest==1){
                 // Print results
                 if(!this.supressPrint)this.print();
@@ -7287,11 +9692,14 @@ public class Regression{
         }
         else{
             WeibullFunctionOne ff = new WeibullFunctionOne();
-            ff.typeFlag = typeFlag;
-            ff.scaleOption = this.scaleFlag;
-            ff.scaleFactor = this.yScaleFactor;
+            ff.setScaleOption(this.scaleFlag);
+            ff.setScaleFactor(this.yScaleFactor);
+            ff.setTypeFlag(typeFlag);
             Object regFun3 = (Object)ff;
-            this.nelderMead(regFun3, start, step, this.fTol, this.nMax);
+            this.simplexFlag = 1;
+            this.nonLinStatsNeeded = true;
+            this.dualErrorsRequired = false;
+            this.nelderMead(regFun3, null, start, step, this.fTol, this.nMax);
             if(allTest==1){
                 // Print results
                 if(!this.supressPrint)this.print();
@@ -7375,7 +9783,7 @@ public class Regression{
             cumX[i] = this.xData[0][i];
 	    }
 
-        // Create an array of ErrorProps from the independent values and their weights
+        // Create an array of ErrorProps from the independent values and their weight
 	    ErrorProp[] yE = ErrorProp.oneDarray(this.nData);
 	    for(int i=0; i<this.nData; i++){
             yE[i].reset(this.yData[i], this.weight[i]);
@@ -7536,17 +9944,17 @@ public class Regression{
         if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
         this.userSupplied = false;
 	    switch(typeFlag){
-    	    case 0: this.lastMethod=16;
-	                this.nTerms=4;
+    	    case 0: this.lastMethod = 16;
+	                this.nParam=4;
 	                break;
-	        case 1: this.lastMethod=17;
-	                this.nTerms=3;
+	        case 1: this.lastMethod = 17;
+	                this.nParam=3;
 	                break;
-	        case 2: this.lastMethod=18;
-	                this.nTerms=2;
+	        case 2: this.lastMethod = 18;
+	                this.nParam=2;
 	                break;
         }
-	    if(!this.scaleFlag)this.nTerms=this.nTerms-1;
+	    if(!this.scaleFlag)this.nParam=this.nParam-1;
         this.frechetWeibull=false;
         this.fitFrechetWeibull(allTest, typeFlag);
     }
@@ -7632,8 +10040,10 @@ public class Regression{
         double corrCoeff = Stat.corrCoeff(this.yData, this.yCalc);
         fout.printtab("Correlation Coefficient");
         fout.println(Fmath.truncate(corrCoeff, this.prec));
-        fout.printtab("Correlation Coefficient Probability");
-        fout.println(Fmath.truncate(1.0D-Stat.linearCorrCoeffProb(corrCoeff, this.degreesOfFreedom-1), this.prec));
+        if(Math.abs(corrCoeff)<=1.0D){
+            fout.printtab("Correlation Coefficient Probability");
+            fout.println(Fmath.truncate(1.0D-Stat.linearCorrCoeffProb(corrCoeff, this.degreesOfFreedom-1), this.prec));
+        }
 
         fout.printtab("Sum of Squares");
         fout.println(Fmath.truncate(this.sumOfSquaresError, this.prec));
@@ -7665,30 +10075,30 @@ public class Regression{
         if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
 	    this.userSupplied = false;
 	    switch(typeFlag){
-    	    case 0: this.lastMethod=7;
-	                this.nTerms=3;
+    	    case 0: this.lastMethod = 7;
+	                this.nParam=3;
 	                break;
-	        case 1: this.lastMethod=8;
-	                this.nTerms=3;
+	        case 1: this.lastMethod = 8;
+	                this.nParam=3;
 	                break;
-	        case 2: this.lastMethod=9;
-	                this.nTerms=2;
+	        case 2: this.lastMethod = 9;
+	                this.nParam=2;
 	                break;
-	        case 3: this.lastMethod=10;
-	                this.nTerms=2;
+	        case 3: this.lastMethod = 10;
+	                this.nParam=2;
 	                break;
-	        case 4: this.lastMethod=11;
-	                this.nTerms=1;
+	        case 4: this.lastMethod = 11;
+	                this.nParam=1;
 	                break;
-            case 5: this.lastMethod=12;
-	                this.nTerms=1;
+            case 5: this.lastMethod = 12;
+	                this.nParam=1;
 	                break;
 	    }
-	    if(!this.scaleFlag)this.nTerms=this.nTerms-1;
+	    if(!this.scaleFlag)this.nParam=this.nParam-1;
 	    this.zeroCheck = false;
-		this.degreesOfFreedom=this.nData - this.nTerms;
+		this.degreesOfFreedom=this.nData - this.nParam;
 	    if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
-	    if(this.nTerms==0){
+	    if(this.nParam==0){
 	        this.noParameters("Gumbel");
 	    }
 	    else{
@@ -7728,8 +10138,8 @@ public class Regression{
 
 	    // Nelder and Mead Simplex Regression for Gumbel
         // Fill arrays needed by the Simplex
-        double[] start = new double[this.nTerms];
-        double[] step = new double[this.nTerms];
+        double[] start = new double[this.nParam];
+        double[] step = new double[this.nParam];
         switch(typeFlag){
             case 0:
             case 1:
@@ -7780,17 +10190,21 @@ public class Regression{
         GumbelFunction ff = new GumbelFunction();
 
         // Set minimum type / maximum type option
-        ff.typeFlag = typeFlag;
+        ff.setTypeFlag(typeFlag);
 
         // Set ordinate scaling option
-        ff.scaleOption = this.scaleFlag;
-        ff.scaleFactor = this.yScaleFactor;
+        ff.setScaleOption(this.scaleFlag);
+        ff.setScaleFactor(this.yScaleFactor);
+
 
         if(typeFlag<4){
 
             // Perform simplex regression
             Object regFun3 = (Object)ff;
-            this.nelderMead(regFun3, start, step, this.fTol, this.nMax);
+            this.simplexFlag = 1;
+            this.nonLinStatsNeeded = true;
+            this.dualErrorsRequired = false;
+            this.nelderMead(regFun3, null, start, step, this.fTol, this.nMax);
 
             if(allTest==1){
                 // Print results
@@ -7936,13 +10350,13 @@ public class Regression{
     protected void fitsexponentialSimple(int plotFlag){
 
         if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
-	    this.lastMethod=43;
+	    this.lastMethod = 43;
 	    this.userSupplied = false;
 	    this.linNonLin = false;
 	    this.zeroCheck = false;
-	    this.nTerms=2;
-	    if(!this.scaleFlag)this.nTerms=1;
-	    this.degreesOfFreedom=this.nData - this.nTerms;
+	    this.nParam=2;
+	    if(!this.scaleFlag)this.nParam=1;
+	    this.degreesOfFreedom=this.nData - this.nParam;
 	    if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
 
 	    // order data into ascending order of the abscissae
@@ -7973,8 +10387,8 @@ public class Regression{
 	    }
 
 	    Regression reglin = new Regression(xlin, ylin, wlin);
-        double[] start = new double[nTerms];
-	    double[] step = new double[nTerms];
+        double[] start = new double[nParam];
+	    double[] step = new double[nParam];
 	    if(this.scaleFlag){
 	        reglin.linear();
 	        double[] coeff = reglin.getBestEstimates();
@@ -8005,10 +10419,14 @@ public class Regression{
 
         // Nelder and Mead Simplex Regression
         ExponentialSimpleFunction f = new ExponentialSimpleFunction();
-        f.scaleOption = this.scaleFlag;
-        f.scaleFactor = this.yScaleFactor;
+        f.setScaleOption(this.scaleFlag);
+        f.setScaleFactor(this.yScaleFactor);
+       
         Object regFun2 = (Object)f;
-        this.nelderMead(regFun2, start, step, this.fTol, this.nMax);
+        this.simplexFlag = 1;
+        this.nonLinStatsNeeded = true;
+        this.dualErrorsRequired = false;
+        this.nelderMead(regFun2, null, start, step, this.fTol, this.nMax);
 
         if(plotFlag==1){
             // Print results
@@ -8056,11 +10474,11 @@ public class Regression{
     protected void fitsexponentialMultiple(int nExps, int plotFlag){
 
         if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
-	    this.lastMethod=44;
+	    this.lastMethod = 44;
 	    this.linNonLin = false;
 	    this.zeroCheck = false;
-	    this.nTerms=2*nExps;
-	    this.degreesOfFreedom=this.nData - this.nTerms;
+	    this.nParam=2*nExps;
+	    this.degreesOfFreedom=this.nData - this.nParam;
 	    if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
 
 	    // order data into ascending order of the abscissae
@@ -8091,16 +10509,16 @@ public class Regression{
 	    }
 
 	    Regression reglin = new Regression(xlin, ylin, wlin);
-        double[] start = new double[nTerms];
-	    double[] step = new double[nTerms];
+        double[] start = new double[nParam];
+	    double[] step = new double[nParam];
 
 	    reglin.linear();
 	    double[] coeff = reglin.getBestEstimates();
 	    double[] errrs = reglin.getBestEstimatesErrors();
 
-        for(int i=0; i<this.nTerms; i+=2){
+        for(int i=0; i<this.nParam; i+=2){
             // initial estimates
-            start[i] = Math.exp(coeff[0])/this.nTerms;
+            start[i] = Math.exp(coeff[0])/this.nParam;
             start[i+1] = coeff[1];
 
             // initial step sizes
@@ -8112,9 +10530,12 @@ public class Regression{
 
         // Nelder and Mead Simplex Regression
         ExponentialMultipleFunction f = new ExponentialMultipleFunction();
-        f.nExps = this.nTerms;
+        f.setNexps(this.nParam);
         Object regFun2 = (Object)f;
-        this.nelderMead(regFun2, start, step, this.fTol, this.nMax);
+        this.simplexFlag = 1;
+        this.nonLinStatsNeeded = true;
+        this.dualErrorsRequired = false;
+        this.nelderMead(regFun2, null, start, step, this.fTol, this.nMax);
 
         if(plotFlag==1){
             // Print results
@@ -8131,20 +10552,21 @@ public class Regression{
     protected void fitsexponentialMultiple(int nExps, int plotFlag, double[] aAndBs){
 
         if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
-	    this.lastMethod=44;
-	    this.linNonLin = false;
-	    this.zeroCheck = false;
-	    this.nTerms=2*nExps;
-	    this.degreesOfFreedom=this.nData - this.nTerms;
-	    if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
+        this.lastMethod = 44;
+        this.linNonLin = false;
+	this.zeroCheck = false;
+	this.nParam=2*nExps;
+	this.degreesOfFreedom=this.nData - this.nParam;
+	if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
+        if(aAndBs.length!=this.nParam)throw new IllegalArgumentException(" Number of A and Bs, " + aAndBs.length + ", does not match the number of exponentials, " + nExps);
 
-	    // order data into ascending order of the abscissae
+	// order data into ascending order of the abscissae
         Regression.sort(this.xData[0], this.yData, this.weight);
 
-        double[] start = new double[nTerms];
-	    double[] step = new double[nTerms];
+        double[] start = new double[nParam];
+	double[] step = new double[nParam];
 
-        for(int i=0; i<this.nTerms; i+=2){
+        for(int i=0; i<this.nParam; i++){
             // initial estimates
             start[i] = aAndBs[i];
 
@@ -8154,9 +10576,12 @@ public class Regression{
 
         // Nelder and Mead Simplex Regression
         ExponentialMultipleFunction f = new ExponentialMultipleFunction();
-        f.nExps = this.nTerms;
+        f.setNexps(this.nParam);
         Object regFun2 = (Object)f;
-        this.nelderMead(regFun2, start, step, this.fTol, this.nMax);
+        this.simplexFlag = 1;
+        this.nonLinStatsNeeded = true;
+        this.dualErrorsRequired = false;
+        this.nelderMead(regFun2, null, start, step, this.fTol, this.nMax);
 
         if(plotFlag==1){
             // Print results
@@ -8184,12 +10609,12 @@ public class Regression{
     protected void fitsoneMinusExponential(int plotFlag){
 
         if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
-	    this.lastMethod=45;
+	    this.lastMethod = 45;
 	    this.userSupplied = false;
 	    this.linNonLin = false;
 	    this.zeroCheck = false;
-	    this.nTerms=2;
-	    this.degreesOfFreedom=this.nData - this.nTerms;
+	    this.nParam=2;
+	    this.degreesOfFreedom=this.nData - this.nParam;
 	    if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
 
 	    // order data into ascending order of the abscissae
@@ -8243,10 +10668,14 @@ public class Regression{
 
         // Nelder and Mead Simplex Regression
         OneMinusExponentialFunction f = new OneMinusExponentialFunction();
-        f.scaleOption = this.scaleFlag;
-        f.scaleFactor = this.yScaleFactor;
+        f.setScaleOption(this.scaleFlag);
+        f.setScaleFactor(this.yScaleFactor);
+
         Object regFun2 = (Object)f;
-        this.nelderMead(regFun2, start, step, this.fTol, this.nMax);
+        this.simplexFlag = 1;
+        this.nonLinStatsNeeded = true;
+        this.dualErrorsRequired = false;
+        this.nelderMead(regFun2, null, start, step, this.fTol, this.nMax);
         double ss0 = this.sumOfSquaresError;
         double[] bestEstimates0 = this.best;
 
@@ -8255,7 +10684,10 @@ public class Regression{
         start[1] = -guessB;
         step[0] = Math.abs(start[0]/5.0);
         step[1] = Math.abs(start[1]/5.0);
-        this.nelderMead(regFun2, start, step, this.fTol, this.nMax);
+        this.simplexFlag = 1;
+        this.nonLinStatsNeeded = true;
+        this.dualErrorsRequired = false;
+        this.nelderMead(regFun2, null, start, step, this.fTol, this.nMax);
 
         // Choose better result
         if(this.sumOfSquaresError>ss0){
@@ -8263,7 +10695,10 @@ public class Regression{
             start[1] = bestEstimates0[1];
             step[0] = Math.abs(start[0]/20.0);
             step[1] = Math.abs(start[1]/20.0);
-            this.nelderMead(regFun2, start, step, this.fTol, this.nMax);
+            this.simplexFlag = 1;
+            this.nonLinStatsNeeded = true;
+            this.dualErrorsRequired = false;
+            this.nelderMead(regFun2, null, start, step, this.fTol, this.nMax);
         }
 
         // Plotting
@@ -8307,22 +10742,22 @@ public class Regression{
         if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
         this.userSupplied = false;
 	    switch(typeFlag){
-    	    case 0: this.lastMethod=19;
-	                this.nTerms=3;
+    	    case 0: this.lastMethod = 19;
+	                this.nParam=3;
 	                break;
-	        case 1: this.lastMethod=20;
-	                this.nTerms=2;
+	        case 1: this.lastMethod = 20;
+	                this.nParam=2;
 	                break;
-	        case 2: this.lastMethod=21;
-	                this.nTerms=1;
+	        case 2: this.lastMethod = 21;
+	                this.nParam=1;
 	                break;
         }
-	    if(!this.scaleFlag)this.nTerms=this.nTerms-1;
+	    if(!this.scaleFlag)this.nParam=this.nParam-1;
    	    this.linNonLin = false;
 	    this.zeroCheck = false;
-	    this.degreesOfFreedom=this.nData - this.nTerms;
+	    this.degreesOfFreedom=this.nData - this.nParam;
 	    if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
-	    if(this.nTerms==0){
+	    if(this.nParam==0){
 	        this.noParameters("Exponential");
 	    }
 	    else{
@@ -8389,8 +10824,8 @@ public class Regression{
         double sigma = this.xData[0][iE]-this.xData[0][0];
 
 	    // Nelder and Mead Simplex Regression
-	    double[] start = new double[this.nTerms];
-	    double[] step = new double[this.nTerms];
+	    double[] start = new double[this.nParam];
+	    double[] step = new double[this.nParam];
 
         // Fill arrays needed by the Simplex
         switch(typeFlag){
@@ -8430,11 +10865,14 @@ public class Regression{
 
         // Create instance of Exponential function and perform regression
         ExponentialFunction ff = new ExponentialFunction();
-        ff.typeFlag = typeFlag;
-        ff.scaleOption = this.scaleFlag;
-        ff.scaleFactor = this.yScaleFactor;
+        ff.setScaleOption(this.scaleFlag);
+        ff.setScaleFactor(this.yScaleFactor);
+        ff.setTypeFlag(typeFlag);
         Object regFun3 = (Object)ff;
-        this.nelderMead(regFun3, start, step, this.fTol, this.nMax);
+        this.simplexFlag = 1;
+        this.nonLinStatsNeeded = true;
+        this.dualErrorsRequired = false;
+        this.nelderMead(regFun3, null, start, step, this.fTol, this.nMax);
 
         if(allTest==1){
             // Print results
@@ -8505,13 +10943,13 @@ public class Regression{
 
     protected void fitRayleigh(int allTest, int typeFlag){
         if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
-    	this.lastMethod=22;
+    	this.lastMethod = 22;
     	this.userSupplied = false;
-	    this.nTerms=2;
-	    if(!this.scaleFlag)this.nTerms=this.nTerms-1;
+	    this.nParam=2;
+	    if(!this.scaleFlag)this.nParam=this.nParam-1;
    	    this.linNonLin = false;
 	    this.zeroCheck = false;
-	    this.degreesOfFreedom=this.nData - this.nTerms;
+	    this.degreesOfFreedom=this.nData - this.nParam;
 	    if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
 
 
@@ -8601,9 +11039,9 @@ public class Regression{
 		this.statFlag=false;
 
         // Fill arrays needed by the Simplex
-        double[] start = new double[this.nTerms];
-        double[] step = new double[this.nTerms];
-        for(int i=0; i<this.nTerms; i++){
+        double[] start = new double[this.nParam];
+        double[] step = new double[this.nParam];
+        for(int i=0; i<this.nParam; i++){
             start[i]=1.0D;
             step[i]=0.2D;
         }
@@ -8614,7 +11052,10 @@ public class Regression{
         // Create instance of log function and perform regression
         RayleighFunctionTwo f = new RayleighFunctionTwo();
         Object regFun2 = (Object)f;
-        this.nelderMead(regFun2, start, step, this.fTol, this.nMax);
+        this.simplexFlag = 1;
+        this.nonLinStatsNeeded = true;
+        this.dualErrorsRequired = false;
+        this.nelderMead(regFun2, null, start, step, this.fTol, this.nMax);
 
 	    // Get best estimates of log regression
 	    double[] ests = Conv.copy(this.best);
@@ -8641,10 +11082,13 @@ public class Regression{
 
         // Create instance of Rayleigh function and perform regression
         RayleighFunctionOne ff = new RayleighFunctionOne();
-        ff.scaleOption = this.scaleFlag;
-        ff.scaleFactor = this.yScaleFactor;
+        ff.setScaleOption(this.scaleFlag);
+        ff.setScaleFactor(this.yScaleFactor);
         Object regFun3 = (Object)ff;
-        this.nelderMead(regFun3, start, step, this.fTol, this.nMax);
+        this.simplexFlag = 1;
+        this.nonLinStatsNeeded = true;
+        this.dualErrorsRequired = false;
+        this.nelderMead(regFun3, null, start, step, this.fTol, this.nMax);
 
         if(allTest==1){
             // Print results
@@ -8673,7 +11117,7 @@ public class Regression{
 	    this.fitPareto(0, 3);
 	}
 
-    public void paretoThreePar(){
+        public void paretoThreePar(){
 	    this.fitPareto(0, 3);
 	}
 
@@ -8684,24 +11128,16 @@ public class Regression{
 	    this.fitPareto(1, 3);
 	}
 
-    // Two Parameter Pareto
+        // Two Parameter Pareto
 	public void paretoTwoPar(){
-	    this.fitPareto(0, 2);
-	}
-	// Deprecated
-	public void pareto(){
 	    this.fitPareto(0, 2);
 	}
 
 	public void paretoTwoParPlot(){
 	    this.fitPareto(1, 2);
 	}
-	// Deprecated
-    public void paretoPlot(){
-	    this.fitPareto(1, 2);
-	}
 
-    // One Parameter Pareto
+        // One Parameter Pareto
 	public void paretoOnePar(){
 	    this.fitPareto(0, 1);
 	}
@@ -8715,26 +11151,26 @@ public class Regression{
         if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
         this.userSupplied = false;
 	    switch(typeFlag){
-	        case 3: this.lastMethod=29;
-	                this.nTerms=4;
+	        case 3: this.lastMethod = 29;
+	                this.nParam=4;
 	                break;
-    	    case 2: this.lastMethod=23;
-	                this.nTerms=3;
+    	    case 2: this.lastMethod = 23;
+	                this.nParam=3;
 	                break;
-	        case 1: this.lastMethod=24;
-	                this.nTerms=2;
+	        case 1: this.lastMethod = 24;
+	                this.nParam=2;
 	                break;
 	    }
 
-	    if(!this.scaleFlag)this.nTerms=this.nTerms-1;
+	    if(!this.scaleFlag)this.nParam=this.nParam-1;
 	    this.linNonLin = false;
 	    this.zeroCheck = false;
-	    this.degreesOfFreedom=this.nData - this.nTerms;
+	    this.degreesOfFreedom=this.nData - this.nParam;
 	    if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
  	    String ss = "Pareto";
 
-        // order data into ascending order of the abscissae
-        Regression.sort(this.xData[0], this.yData, this.weight);
+            // order data into ascending order of the abscissae
+            Regression.sort(this.xData[0], this.yData, this.weight);
 
 	    // check y data
 	    Double tempd=null;
@@ -8826,9 +11262,9 @@ public class Regression{
 		this.statFlag=false;
 
         // Fill arrays needed by the Simplex
-        double[] start = new double[this.nTerms];
-        double[] step = new double[this.nTerms];
-        for(int i=0; i<this.nTerms; i++){
+        double[] start = new double[this.nParam];
+        double[] step = new double[this.nParam];
+        for(int i=0; i<this.nParam; i++){
             start[i]=1.0D;
             step[i]=0.2D;
         }
@@ -8881,9 +11317,12 @@ public class Regression{
 
         // Create instance of cdf function and perform regression
         ParetoFunctionTwo f = new ParetoFunctionTwo();
-        f.typeFlag = typeFlag;
+        f.setTypeFlag(typeFlag);
         Object regFun2 = (Object)f;
-        this.nelderMead(regFun2, start, step, this.fTol, this.nMax);
+        this.simplexFlag = 1;
+        this.nonLinStatsNeeded = true;
+        this.dualErrorsRequired = false;
+        this.nelderMead(regFun2, null, start, step, this.fTol, this.nMax);
 
 	    // Get best estimates of cdf regression
 	    double[] ests = Conv.copy(this.best);
@@ -8988,11 +11427,14 @@ public class Regression{
 
         // Create instance of Pareto function and perform regression
         ParetoFunctionOne ff = new ParetoFunctionOne();
-        ff.typeFlag = typeFlag;
-        ff.scaleOption = this.scaleFlag;
-        ff.scaleFactor = this.yScaleFactor;
+        ff.setScaleOption(this.scaleFlag);
+        ff.setScaleFactor(this.yScaleFactor);
+        ff.setTypeFlag(typeFlag);
+        this.simplexFlag = 1;
+        this.nonLinStatsNeeded = true;
+        this.dualErrorsRequired = false;
         Object regFun3 = (Object)ff;
-        this.nelderMead(regFun3, start, step, this.fTol, this.nMax);
+        this.nelderMead(regFun3, null, start, step, this.fTol, this.nMax);
 
         if(allTest==1){
             // Print results
@@ -9028,22 +11470,21 @@ public class Regression{
         fitSigmoidThreshold(1);
     }
 
-
     // method for fitting data to a sigmoid threshold function
     protected void fitSigmoidThreshold(int plotFlag){
 
-        if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
-	    this.lastMethod=25;
+            if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
+	    this.lastMethod = 25;
 	    this.userSupplied = false;
 	    this.linNonLin = false;
 	    this.zeroCheck = false;
-	    this.nTerms=3;
-	    if(!this.scaleFlag)this.nTerms=2;
-	    this.degreesOfFreedom=this.nData - this.nTerms;
+	    this.nParam=3;
+	    if(!this.scaleFlag)this.nParam=2;
+	    this.degreesOfFreedom=this.nData - this.nParam;
 	    if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
 
 	    // order data into ascending order of the abscissae
-        Regression.sort(this.xData[0], this.yData, this.weight);
+            Regression.sort(this.xData[0], this.yData, this.weight);
 
 	    // Estimate  of theta
 	    double yymin = Fmath.minimum(this.yData);
@@ -9087,7 +11528,7 @@ public class Regression{
 	        }
 	    }
 	    int thetaPos = (ii+jj)/2;
-        double theta0 = xData[0][thetaPos];
+            double theta0 = xData[0][thetaPos];
 
 	    // estimate of slope
 	    double thetaSlope1 = 2.0D*(yData[nLen-1] - theta0)/(xData[0][nLen-1] - xData[0][thetaPos]);
@@ -9095,7 +11536,7 @@ public class Regression{
 	    double thetaSlope = Math.max(thetaSlope1, thetaSlope2);
 
         // initial estimates
-        double[] start = new double[nTerms];
+        double[] start = new double[nParam];
         start[0] = 4.0D*thetaSlope;
         if(dirFlag==1){
             start[0] /= yymax;
@@ -9114,28 +11555,53 @@ public class Regression{
         }
 
         // initial step sizes
-        double[] step = new double[nTerms];
-        for(int i=0; i<nTerms; i++)step[i] = 0.1*start[i];
+        double[] step = new double[nParam];
+        for(int i=0; i<nParam; i++)step[i] = 0.1*start[i];
         if(step[0]==0.0D)step[0] = 0.1*(xData[0][nLen-1] - xData[0][0])/(yData[nLen-1] - yData[0]);
         if(step[1]==0.0D)step[1] = (xData[0][nLen-1] - xData[0][0])/20.0D;
         if(this.scaleFlag)if(step[2]==0.0D)step[2] = 0.1*(yData[nLen-1] - yData[0]);
 
         // Nelder and Mead Simplex Regression
-        SigmoidThresholdFunction f = new SigmoidThresholdFunction();
-        f.scaleOption = this.scaleFlag;
-        f.scaleFactor = this.yScaleFactor;
-        Object regFun2 = (Object)f;
-        this.nelderMead(regFun2, start, step, this.fTol, this.nMax);
-
-        if(plotFlag==1){
-            // Print results
-            if(!this.supressPrint)this.print();
-
-            // Plot results
-            int flag = this.plotXY(f);
-            if(flag!=-2 && !this.supressYYplot)this.plotYY();
+        if(this.xErrorsEntered){
+            this.dualErrorsRequired = true;
+            this.nonLinStatsNeeded = true;
+            this.simplexFlag = 3;
+            SigmoidThresholdFunctionDual f1 = new SigmoidThresholdFunctionDual();
+            f1.setScaleOption(this.scaleFlag);
+            f1.setScaleFactor(this.yScaleFactor);
+            f1.setXerrors(this.xErrors);
+            f1.setYerrors(this.yErrors);
+            Object regFun1 = (Object)f1;
+            this.nelderMead(regFun1, null, start, step, this.fTol, this.nMax);
+            if(plotFlag==1){
+                // Print results
+                if(!this.supressPrint)this.print();
+                // Plot results
+                int flag = this.plotXY(f1);
+                if(flag!=-2 && !this.supressYYplot)this.plotYY();
+            }
         }
+        else{
+            this.dualErrorsRequired = false;
+            this.nonLinStatsNeeded = true;
+            this.simplexFlag = 1;
+            SigmoidThresholdFunction f2 = new SigmoidThresholdFunction();
+            f2.setScaleOption(this.scaleFlag);
+            f2.setScaleFactor(this.yScaleFactor);
+            Object regFun2 = (Object)f2;
+            this.nelderMead(regFun2, null, start, step, this.fTol, this.nMax);
+            if(plotFlag==1){
+                // Print results
+                if(!this.supressPrint)this.print();
+                // Plot results
+                int flag = this.plotXY(f2);
+                if(flag!=-2 && !this.supressYYplot)this.plotYY();
+            }
+        }
+        this.dualErrorsRequired = false;
+        this.nonLinStatsNeeded = true;
     }
+    
     // method for fitting data to a Hill/Sips Sigmoid
     public void sigmoidHillSips(){
         fitsigmoidHillSips(0);
@@ -9146,100 +11612,378 @@ public class Regression{
         fitsigmoidHillSips(1);
     }
 
-    // method for fitting data to a Hill/Sips Sigmoid
+    // method for fitting data to a Hill/Sips  sigmoid function
     protected void fitsigmoidHillSips(int plotFlag){
 
-        if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
-	    this.lastMethod=28;
+            if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
+	    this.lastMethod = 28;
 	    this.userSupplied = false;
 	    this.linNonLin = false;
 	    this.zeroCheck = false;
-	    this.nTerms=3;
-	    if(!this.scaleFlag)this.nTerms=2;
-	    this.degreesOfFreedom=this.nData - this.nTerms;
+	    this.nParam=3;
+	    if(!this.scaleFlag)this.nParam=2;
+	    this.degreesOfFreedom=this.nData - this.nParam;
 	    if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
 
 	    // order data into ascending order of the abscissae
-        Regression.sort(this.xData[0], this.yData, this.weight);
+            Regression.sort(this.xData[0], this.yData, this.weight);
 
-	    // Estimate  of theta
-        int nLen = this.yData.length;
-        this.midPoint();
-       	double theta0 = this.midPointYvalue;
+	    // check y direction           
+            double[] xx = Conv.copy(this.xData[0]);
+            double[] yy = Conv.copy(this.yData);
+            int yReverseFlag = 1;
+            if(this.yData[0]>this.yData[this.nData-1]){
+                yReverseFlag = -1;
+                for(int i=0; i<this.nData; i++)yy[i] = -yy[i];
+            }
+            double yymin = Fmath.minimum(yy);
+            double yymax = Fmath.maximum(yy);
+            double yshift = 0.0;
+            double yrange = yymax - yymin;
+            if(yymin<=0.0){
+                yshift = yymin - 0.01*yrange;
+                for(int i=0; i<this.nData; i++)yy[i] = yy[i] - yshift;
+            }
+            double xxmin = Fmath.minimum(xx);
+            double xxmax = Fmath.maximum(xx);
+            double xshift = 0.0;
+            double xrange = xxmax - xxmin;
+            if(xxmin<=0.0){
+                xshift = xxmin - 0.01*xrange;
+                for(int i=0; i<this.nData; i++)xx[i] = xx[i] - xshift;
+            }
 
-        // initial estimates
-        double[] start = new double[nTerms];
-        start[0] = theta0;
-        if(this.directionFlag==1){
-            start[1] = 1;
-        }
-        else{
-            start[1] = -1;
-        }
-        if(this.scaleFlag){
-            start[2] = this.top - this.bottom;
-        }
-
-        // initial step sizes
-        double[] step = new double[nTerms];
-        for(int i=0; i<this.nTerms; i++)step[i] = 0.1*start[i];
-        if(step[0]==0.0D)step[0] = (this.xData[0][nLen-1] - this.xData[0][0])/20.0D;
-        if(this.scaleFlag)if(step[2]==0.0D)step[2] = 0.1*(this.yData[nLen-1] - this.yData[0]);
+            // linear transform
+            for(int i=0; i<this.nData; i++){
+                yy[i] = Math.log(yrange + 0.01*yrange - yy[i]) - Math.log(yy[i]);
+                xx[i] = Math.log(xx[i]);
+            } 
+       
+            Regression reg = new Regression(xx, yy);
+            reg.linear();
+            double[] coeff = reg.getBestEstimates();         
+	  
+            // initial estimates
+            double[] start = new double[nParam];
+            start[1] = -coeff[1]*yReverseFlag;
+            start[0] = Math.exp(coeff[0]/start[1]) + xshift;
+            if(this.scaleFlag)start[2] = yrange*yReverseFlag;
+            
+            // initial step sizes
+            int nLen = this.nData/2;
+            double[] step = new double[nParam];
+            for(int i=0; i<nParam; i++)step[i] = 0.1*start[i];
+            if(step[0]==0.0D)step[0] = 0.1*(xData[0][nLen-1] - xData[0][0])/(yData[nLen-1] - yData[0]);
+            if(step[1]==0.0D)step[1] = (xData[0][nLen-1] - xData[0][0])/20.0D;
+            if(this.scaleFlag)if(step[2]==0.0D)step[2] = 0.1*(yData[nLen-1] - yData[0]);
 
         // Nelder and Mead Simplex Regression
-        SigmoidHillSipsFunction f = new SigmoidHillSipsFunction();
-        f.scaleOption = this.scaleFlag;
-        f.scaleFactor = this.yScaleFactor;
-        Object regFun2 = (Object)f;
-        this.nelderMead(regFun2, start, step, this.fTol, this.nMax);
-
-        if(plotFlag==1){
-            // Print results
-            if(!this.supressPrint)this.print();
-
-            // Plot results
-            int flag = this.plotXY(f);
-            if(flag!=-2 && !this.supressYYplot)this.plotYY();
+        if(this.xErrorsEntered){
+            this.dualErrorsRequired = true;
+            this.nonLinStatsNeeded = true;
+            this.simplexFlag = 3;
+            SigmoidHillSipsFunctionDual f1 = new SigmoidHillSipsFunctionDual();
+            f1.setScaleOption(this.scaleFlag);
+            f1.setScaleFactor(this.yScaleFactor);
+            f1.setXerrors(this.xErrors);
+            f1.setYerrors(this.yErrors);
+            Object regFun1 = (Object)f1;
+            this.nelderMead(regFun1, null, start, step, this.fTol, this.nMax);
+            
+            if(plotFlag==1){
+                // Print results
+                if(!this.supressPrint)this.print();
+                // Plot results
+                int flag = this.plotXY(f1);
+                if(flag!=-2 && !this.supressYYplot)this.plotYY();
+            }
         }
+        else{
+            this.dualErrorsRequired = false;
+            this.nonLinStatsNeeded = true;
+            this.simplexFlag = 1;
+            SigmoidHillSipsFunction f2 = new SigmoidHillSipsFunction();
+            f2.setScaleOption(this.scaleFlag);
+            f2.setScaleFactor(this.yScaleFactor);
+            Object regFun2 = (Object)f2;
+            this.nelderMead(regFun2, null, start, step, this.fTol, this.nMax);
+            if(plotFlag==1){
+                // Print results
+                if(!this.supressPrint)this.print();
+                // Plot results
+                int flag = this.plotXY(f2);
+                if(flag!=-2 && !this.supressYYplot)this.plotYY();
+            }
+        }
+        this.dualErrorsRequired = false;
+        this.nonLinStatsNeeded = true;
     }
+   
 
-    // method for fitting data to a EC50 dose response curve
+    // method for fitting data to a EC50 dose response curve (four parameter logistic)
     public void ec50(){
         fitEC50(0);
     }
 
-    // method for fitting data to a EC50 dose response curve with plot and print out
+    // method for fitting data to a EC50 dose response curve with plot and print out (four parameter logistic)
     public void ec50Plot(){
         fitEC50(1);
     }
 
-    // method for fitting data to a EC50 dose response curve
+    // method for fitting data to a EC50 dose response curve (four parameter logistic)
     // bottom constrained to zero or positive values
     public void ec50constrained(){
         fitEC50(2);
     }
 
-    // method for fitting data to a EC50 dose response curve with plot and print out
+    // method for fitting data to a EC50 dose response curve with plot and print out (four parameter logistic)
     // bottom constrained to zero or positive values
     public void ec50constrainedPlot(){
         fitEC50(3);
     }
 
+    // method for fitting data to a EC50 dose response curve (four parameter logistic)
+    public void fourParameterLogistic(){
+        fitEC50(0);
+    }
+
+    // method for fitting data to a EC50 dose response curve with plot and print out (four parameter logistic)
+    public void fourParameterLogisticPlot(){
+        fitEC50(1);
+    }
+
+    // method for fitting data to a EC50 dose response curve (four parameter logistic)
+    // bottom constrained to zero or positive values
+    public void fourParameterLogisticConstrained(){
+        fitEC50(2);
+    }
+
+    // method for fitting data to a EC50 dose response curve with plot and print out (four parameter logistic)
+    // bottom constrained to zero or positive values
+    public void fourParameterLogisticConstrainedPlot(){
+        fitEC50(3);
+    }
+
+    // method for fitting data to a EC50 dose response curve (four parameter logistic)
+    protected void fitEC50(int cpFlag){
+
+        if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
+        int plotFlag = 0;
+        boolean constrained = false;
+        this.userSupplied = false;
+	    switch(cpFlag){
+	        case 0: this.lastMethod =  39;
+	                plotFlag = 0;
+	                break;
+	        case 1: this.lastMethod =  39;
+	                plotFlag = 1;
+	                break;
+	        case 2: this.lastMethod =  41;
+	                plotFlag = 0;
+	                constrained = true;
+	                break;
+	        case 3: this.lastMethod =  41;
+	                plotFlag = 1;
+	                constrained = true;
+	                break;
+	    }
+
+	    this.linNonLin = false;
+	    this.zeroCheck = false;
+	    this.nParam=4;
+	    this.scaleFlag = false;
+	    this.degreesOfFreedom=this.nData - this.nParam;
+	    if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
+
+	    // order data into ascending order of the abscissae
+        Regression.sort(this.xData[0], this.yData, this.weight);
+
+        // Initial estimate of EC50
+        int nLen = this.yData.length;
+        this.midPoint();
+
+	    // estimate of slope
+	    double hillSlope = 1.0;
+        if(this.directionFlag==-1)hillSlope = -1.0;
+
+        // initial estimates
+        double[] start = new double[nParam];
+        start[0] = this.topS;
+        start[1] = this.bottomS;
+        start[2] = this.midPointXvalue;
+        start[3] = hillSlope;
+
+        // initial step sizes
+        double[] step = new double[nParam];
+        for(int i=0; i<nParam; i++){
+            step[i] = 0.1*Math.abs(start[i]);
+        }
+
+        if(step[0]==0.0D)step[0] = 0.1*(yData[nLen-1] - yData[0]);
+        if(step[1]==0.0D)step[1] = 0.1*(yData[nLen-1] - yData[0]);
+        if(step[2]==0.0D)step[2] = 0.05*(xData[0][nLen-1] - xData[0][0]);
+        if(step[3]==0.0D)step[3] = 0.1*(xData[0][nLen-1] - xData[0][0])/(yData[nLen-1] - yData[0]);
+
+        // Constrained option
+         if(constrained)this.addConstraint(0, -1, 0.0D);
+
+        // Nelder and Mead Simplex Regression
+        if(this.xErrorsEntered){
+            EC50FunctionDual f1 = new EC50FunctionDual();
+            f1.setXerrors(this.xErrors);
+            f1.setYerrors(this.yErrors);
+            Object regFun1 = (Object)f1;
+            this.simplexFlag = 3;
+            this.nonLinStatsNeeded = true;
+            this.dualErrorsRequired = true;
+            this.nelderMead(regFun1, null, start, step, this.fTol, this.nMax);
+            if(plotFlag==1){
+                // Print results
+                if(!this.supressPrint)this.print();
+                // Plot results
+                int flag = this.plotXY(f1);
+                if(flag!=-2 && !this.supressYYplot)this.plotYY();
+            }
+        }
+        else{
+            EC50Function f2 = new EC50Function();
+            Object regFun2 = (Object)f2;
+            this.simplexFlag = 1;
+            this.nonLinStatsNeeded = true;
+            this.dualErrorsRequired = false;
+            this.nelderMead(regFun2, null, start, step, this.fTol, this.nMax);
+            if(plotFlag==1){
+                // Print results
+                if(!this.supressPrint)this.print();
+                // Plot results
+                int flag = this.plotXY(f2);
+                if(flag!=-2 && !this.supressYYplot)this.plotYY();
+            }
+        }
+    }
+
+    // method for fitting data to a EC50 dose response curve (four parameter logistic) with top and bottom fixed
+    // no plotting
+    protected void ec50(double bottom, double top){
+        this.lastMethod = 40;
+        this.fitEC50(bottom, top, 0);
+    }
+
+    // method for fitting data to a EC50 dose response curve (four parameter logistic) with top and bottom fixed
+    // no plotting
+    protected void fourParameterLogistic(double bottom, double top){
+        this.lastMethod = 40;
+        this.fitEC50(bottom, top, 0);
+    }
+
+    // method for fitting data to a EC50 dose response curve (four parameter logistic) with top and bottom fixed
+    // plotting
+    protected void ec50Plot(double bottom, double top){
+        this.lastMethod = 40;
+        this.fitEC50(bottom, top, 1);
+    }
+
+    // method for fitting data to a EC50 dose response curve (four parameter logistic) with top and bottom fixed
+    // plotting
+    protected void fourParameterLogisticPlot(double bottom, double top){
+        this.lastMethod = 40;
+        this.fitEC50(bottom, top, 1);
+    }
+
+    // method for fitting data to a EC50 dose response curve (four parameter logistic) with top and bottom fixed
+    // common fitting method
+    private void fitEC50(double bottom, double top, int plotFlag){
+
+        if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
+
+        this.bottom = bottom;
+        this.top = top;
+
+	    this.linNonLin = false;
+	    this.zeroCheck = false;
+	    this.nParam=2;
+	    this.scaleFlag = false;
+	    this.degreesOfFreedom=this.nData - this.nParam;
+	    if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
+
+	    // order data into ascending order of the abscissae
+        Regression.sort(this.xData[0], this.yData, this.weight);
+
+        // Initial estimate of EC50
+        int nLen = this.yData.length;
+        this.midPoint();
+
+	    // estimate of slope
+	    double hillSlope = 1.0;
+        if(this.directionFlag==-1)hillSlope = -1.0;
+
+        // initial estimates
+        double[] start = new double[nParam];
+        start[0] = this.midPointXvalue;
+        start[1] = hillSlope;
+
+        // initial step sizes
+        double[] step = new double[nParam];
+        for(int i=0; i<nParam; i++){
+            step[i] = 0.1*Math.abs(start[i]);
+        }
+
+        if(step[0]==0.0D)step[0] = 0.05*(xData[0][nLen-1] - xData[0][0]);
+        if(step[1]==0.0D)step[1] = 0.1*(xData[0][nLen-1] - xData[0][0])/(yData[nLen-1] - yData[0]);
+
+        // Nelder and Mead Simplex Regression
+        if(this.xErrorsEntered){
+            EC50FixedFunctionDual f1 = new EC50FixedFunctionDual();
+            f1.setBottom(this.bottom);
+            f1.setTop(this.top);
+            f1.setXerrors(this.xErrors);
+            f1.setYerrors(this.yErrors);
+            Object regFun1 = (Object)f1;
+            this.simplexFlag = 3;
+            this.nonLinStatsNeeded = true;
+            this.dualErrorsRequired = true;
+            this.nelderMead(regFun1, null, start, step, this.fTol, this.nMax);
+            if(plotFlag==1){
+                // Print results
+                if(!this.supressPrint)this.print();
+                // Plot results
+                int flag = this.plotXY(f1);
+                if(flag!=-2 && !this.supressYYplot)this.plotYY();
+            }
+        }
+        else{
+            EC50FixedFunction f2 = new EC50FixedFunction();
+            f2.setBottom(this.bottom);
+            f2.setTop(this.top);
+            Object regFun2 = (Object)f2;
+            this.simplexFlag = 1;
+            this.nonLinStatsNeeded = true;
+            this.dualErrorsRequired = false;
+            this.nelderMead(regFun2, null, start, step, this.fTol, this.nMax);
+            if(plotFlag==1){
+                // Print results
+                if(!this.supressPrint)this.print();
+                // Plot results
+                int flag = this.plotXY(f2);
+                if(flag!=-2 && !this.supressYYplot)this.plotYY();
+            }
+        }
+    }
 
 
-   // Estimate mid point of sigmoid curves
-   private void midPoint(){
+    // Estimate mid point of sigmoid curves
+    private void midPoint(){
 	    // Estimate of bottom and top
-	    this.bottom = Fmath.minimum(this.yData);
-	    this.top = Fmath.maximum(this.yData);
-        this.bottomIndex = 0;
-        this.topIndex = 0;
+	    this.bottomS = Fmath.minimum(this.yData);
+	    this.topS = Fmath.maximum(this.yData);
+        this.bottomSindex = 0;
+        this.topSindex = 0;
         int nLen = this.yData.length;
         int ii = 0;
         boolean test = true;
         while(test){
-            if(this.bottom==this.yData[ii]){
-                this.bottomIndex = ii;
+            if(this.bottomS==this.yData[ii]){
+                this.bottomSindex = ii;
                 test = false;
             }
             else{
@@ -9250,8 +11994,8 @@ public class Regression{
         test = true;
         ii = 0;
         while(test){
-            if(this.top==this.yData[ii]){
-                this.topIndex = ii;
+            if(this.topS==this.yData[ii]){
+                this.topSindex = ii;
                 test = false;
             }
             else{
@@ -9260,13 +12004,13 @@ public class Regression{
             }
         }
         this.directionFlag = 1;
-        if(this.topIndex<this.bottomIndex)this.directionFlag = -1;
+        if(this.topSindex<this.bottomSindex)this.directionFlag = -1;
 
 	    // Estimate of midpoint
-	    double yyymid = (this.top - this.bottom)/2.0D;
+	    double yyymid = this.topS - (this.topS - this.bottomS)/2.0D;
+	    this.midPointYvalue = yyymid;
 	    double yyxmidl = this.xData[0][0];
 	    ii = 0;
-	    this.midPointIndex = 0;
 	    if(this.directionFlag==1){
 	        test = true;
 	        while(test){
@@ -9300,7 +12044,14 @@ public class Regression{
                     }
 	            }
 	        }
-	        this.midPointIndex = (ii+jj)/2;
+	        if(ii<jj){
+	            int jjh = jj;
+	            jj = ii;
+	            ii = jjh;
+	        }
+	        this.midPointLowerIndex = jj;
+	        this.midPointUpperIndex = ii;
+	        this.midPointXvalue = (this.xData[0][ii]+this.xData[0][jj])/2.0;
 	    }
 	    else{
 	        ii = 0;
@@ -9336,88 +12087,207 @@ public class Regression{
                     }
 	            }
 	        }
-	        this.midPointIndex = (ii+jj)/2;
-	    }
-        this.midPointXvalue = this.xData[0][this.midPointIndex];
-        this.midPointYvalue = this.yData[this.midPointIndex];
-   }
+	        if(ii>jj){
+	            int jjh = jj;
+	            jj = ii;
+	            ii = jjh;
+	        }
 
-    // method for fitting data to a logEC50 dose response curve
-    protected void fitEC50(int cpFlag){
+	        if(ii<jj){
+	            int jjh = jj;
+	            jj = ii;
+	            ii = jjh;
+	        }
+	        this.midPointLowerIndex = jj;
+	        this.midPointUpperIndex = ii;
+	        this.midPointXvalue = (this.xData[0][ii]+this.xData[0][jj])/2.0;
+	    }
+    }
+
+    // method for fitting data to a five parameter logistic function
+    public void fiveParameterLogistic(){
+        fitfiveParameterLogistic(0);
+    }
+
+    // method for fitting data to five parameter logistic function
+    public void fiveParameterLogisticPlot(){
+        fitfiveParameterLogistic(1);
+    }
+
+    // method for fitting data to a five parameter logistic function
+    // method for fitting data to a five parameter logistic function
+    protected void fitfiveParameterLogistic(int plotFlag){
 
         if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
-        int plotFlag = 0;
         boolean constrained = false;
         this.userSupplied = false;
-	    switch(cpFlag){
-	        case 0: this.lastMethod= 39;
-	                plotFlag = 0;
-	                break;
-	        case 1: this.lastMethod= 39;
-	                plotFlag = 1;
-	                break;
-	        case 2: this.lastMethod= 41;
-	                plotFlag = 0;
-	                constrained = true;
-	                break;
-	        case 3: this.lastMethod= 41;
-	                plotFlag = 1;
-	                constrained = true;
-	                break;
-	    }
+	    this.lastMethod =  51;
 
 	    this.linNonLin = false;
 	    this.zeroCheck = false;
-	    this.nTerms=4;
+	    this.nParam = 5;
 	    this.scaleFlag = false;
-	    this.degreesOfFreedom=this.nData - this.nTerms;
+	    this.degreesOfFreedom=this.nData - this.nParam;
 	    if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
 
 	    // order data into ascending order of the abscissae
         Regression.sort(this.xData[0], this.yData, this.weight);
 
-        // Initial estimate of EC50
+        // Initial estimate of y50
+        int nLen = this.yData.length;
+        this.midPoint();
+
+         // estimate of slope
+        double hillSlope = 1.0;
+        if(this.directionFlag==-1 && hillSlope>=0)hillSlope = -1.0;
+
+        // initial estimates
+        double[] start = new double[nParam];
+        start[0] = this.topS;
+        start[1] = this.bottomS;
+        start[2] = this.midPointXvalue;
+        start[3] = hillSlope;
+        start[4] = 1.0;
+
+        // initial step sizes
+        double[] step = new double[nParam];
+        for(int i=0; i<nParam; i++){
+            step[i] = 0.1*Math.abs(start[i]);
+        }
+        if(step[0]==0.0D)step[0] = 0.1*(yData[nLen-1] - yData[0]);
+        if(step[1]==0.0D)step[1] = 0.1*(yData[nLen-1] - yData[0]);
+        if(step[2]==0.0D)step[2] = 0.05*(xData[0][nLen-1] - xData[0][0]);
+        if(step[3]==0.0D)step[3] = 0.1*(xData[0][nLen-1] - xData[0][0])/(yData[nLen-1] - yData[0]);
+
+        // Nelder and Mead Simplex Regression
+        if(this.xErrorsEntered){
+            Logistic5FunctionDual f1 = new Logistic5FunctionDual();
+            f1.setXerrors(this.xErrors);
+            f1.setYerrors(this.yErrors);
+            Object regFun1 = (Object)f1;
+            this.simplexFlag = 3;
+            this.nonLinStatsNeeded = true;
+            this.dualErrorsRequired = true;
+            this.nelderMead(regFun1, null, start, step, this.fTol, this.nMax);
+            if(plotFlag==1){
+                // Print results
+                if(!this.supressPrint)this.print();
+                // Plot results
+               int flag = this.plotXY(f1);
+               if(flag!=-2 && !this.supressYYplot)this.plotYY();
+            }
+        }
+        else{
+            Logistic5Function f2 = new Logistic5Function();
+            Object regFun2 = (Object)f2;
+            this.simplexFlag = 1;
+            this.nonLinStatsNeeded = true;
+            this.dualErrorsRequired = false;
+            this.nelderMead(regFun2, null, start, step, this.fTol, this.nMax);
+            if(plotFlag==1){
+                // Print results
+                if(!this.supressPrint)this.print();
+                // Plot results
+                int flag = this.plotXY(f2);
+                if(flag!=-2 && !this.supressYYplot)this.plotYY();
+           }
+        }
+    }
+  
+
+    // method for fitting data to five parameter logistic with top and bottom fixed
+    // no plotting
+    public void fiveParameterLogistic(double bottom, double top){
+        this.lastMethod = 42;
+        this.fitFiveParameterLogistic(bottom, top, 0);
+    }
+
+    // method for fitting data to five parameter logistic with top and bottom fixed
+    // plotting
+    public void fiveParameterLogisticPlot(double bottom, double top){
+        this.lastMethod = 42;
+        this.fitFiveParameterLogistic(bottom, top, 1);
+    }
+
+    // method for fitting data to five parameter logistic with top and bottom fixed
+    // common fitting method
+    protected void fitFiveParameterLogistic(double bottom, double top, int plotFlag){
+
+        if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
+
+	    this.linNonLin = false;
+	    this.zeroCheck = false;
+	    this.nParam=3;
+	    this.scaleFlag = false;
+	    this.degreesOfFreedom=this.nData - this.nParam;
+	    if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
+
+	    // order data into ascending order of the abscissae
+        Regression.sort(this.xData[0], this.yData, this.weight);
+
+        // Initial estimate of C50
         int nLen = this.yData.length;
         this.midPoint();
 
 	    // estimate of slope
-	    double thetaSlope1 = 2.0D*(this.yData[nLen-1] - this.midPointYvalue)/(this.xData[0][nLen-1] - this.xData[0][this.midPointIndex]);
-	    double thetaSlope2 = 2.0D*(this.midPointYvalue - this.yData[0])/(this.xData[0][this.midPointIndex] - this.xData[0][nLen-1]);
-	    double hillSlope = Math.max(thetaSlope1, thetaSlope2);
+	    double hillSlope = 1.0;
+        if(this.directionFlag==-1)hillSlope = -1.0;
 
         // initial estimates
-        double[] start = new double[nTerms];
-        start[0] = this.bottom;
-        start[1] = this.top;
-        start[2] = this.midPointYvalue;
-        start[3] = Math.abs(hillSlope);
-        if(this.directionFlag==1)start[3] = -Math.abs(hillSlope);
+        double[] start = new double[nParam];
+        start[0] = this.midPointXvalue;
+        start[1] = hillSlope;
+        start[2] = 1.0;
 
         // initial step sizes
-        double[] step = new double[nTerms];
-        for(int i=0; i<nTerms; i++)step[i] = 0.1*start[i];
-        if(step[0]==0.0D)step[0] = 0.1*(yData[nLen-1] - yData[0]);
-        if(step[1]==0.0D)step[1] = 0.1*(yData[nLen-1] - yData[0]) + yData[nLen-1];
-        if(step[2]==0.0D)step[2] = 0.05*(xData[0][nLen-1] - xData[0][0]);
-        if(step[3]==0.0D)step[3] = 0.1*(xData[0][nLen-1] - xData[0][0])/(yData[nLen-1] - yData[0]);
+        double[] step = new double[nParam];
+        for(int i=0; i<nParam; i++){
+            step[i] = 0.1*Math.abs(start[i]);
+        }
 
-        // Constrained option
-        if(constrained)this.addConstraint(0, -1, 0.0D);
+        if(step[0]==0.0D)step[0] = 0.05*(xData[0][nLen-1] - xData[0][0]);
+        if(step[1]==0.0D)step[1] = 0.1*(xData[0][nLen-1] - xData[0][0])/(yData[nLen-1] - yData[0]);
+        if(step[2]==0.0D)step[2] = 0.1;
 
         // Nelder and Mead Simplex Regression
-        EC50Function f = new EC50Function();
-        Object regFun2 = (Object)f;
-        this.nelderMead(regFun2, start, step, this.fTol, this.nMax);
-
-        if(plotFlag==1){
-            // Print results
-            if(!this.supressPrint)this.print();
-
-            // Plot results
-            int flag = this.plotXY(f);
-            if(flag!=-2 && !this.supressYYplot)this.plotYY();
+        if(this.xErrorsEntered){
+            Logistic5FixedFunctionDual f1 = new Logistic5FixedFunctionDual();
+            f1.setBottom(bottom);
+            f1.setTop(top);
+            f1.setXerrors(this.xErrors);
+            f1.setYerrors(this.yErrors);
+            Object regFun1 = (Object)f1;
+            this.simplexFlag = 3;
+            this.nonLinStatsNeeded = true;
+            this.dualErrorsRequired = true;
+            this.nelderMead(regFun1, null, start, step, this.fTol, this.nMax);
+            if(plotFlag==1){
+                // Print results
+                if(!this.supressPrint)this.print();
+                // Plot results
+                int flag = this.plotXY(f1);
+                if(flag!=-2 && !this.supressYYplot)this.plotYY();
+            }
+        }
+        else{
+            Logistic5FixedFunction f2 = new Logistic5FixedFunction();
+            f2.setBottom(bottom);
+            f2.setTop(top);
+            Object regFun2 = (Object)f2;
+            this.simplexFlag = 1;
+            this.nonLinStatsNeeded = true;
+            this.dualErrorsRequired = false;
+            this.nelderMead(regFun2, null, start, step, this.fTol, this.nMax);
+            if(plotFlag==1){
+                // Print results
+                if(!this.supressPrint)this.print();
+                // Plot results
+                int flag = this.plotXY(f2);
+                if(flag!=-2 && !this.supressYYplot)this.plotYY();
+            }
         }
     }
+
 
 	// method for fitting data to a rectangular hyberbola
     public void rectangularHyperbola(){
@@ -9433,13 +12303,13 @@ public class Regression{
     protected void fitRectangularHyperbola(int plotFlag){
 
         if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
-	    this.lastMethod=26;
+	    this.lastMethod = 26;
 	    this.userSupplied = false;
 	    this.linNonLin = false;
 	    this.zeroCheck = false;
-	    this.nTerms=2;
-	    if(!this.scaleFlag)this.nTerms=1;
-	    this.degreesOfFreedom=this.nData - this.nTerms;
+	    this.nParam=2;
+	    if(!this.scaleFlag)this.nParam=1;
+	    this.degreesOfFreedom=this.nData - this.nParam;
 	    if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
 
 	    // order data into ascending order of the abscissae
@@ -9490,7 +12360,7 @@ public class Regression{
 	    double theta0 = xData[0][thetaPos];
 
         // initial estimates
-        double[] start = new double[nTerms];
+        double[] start = new double[nParam];
         start[0] = theta0;
         if(this.scaleFlag){
             if(dirFlag==1){
@@ -9502,27 +12372,175 @@ public class Regression{
         }
 
         // initial step sizes
-        double[] step = new double[nTerms];
-        for(int i=0; i<nTerms; i++)step[i] = 0.1*start[i];
+        double[] step = new double[nParam];
+        for(int i=0; i<nParam; i++)step[i] = 0.1*start[i];
         if(step[0]==0.0D)step[0] = (xData[0][nLen-1] - xData[0][0])/20.0D;
         if(this.scaleFlag)if(step[1]==0.0D)step[1] = 0.1*(yData[nLen-1] - yData[0]);
 
         // Nelder and Mead Simplex Regression
-        RectangularHyperbolaFunction f = new RectangularHyperbolaFunction();
-        f.scaleOption = this.scaleFlag;
-        f.scaleFactor = this.yScaleFactor;
-        Object regFun2 = (Object)f;
-        this.nelderMead(regFun2, start, step, this.fTol, this.nMax);
-
-        if(plotFlag==1){
-            // Print results
-            if(!this.supressPrint)this.print();
-
-            // Plot results
-            int flag = this.plotXY(f);
-            if(flag!=-2 && !this.supressYYplot)this.plotYY();
+        if(this.xErrorsEntered){
+            RectangularHyperbolaFunctionDual f1 = new RectangularHyperbolaFunctionDual();
+            f1.setScaleOption(this.scaleFlag);
+            f1.setScaleFactor(this.yScaleFactor);
+            f1.setXerrors(this.xErrors);
+            f1.setYerrors(this.yErrors);
+            Object regFun1 = (Object)f1;
+            this.simplexFlag = 3;
+            this.nonLinStatsNeeded = true;
+            this.dualErrorsRequired = true;
+            this.nelderMead(regFun1, null, start, step, this.fTol, this.nMax);
+            if(plotFlag==1){
+                // Print results
+                if(!this.supressPrint)this.print();
+                // Plot results
+                int flag = this.plotXY(f1);
+                if(flag!=-2 && !this.supressYYplot)this.plotYY();
+            }
+        }
+        else{
+            RectangularHyperbolaFunction f2 = new RectangularHyperbolaFunction();
+            f2.setScaleOption(this.scaleFlag);
+            f2.setScaleFactor(this.yScaleFactor);
+            Object regFun2 = (Object)f2;
+            this.simplexFlag = 1;
+            this.nonLinStatsNeeded = true;
+            this.dualErrorsRequired = false;
+            this.nelderMead(regFun2, null, start, step, this.fTol, this.nMax);
+            if(plotFlag==1){
+                // Print results
+                if(!this.supressPrint)this.print();
+                // Plot results
+                int flag = this.plotXY(f2);
+                if(flag!=-2 && !this.supressYYplot)this.plotYY();
+            }
         }
     }
+
+    // method for fitting data to a shifted rectangular hyberbola
+    public void shiftedRectangularHyperbola(){
+        fitShiftedRectangularHyperbola(0);
+    }
+
+    // method for fitting data to a shifted rectangular hyberbola with plot and print out
+    public void shiftedRectangularHyperbolaPlot(){
+        fitShiftedRectangularHyperbola(1);
+    }
+
+    // method for fitting data to a shifted rectangular hyperbola
+    protected void fitShiftedRectangularHyperbola(int plotFlag){
+
+        if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
+	    this.lastMethod = 52;
+	    this.userSupplied = false;
+	    this.linNonLin = false;
+	    this.zeroCheck = false;
+	    this.nParam=3;
+	    boolean sfhold = this.scaleFlag;
+	    this.scaleFlag = false;
+	    this.degreesOfFreedom=this.nData - this.nParam;
+	    if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
+
+	    // order data into ascending order of the abscissae
+        Regression.sort(this.xData[0], this.yData, this.weight);
+
+	    // Estimate  of theta
+	    double yymin = Fmath.minimum(this.yData);
+	    double yymax = Fmath.maximum(this.yData);
+	    int dirFlag = 1;
+	    if(yymin<0)dirFlag=-1;
+	    double yyymid = (yymax - yymin)/2.0D;
+	    double yyxmidl = xData[0][0];
+	    int ii = 1;
+	    int nLen = this.yData.length;
+	    boolean test = true;
+	    while(test){
+	        if(this.yData[ii]>=dirFlag*yyymid){
+	            yyxmidl = xData[0][ii];
+	            test = false;
+	        }
+	        else{
+	            ii++;
+	            if(ii>=nLen){
+	                yyxmidl = Stat.mean(this.xData[0]);
+	                ii=nLen-1;
+                    test = false;
+                }
+	        }
+	    }
+	    double yyxmidh = xData[0][nLen-1];
+	    int jj = nLen-1;
+	    test = true;
+	    while(test){
+	        if(this.yData[jj]<=dirFlag*yyymid){
+	            yyxmidh = xData[0][jj];
+	            test = false;
+	        }
+	        else{
+	            jj--;
+	            if(jj<0){
+	                yyxmidh = Stat.mean(this.xData[0]);
+	                jj=1;
+                    test = false;
+                }
+	        }
+	    }
+	    int thetaPos = (ii+jj)/2;
+	    double theta0 = xData[0][thetaPos];
+
+        // initial estimates
+        double[] start = new double[nParam];
+        start[0] = theta0;
+        start[1] = this.yData[0];
+        if(dirFlag==1){
+                start[2] = yymax;
+        }
+        else{
+                start[2] = yymin;
+        }
+
+        // initial step sizes
+        double[] step = new double[nParam];
+        for(int i=0; i<nParam; i++)step[i] = 0.1*start[i];
+        if(step[0]==0.0D)step[0] = (xData[0][nLen-1] - xData[0][0])/20.0D;
+        if(step[1]==0.0D)step[1] = Math.abs(yData[nLen-1] - yData[0])/20.0D;
+        if(step[2]==0.0D)step[1] = 0.1*(yData[nLen-1] - yData[0]);
+
+        // Nelder and Mead Simplex Regression
+        if(this.xErrorsEntered){
+            ShiftedRectangularHyperbolaFunctionDual f1 = new ShiftedRectangularHyperbolaFunctionDual();
+            f1.setYerrors(this.yErrors);
+            f1.setXerrors(this.xErrors);
+            Object regFun1 = (Object)f1;
+            this.simplexFlag = 3;
+            this.nonLinStatsNeeded = true;
+            this.dualErrorsRequired = true;
+            this.nelderMead(regFun1, null, start, step, this.fTol, this.nMax);
+            if(plotFlag==1){
+                // Print results
+                if(!this.supressPrint)this.print();
+                // Plot results
+                int flag = this.plotXY(f1);
+                if(flag!=-2 && !this.supressYYplot)this.plotYY();
+            }
+        }
+        else{
+            ShiftedRectangularHyperbolaFunction f2 = new ShiftedRectangularHyperbolaFunction();
+            Object regFun2 = (Object)f2;
+            this.simplexFlag = 1;
+            this.nonLinStatsNeeded = true;
+            this.dualErrorsRequired = false;
+            this.nelderMead(regFun2, null, start, step, this.fTol, this.nMax);
+            if(plotFlag==1){
+                // Print results
+                if(!this.supressPrint)this.print();
+                // Plot results
+                int flag = this.plotXY(f2);
+                if(flag!=-2 && !this.supressYYplot)this.plotYY();
+            }
+        }
+        this.scaleFlag = sfhold;
+    }
+
 
     // method for fitting data to a scaled Heaviside Step Function
     public void stepFunction(){
@@ -9538,13 +12556,13 @@ public class Regression{
     protected void fitStepFunction(int plotFlag){
 
         if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
-	    this.lastMethod=27;
+	    this.lastMethod = 27;
 	    this.userSupplied = false;
 	    this.linNonLin = false;
 	    this.zeroCheck = false;
-	    this.nTerms=2;
-	    if(!this.scaleFlag)this.nTerms=1;
-	    this.degreesOfFreedom=this.nData - this.nTerms;
+	    this.nParam=2;
+	    if(!this.scaleFlag)this.nParam=1;
+	    this.degreesOfFreedom=this.nData - this.nParam;
 	    if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
 
 	    // order data into ascending order of the abscissae
@@ -9595,7 +12613,7 @@ public class Regression{
 	    double theta0 = xData[0][thetaPos];
 
         // initial estimates
-        double[] start = new double[nTerms];
+        double[] start = new double[nParam];
         start[0] = theta0;
         if(this.scaleFlag){
             if(dirFlag==1){
@@ -9607,17 +12625,21 @@ public class Regression{
         }
 
         // initial step sizes
-        double[] step = new double[nTerms];
-        for(int i=0; i<nTerms; i++)step[i] = 0.1*start[i];
+        double[] step = new double[nParam];
+        for(int i=0; i<nParam; i++)step[i] = 0.1*start[i];
         if(step[0]==0.0D)step[0] = (xData[0][nLen-1] - xData[0][0])/20.0D;
         if(this.scaleFlag)if(step[1]==0.0D)step[1] = 0.1*(yData[nLen-1] - yData[0]);
 
         // Nelder and Mead Simplex Regression
         StepFunctionFunction f = new StepFunctionFunction();
-        f.scaleOption = this.scaleFlag;
-        f.scaleFactor = this.yScaleFactor;
+        f.setScaleOption(this.scaleFlag);
+        f.setScaleFactor(this.yScaleFactor);
+
         Object regFun2 = (Object)f;
-        this.nelderMead(regFun2, start, step, this.fTol, this.nMax);
+        this.simplexFlag = 1;
+        this.nonLinStatsNeeded = true;
+        this.dualErrorsRequired = false;
+        this.nelderMead(regFun2, null, start, step, this.fTol, this.nMax);
 
         if(plotFlag==1){
             // Print results
@@ -9643,13 +12665,13 @@ public class Regression{
     // Fit data to a Logistic probability function
 	protected void fitLogistic(int plotFlag){
         if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
-	    this.lastMethod=30;
+	    this.lastMethod = 30;
 	    this.userSupplied = false;
 	    this.linNonLin = false;
 	    this.zeroCheck = false;
-	    this.nTerms=3;
-	    if(!this.scaleFlag)this.nTerms=2;
-	    this.degreesOfFreedom=this.nData - this.nTerms;
+	    this.nParam=3;
+	    if(!this.scaleFlag)this.nParam=2;
+	    this.degreesOfFreedom=this.nData - this.nParam;
 	    if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
 
 	    // order data into ascending order of the abscissae
@@ -9687,8 +12709,8 @@ public class Regression{
 	    ym=ym*beta*Math.sqrt(2.0D*Math.PI);
 
         // Fill arrays needed by the Simplex
-        double[] start = new double[this.nTerms];
-        double[] step = new double[this.nTerms];
+        double[] start = new double[this.nParam];
+        double[] step = new double[this.nParam];
         start[0] = mu;
         start[1] = beta;
         if(this.scaleFlag){
@@ -9712,10 +12734,14 @@ public class Regression{
 	    // Nelder and Mead Simplex Regression
         LogisticFunction f = new LogisticFunction();
         this.addConstraint(1,-1,0.0D);
-        f.scaleOption = this.scaleFlag;
-        f.scaleFactor = this.yScaleFactor;
+        f.setScaleOption(this.scaleFlag);
+        f.setScaleFactor(this.yScaleFactor);
+
         Object regFun2 = (Object)f;
-        this.nelderMead(regFun2, start, step, this.fTol, this.nMax);
+        this.simplexFlag = 1;
+        this.nonLinStatsNeeded = true;
+        this.dualErrorsRequired = false;
+        this.nelderMead(regFun2, null, start, step, this.fTol, this.nMax);
 
         if(plotFlag==1){
             // Print results
@@ -9755,17 +12781,17 @@ public class Regression{
         if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
         this.userSupplied = false;
 	    switch(typeFlag){
-    	    case 0: this.lastMethod=31;
-	                this.nTerms=3;
+    	    case 0: this.lastMethod = 31;
+	                this.nParam=3;
 	                break;
-	        case 1: this.lastMethod=32;
-	                this.nTerms=5;
+	        case 1: this.lastMethod = 32;
+	                this.nParam=5;
 	                break;
         }
-	    if(!this.scaleFlag)this.nTerms=this.nTerms-1;
+	    if(!this.scaleFlag)this.nParam=this.nParam-1;
 
 	    this.zeroCheck = false;
-		this.degreesOfFreedom=this.nData - this.nTerms;
+		this.degreesOfFreedom=this.nData - this.nParam;
 	    if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
 
 	    // order data into ascending order of the abscissae
@@ -9813,15 +12839,15 @@ public class Regression{
 	            System.out.println("Regression: beta: data points must be greater than or equal to 0");
 	            System.out.println("method betaMinMax used in place of method beta");
 	            typeFlag = 1;
-	            this.lastMethod=32;
-	            this.nTerms=5;
+	            this.lastMethod = 32;
+	            this.nParam=5;
 	        }
 	        if(maxX>1.0D){
 	            System.out.println("Regression: beta: data points must be less than or equal to 1");
 	            System.out.println("method betaMinMax used in place of method beta");
 	            typeFlag = 1;
-	            this.lastMethod=32;
-	            this.nTerms=5;
+	            this.lastMethod = 32;
+	            this.nParam=5;
 	        }
         }
 
@@ -9848,8 +12874,8 @@ public class Regression{
 
 	    // Nelder and Mead Simplex Regression for Gumbel
         // Fill arrays needed by the Simplex
-        double[] start = new double[this.nTerms];
-        double[] step = new double[this.nTerms];
+        double[] start = new double[this.nParam];
+        double[] step = new double[this.nParam];
         switch(typeFlag){
             case 0: start[0] = alphaGuess;          //alpha
                     start[1] = betaGuess;           //beta
@@ -9890,15 +12916,22 @@ public class Regression{
         BetaFunction ff = new BetaFunction();
 
         // Set minimum maximum type option
-        ff.typeFlag = typeFlag;
+        ff.setTypeFlag(typeFlag);
 
         // Set ordinate scaling option
-        ff.scaleOption = this.scaleFlag;
-        ff.scaleFactor = this.yScaleFactor;
-
+        ff.setScaleOption(this.scaleFlag);
+        ff.setScaleFactor(this.yScaleFactor);
+  
+                
         // Perform simplex regression
         Object regFun3 = (Object)ff;
-        this.nelderMead(regFun3, start, step, this.fTol, this.nMax);
+        this.simplexFlag = 1;
+        this.nonLinStatsNeeded = true;
+        this.dualErrorsRequired = false;
+        this.simplexFlag = 1;
+        this.nonLinStatsNeeded = true;
+        this.dualErrorsRequired = false;
+        this.nelderMead(regFun3, null, start, step, this.fTol, this.nMax);
 
         if(allTest==1){
             // Print results
@@ -9937,17 +12970,17 @@ public class Regression{
         if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
         this.userSupplied = false;
 	    switch(typeFlag){
-    	    case 0: this.lastMethod=33;
-	                this.nTerms=4;
+    	    case 0: this.lastMethod = 33;
+	                this.nParam=4;
 	                break;
-	        case 1: this.lastMethod=34;
-	                this.nTerms=2;
+	        case 1: this.lastMethod = 34;
+	                this.nParam=2;
 	                break;
         }
-	    if(!this.scaleFlag)this.nTerms=this.nTerms-1;
+	    if(!this.scaleFlag)this.nParam=this.nParam-1;
 
 	    this.zeroCheck = false;
-		this.degreesOfFreedom=this.nData - this.nTerms;
+		this.degreesOfFreedom=this.nData - this.nParam;
 	    if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
 
 	    // order data into ascending order of the abscissae
@@ -9995,8 +13028,8 @@ public class Regression{
 	            System.out.println("Regression: gammaStandard: data points must be greater than or equal to 0");
 	            System.out.println("method gamma used in place of method gammaStandard");
 	            typeFlag = 0;
-	            this.lastMethod=33;
-	            this.nTerms=2;
+	            this.lastMethod = 33;
+	            this.nParam=2;
 	        }
         }
 
@@ -10020,8 +13053,8 @@ public class Regression{
 
 	    // Nelder and Mead Simplex Regression for Gamma
         // Fill arrays needed by the Simplex
-        double[] start = new double[this.nTerms];
-        double[] step = new double[this.nTerms];
+        double[] start = new double[this.nParam];
+        double[] step = new double[this.nParam];
         switch(typeFlag){
             case 1: start[0] = gammaGuess;          //gamma
                     if(this.scaleFlag){
@@ -10054,15 +13087,18 @@ public class Regression{
         GammaFunction ff = new GammaFunction();
 
         // Set type option
-        ff.typeFlag = typeFlag;
+        ff.setTypeFlag(typeFlag);
 
         // Set ordinate scaling option
-        ff.scaleOption = this.scaleFlag;
-        ff.scaleFactor = this.yScaleFactor;
+        ff.setScaleOption(this.scaleFlag);
+        ff.setScaleFactor(this.yScaleFactor);
 
         // Perform simplex regression
         Object regFun3 = (Object)ff;
-        this.nelderMead(regFun3, start, step, this.fTol, this.nMax);
+        this.simplexFlag = 1;
+        this.nonLinStatsNeeded = true;
+        this.dualErrorsRequired = false;
+        this.nelderMead(regFun3, null, start, step, this.fTol, this.nMax);
 
         if(allTest==1){
             // Print results
@@ -10092,15 +13128,15 @@ public class Regression{
 
     protected void fitErlang(int allTest, int typeFlag){
         if(this.multipleY)throw new IllegalArgumentException("This method cannot handle multiply dimensioned y arrays");
-	    this.lastMethod=35;
+	    this.lastMethod = 35;
 	    this.userSupplied = false;
-	    int nTerms0 = 2;    // number of erlang terms
-	    int nTerms1 = 4;    // number of gamma terms - initial estimates procedure
-	    this.nTerms = nTerms1;
-	    if(!this.scaleFlag)this.nTerms=this.nTerms-1;
+	    int nParam0 = 2;    // number of erlang terms
+	    int nParam1 = 4;    // number of gamma terms - initial estimates procedure
+	    this.nParam = nParam1;
+	    if(!this.scaleFlag)this.nParam=this.nParam-1;
 
 	    this.zeroCheck = false;
-		this.degreesOfFreedom=this.nData - this.nTerms;
+		this.degreesOfFreedom=this.nData - this.nParam;
 	    if(this.degreesOfFreedom<1 && !this.ignoreDofFcheck)throw new IllegalArgumentException("Degrees of freedom must be greater than 0");
 
 	    // order data into ascending order of the abscissae
@@ -10161,8 +13197,8 @@ public class Regression{
 
 	    // Nelder and Mead Simplex Regression for Gamma
         // Fill arrays needed by the Simplex
-        double[] start = new double[this.nTerms];
-        double[] step = new double[this.nTerms];
+        double[] start = new double[this.nParam];
+        double[] step = new double[this.nParam];
         start[0] = muGuess;             // mu
         start[1] = betaGuess;           // beta
         start[2] = gammaGuess;          // gamma
@@ -10181,15 +13217,18 @@ public class Regression{
         GammaFunction ff = new GammaFunction();
 
         // Set type option
-        ff.typeFlag = typeFlag;
+        ff.setTypeFlag(typeFlag);
 
         // Set ordinate scaling option
-        ff.scaleOption = this.scaleFlag;
-        ff.scaleFactor = this.yScaleFactor;
+        ff.setScaleOption(this.scaleFlag);
+        ff.setScaleFactor(this.yScaleFactor);
 
         // Perform simplex regression
         Object regFun3 = (Object)ff;
-        this.nelderMead(regFun3, start, step, this.fTol, this.nMax);
+        this.simplexFlag = 1;
+        this.nonLinStatsNeeded = true;
+        this.dualErrorsRequired = false;
+        this.nelderMead(regFun3, null, start, step, this.fTol, this.nMax);
 
         // FIT TO ERLANG DISTRIBUTION USING GAMMA BEST ESTIMATES AS INITIAL ESTIMATES
         // AND VARYING RATE PARAMETER BY UNIT STEPS
@@ -10199,9 +13238,9 @@ public class Regression{
         double[] bestGammaEst = this.getCoeff();
 
         // Swap from Gamma dimensions to Erlang dimensions
-        this.nTerms = nTerms0;
-        start = new double[this.nTerms];
-        step = new double[this.nTerms];
+        this.nParam = nParam0;
+        start = new double[this.nParam];
+        step = new double[this.nParam];
         if(bestGammaEst[3]<0.0)bestGammaEst[3] *= -1.0;
 
         // initial estimates
@@ -10222,9 +13261,9 @@ public class Regression{
         ErlangFunction ef = new ErlangFunction();
 
         // Set ordinate scaling option
-        ef.scaleOption = this.scaleFlag;
-        ef.scaleFactor = this.yScaleFactor;
-        ef.kay = kay;
+        ef.setScaleOption(this.scaleFlag);
+        ef.setScaleFactor(this.yScaleFactor);
+        ef.setKay(kay);
 
         // Fit stepping up
         boolean testKay = true;
@@ -10239,8 +13278,10 @@ public class Regression{
 
             // Perform simplex regression
             Object regFun4 = (Object)ef;
-
-            this.nelderMead(regFun4, start, step, this.fTol, this.nMax);
+            this.simplexFlag = 1;
+            this.nonLinStatsNeeded = true;
+            this.dualErrorsRequired = false;
+            this.nelderMead(regFun4, null, start, step, this.fTol, this.nMax);
             double sumOfSquaresError = this.getSumOfSquares();
             if(iStart==1){
                 iStart = 2;
@@ -10251,7 +13292,7 @@ public class Regression{
                 step[0] = 0.1D*start[0];
                 if(this.scaleFlag)step[1] = 0.1D*start[1];
                 this.addConstraint(0,-1,0.0D);
-                ef.kay = kay;
+                ef.setKay(kay);
             }
             else{
                 if(sumOfSquaresError<=ssMin){
@@ -10270,7 +13311,7 @@ public class Regression{
                     step[0] = 0.1D*start[0];
                     if(this.scaleFlag)step[1] = 0.1D*start[1];
                     this.addConstraint(0,-1,0.0D);
-                    ef.kay = kay;
+                    ef.setKay(kay);
                 }
                 else{
                     upSS = ssMin;
@@ -10299,14 +13340,16 @@ public class Regression{
 	        // Add constraints
             this.addConstraint(0,-1,0.0D);
             kay = kay0;
-            ef.kay = kay;
+            ef.setKay(kay);
 
             while(testKay){
 
                 // Perform simplex regression
                 Object regFun5 = (Object)ef;
-
-                this.nelderMead(regFun5, start, step, this.fTol, this.nMax);
+                this.simplexFlag = 1;
+                this.nonLinStatsNeeded = true;
+                this.dualErrorsRequired = false;
+                this.nelderMead(regFun5, null, start, step, this.fTol, this.nMax);
                 double sumOfSquaresError = this.getSumOfSquares();
                 if(iStart==1){
                     iStart = 2;
@@ -10323,7 +13366,7 @@ public class Regression{
                         step[0] = 0.1D*start[0];
                         if(this.scaleFlag)step[1] = 0.1D*start[1];
                         this.addConstraint(0,-1,0.0D);
-                        ef.kay = kay;
+                        ef.setKay(kay);
                     }
                 }
                 else{
@@ -10341,7 +13384,7 @@ public class Regression{
                             step[0] = 0.1D*start[0];
                             if(this.scaleFlag)step[1] = 0.1D*start[1];
                             this.addConstraint(0,-1,0.0D);
-                            ef.kay = kay;
+                            ef.setKay(kay);
                         }
                     }
                     else{
@@ -10373,15 +13416,17 @@ public class Regression{
         this.addConstraint(0,-1,0.0D);
 
         // Set function variables
-        ef.scaleOption = this.scaleFlag;
-        ef.scaleFactor = this.yScaleFactor;
-        ef.kay = Math.round(kayFinal);
+        ef.setScaleOption(this.scaleFlag);
+        ef.setScaleFactor(this.yScaleFactor);
+        ef.setKay(Math.round(kayFinal));
         this.kayValue = Math.round(kayFinal);
 
         // Perform penultimate regression
         Object regFun4 = (Object)ef;
-
-        this.nelderMead(regFun4, start, step, this.fTol, this.nMax);
+        this.simplexFlag = 1;
+        this.nonLinStatsNeeded = true;
+        this.dualErrorsRequired = false;
+        this.nelderMead(regFun4, null, start, step, this.fTol, this.nMax);
         double[] coeff = getCoeff();
 
         // Final fit
@@ -10397,15 +13442,17 @@ public class Regression{
         this.addConstraint(0,-1,0.0D);
 
         // Set function variables
-        ef.scaleOption = this.scaleFlag;
-        ef.scaleFactor = this.yScaleFactor;
-        ef.kay = Math.round(kayFinal);
+        ef.setScaleOption(this.scaleFlag);
+        ef.setScaleFactor(this.yScaleFactor);
+        ef.setKay(Math.round(kayFinal));
         this.kayValue = Math.round(kayFinal);
 
         // Perform final regression
-       Object regFun5 = (Object)ef;
-
-        this.nelderMead(regFun5, start, step, this.fTol, this.nMax);
+        Object regFun5 = (Object)ef;
+        this.simplexFlag = 1;
+        this.nonLinStatsNeeded = true;
+        this.dualErrorsRequired = false;
+        this.nelderMead(regFun5, null, start, step, this.fTol, this.nMax);
 
         if(allTest==1){
             // Print results
@@ -10553,29 +13600,325 @@ public class Regression{
 
             return Regression.histogramBins(data, binWidth, binZero);
         }
+        
+    // DEPRECATED METHODS
+        
+    // Nelder and Mead Simplex Simplex2 Non-linear Regression
+    // Numerical differencing Hessian
+    public void simplex2(RegressionFunction2 g, double[] start, double[] step, double fTol, int nMax){
+        this.simplex(g, start, step, fTol, nMax);
+    }
 
+    // Nelder and Mead Simplex Simplex2 Non-linear Regression
+    // Analytical Hessian derivatives
+    public void simplex2(RegressionFunction2 g, RegressionDerivativeFunction2 gd, double[] start, double[] step, double fTol, int nMax){
+        this.simplex(g, gd, start, step, fTol, nMax);
+    }
+    
+    // Nelder and Mead Simplex Simplex2 Non-linear Regression
+    // plus plot and output file
+    // Numerical differencing Hessian
+    public void simplexPlot2(RegressionFunction2 g, double[] start, double[] step, double fTol, int nMax){
+         this.simplexPlot(g, start, step, fTol, nMax);
+    }
+    
+    // Nelder and Mead Simplex Simplex2 Non-linear Regression
+    // plus plot and output file
+    // Analytical Hessian derivatives
+    public void simplexPlot2(RegressionFunction2 g, RegressionDerivativeFunction2 gd, double[] start, double[] step, double fTol, int nMax){
+        this.simplexPlot(g, gd, start, step, fTol, nMax);
+    }
+
+    // Nelder and Mead simplex
+    // Default  maximum iterations
+    // Numerical differencing Hessian
+    public void simplex2(RegressionFunction2 g, double[] start, double[] step, double fTol){
+        this.simplex(g, start, step, fTol);
+    }
+    
+    // Nelder and Mead simplex
+    // Default  maximum iterations
+    // Analytical Hessian derivatives
+    public void simplex2(RegressionFunction2 g, RegressionDerivativeFunction2 gd, double[] start, double[] step, double fTol){
+        this.simplex(g, gd, start, step, fTol);
+    }
+
+    // Nelder and Mead Simplex Simplex2 Non-linear Regression
+    // plus plot and output file
+    // Default  maximum iterations
+    // Numerical differencing Hessian
+    public void simplexPlot2(RegressionFunction2 g, double[] start, double[] step, double fTol){
+        this.simplexPlot(g, start, step, fTol);
+    }
+    
+    // Nelder and Mead Simplex Simplex2 Non-linear Regression
+    // plus plot and output file
+    // Default  maximum iterations
+    // Analytical Hessian derivatives
+    public void simplexPlot2(RegressionFunction2 g, RegressionDerivativeFunction2 gd, double[] start, double[] step, double fTol){
+        this.simplexPlot(g, gd, start, step, fTol);
+    }
+
+    // Nelder and Mead simplex
+    // Default  tolerance
+    // Numerical differencing Hessian
+    public void simplex2(RegressionFunction2 g, double[] start, double[] step, int nMax){
+        this.simplex(g, start, step, nMax);
+    }
+    
+    // Nelder and Mead simplex
+    // Default  tolerance
+    // Analytical Hessian derivatives
+    public void simplex2(RegressionFunction2 g, RegressionDerivativeFunction2 gd, double[] start, double[] step, int nMax){
+        this.simplex(g, gd, start, step, nMax);
+    }
+
+    // Nelder and Mead Simplex Simplex2 Non-linear Regression
+    // plus plot and output file
+    // Default  tolerance
+    // Numerical differencing Hessian
+    public void simplexPlot2(RegressionFunction2 g, double[] start, double[] step, int nMax){
+        this.simplexPlot(g, start, step, nMax);
+    }
+    
+    // Nelder and Mead Simplex Simplex2 Non-linear Regression
+    // plus plot and output file
+    // Default  tolerance
+    // Analytical Hessian derivatives
+    public void simplexPlot2(RegressionFunction2 g, RegressionDerivativeFunction2 gd, double[] start, double[] step, int nMax){
+        this.simplexPlot(g, gd, start, step, nMax);
+    }
+
+    // Nelder and Mead simplex
+    // Default  tolerance
+    // Default  maximum iterations
+    // Numerical differencing Hessian
+    public void simplex2(RegressionFunction2 g, double[] start, double[] step){
+        this.simplex(g, start, step);
+    }
+    
+        // Nelder and Mead simplex
+    // Default  tolerance
+    // Default  maximum iterations
+    // Analytical Hessian derivatives
+    public void simplex2(RegressionFunction2 g, RegressionDerivativeFunction2 gd, double[] start, double[] step){
+        this.simplex(g, gd, start, step);
+    }
+
+    // Nelder and Mead Simplex Simplex2 Non-linear Regression
+    // plus plot and output file
+    // Default  tolerance
+    // Default  maximum iterations
+    // Numerical differencing Hessian
+    public void simplexPlot2(RegressionFunction2 g, double[] start, double[] step){
+        this.simplexPlot(g, start, step);
+    }
+    
+      // Nelder and Mead Simplex Simplex2 Non-linear Regression
+    // plus plot and output file
+    // Default  tolerance
+    // Default  maximum iterations
+    // Analytical Hessian derivatives
+    public void simplexPlot2(RegressionFunction2 g, RegressionDerivativeFunction2 gd, double[] start, double[] step){
+        this.simplexPlot(g, gd, start, step);
+    }
+
+    // Nelder and Mead simplex
+    // Default step option - all step[i] = dStep
+    // Numerical differencing Hessian
+    public void simplex2(RegressionFunction2 g, double[] start, double fTol, int nMax){
+        this.simplex(g, start, fTol, nMax);
+    }
+    
+    // Nelder and Mead simplex
+    // Default step option - all step[i] = dStep
+    // Analytical Hessian derivatives
+    public void simplex2(RegressionFunction2 g, RegressionDerivativeFunction2 gd, double[] start, double fTol, int nMax){
+        this.simplex(g, gd, start, fTol, nMax);
+    }
+
+    // Nelder and Mead Simplex Simplex2 Non-linear Regression
+    // plus plot and output file
+    // Default step option - all step[i] = dStep
+    // Numerical differencing Hessian
+    public void simplexPlot2(RegressionFunction2 g, double[] start, double fTol, int nMax){
+        this.simplexPlot(g, start, fTol, nMax);
+    }
+
+    // Nelder and Mead Simplex Simplex2 Non-linear Regression
+    // plus plot and output file
+    // Default step option - all step[i] = dStep
+    // Analytical Hessian derivatives
+    public void simplexPlot2(RegressionFunction2 g, RegressionDerivativeFunction2 gd, double[] start, double fTol, int nMax){
+        this.simplexPlot(g, gd, start, fTol, nMax);
+    }
+    
+    // Nelder and Mead simplex
+    // Default  maximum iterations
+    // Default step option - all step[i] = dStep
+    // Numerical differencing Hessian
+    public void simplex2(RegressionFunction2 g, double[] start, double fTol){
+        this.simplex(g, start, fTol);
+    }
+    
+    // Nelder and Mead simplex
+    // Default  maximum iterations
+    // Default step option - all step[i] = dStep
+    // Analytical Hessian derivatives
+    public void simplex2(RegressionFunction2 g, RegressionDerivativeFunction2 gd, double[] start, double fTol){
+        this.simplex(g, gd, start, fTol);
+    }
+
+    // Nelder and Mead Simplex Simplex2 Non-linear Regression
+    // plus plot and output file
+    // Default  maximum iterations
+    // Default step option - all step[i] = dStep
+    // Numerical differencing Hessian
+    public void simplexPlot2(RegressionFunction2 g, double[] start, double fTol){
+        this.simplexPlot(g, start, fTol);
+    }
+    
+    // Nelder and Mead Simplex Simplex2 Non-linear Regression
+    // plus plot and output file
+    // Default  maximum iterations
+    // Default step option - all step[i] = dStep
+    // Analytical Hessian derivatives
+    public void simplexPlot2(RegressionFunction2 g, RegressionDerivativeFunction2 gd, double[] start, double fTol){
+        this.simplexPlot(g, gd, start, fTol);
+    }
+
+    // Nelder and Mead simplex
+    // Default  tolerance
+    // Default step option - all step[i] = dStep
+    // Numerical differencing Hessian
+    public void simplex2(RegressionFunction2 g, double[] start, int nMax){
+        this.simplex(g, start, nMax);
+    }
+    
+    // Nelder and Mead simplex
+    // Default  tolerance
+    // Default step option - all step[i] = dStep
+    // Analytical Hessian derivatives
+    public void simplex2(RegressionFunction2 g, RegressionDerivativeFunction2 gd, double[] start, int nMax){
+        this.simplex(g, gd, start, nMax);
+    }
+
+    // Nelder and Mead Simplex Simplex2 Non-linear Regression
+    // plus plot and output file
+    // Default  tolerance
+    // Default step option - all step[i] = dStep
+    // Numerical differencing Hessian
+    public void simplexPlot2(RegressionFunction2 g, double[] start, int nMax){
+        this.simplexPlot(g, start, nMax);
+    }
+
+    // Nelder and Mead Simplex Simplex2 Non-linear Regression
+    // plus plot and output file
+    // Default  tolerance
+    // Default step option - all step[i] = dStep
+    // Analytical Hessian derivatives
+    public void simplexPlot2(RegressionFunction2 g, RegressionDerivativeFunction2 gd, double[] start, int nMax){
+        this.simplexPlot(g, gd, start, nMax);
+    }
+    
+    // Nelder and Mead simplex
+    // Default  tolerance
+    // Default  maximum iterations
+    // Default step option - all step[i] = dStep
+    // Numerical differencing Hessian
+    public void simplex2(RegressionFunction2 g, double[] start){
+        this.simplex(g, start);
+    }
+    
+    // Nelder and Mead simplex
+    // Default  tolerance
+    // Default  maximum iterations
+    // Default step option - all step[i] = dStep
+    // Analytical Hessian derivatives
+    public void simplex2(RegressionFunction2 g, RegressionDerivativeFunction2 gd, double[] start){
+        this.simplex(g, gd, start);
+    }
+
+    // Nelder and Mead Simplex Simplex2 Non-linear Regression
+    // plus plot and output file
+    // Default  tolerance
+    // Default  maximum iterations
+    // Default step option - all step[i] = dStep
+    // Numerical differencing Hessian
+    public void simplexPlot2(RegressionFunction2 g, double[] start){
+        this.simplexPlot(g, start);
+    }
+    
+    // Nelder and Mead Simplex Simplex2 Non-linear Regression
+    // plus plot and output file
+    // Default  tolerance
+    // Default  maximum iterations
+    // Default step option - all step[i] = dStep
+    // Analytical Hessian derivatives
+    public void simplexPlot2(RegressionFunction2 g, RegressionDerivativeFunction2 gd, double[] start){
+        this.simplexPlot(g, gd, start);
+    }
+
+    // plot experimental x against experimental y and against calculated y
+    // non-linear regression data
+    // title provided
+    // matching simplex2
+    protected int plotXY2(RegressionFunction2 g, String title){
+        return plotXY(g, title);
+    }
+    
+    // plot experimental x against experimental y and against calculated y
+    // non-linear regression data
+    // no title provided
+    // matches simplex2
+    protected int plotXY2(RegressionFunction2 g){
+        return plotXY(g);
+    }
+
+    // Pareto
+    public void pareto(){
+        this.fitPareto(0, 2);
+    }
+    
+    public void paretoPlot(){
+	this.fitPareto(1, 2);
+    }
 }
 
 //  CLASSES TO EVALUATE THE SPECIAL FUNCTIONS
 
-// Class to evaluate the Gausian (normal) function y = (yscale/sd.sqrt(2.pi)).exp(-0.5[(x - xmean)/sd]^2).
+
+
+// Class to evaluate derivatives for the Gausian (normal) function y = (yscale/sd.sqrt(2.pi)).exp(-0.5[(x - xmean)/sd]^2).
 class GaussianFunction implements RegressionFunction{
-    public boolean scaleOption = true;
-    public double scaleFactor = 1.0D;
+    private boolean scaleOption = true;
+    private double scaleFactor = 1.0D;
+    
     public double function(double[] p, double[] x){
         double yScale = scaleFactor;
         if(scaleOption)yScale = p[2];
         double y = (yScale/(p[1]*Math.sqrt(2.0D*Math.PI)))*Math.exp(-0.5D*Fmath.square((x[0]-p[0])/p[1]));
         return y;
     }
+           
+    public void setScaleFactor(double scaleFactor){
+        this.scaleFactor = scaleFactor;
+    } 
+    
+    public void setScaleOption(boolean scaleFlag){
+        this.scaleOption = scaleFlag;
+    }
+
 }
+
+
 
 // Class to evaluate the Gausian (normal) function y = (yscale/sd.sqrt(2.pi)).exp(-0.5[(x - xmean)/sd]^2).
 // Some parameters may be fixed
 class GaussianFunctionFixed implements RegressionFunction{
 
-    public double[] param = new double[3];
-    public boolean[] fixed = new boolean[3];
+    private double[] param = new double[3];
+    private boolean[] fixed = new boolean[3];
 
     public double function(double[] p, double[] x){
 
@@ -10590,13 +13933,21 @@ class GaussianFunctionFixed implements RegressionFunction{
         double y = (param[2]/(param[1]*Math.sqrt(2.0D*Math.PI)))*Math.exp(-0.5D*Fmath.square((x[0]-param[0])/param[1]));
         return y;
     }
+        
+    public void setParam(double[] param){
+        this.param = param;
+    } 
+    
+    public void setFixed(boolean[] fixed){
+        this.fixed = fixed;
+    }
 }
 
 // Class to evaluate the  multiple Gausian (normal) function y = Sum[(A(i)/sd(i).sqrt(2.pi)).exp(-0.5[(x - xmean(i))/sd(i)]^2)].
 class MultipleGaussianFunction implements RegressionFunction{
-    public boolean scaleOption = true;
-    public double scaleFactor = 1.0D;
-    public int nGaussians = 1;
+    private boolean scaleOption = true;
+    private double scaleFactor = 1.0D;
+    private int nGaussians = 1;
 
     public double function(double[] p, double[] x){
         double y = 0.0;
@@ -10607,30 +13958,60 @@ class MultipleGaussianFunction implements RegressionFunction{
         }
         return y;
     }
+        
+    public void setScaleFactor(double scaleFactor){
+        this.scaleFactor = scaleFactor;
+    } 
+    
+    public void setScaleOption(boolean scaleFlag){
+        this.scaleOption = scaleFlag;
+    }
+    
+    public void setNgaussians(int nGaussians){
+        this.nGaussians = nGaussians;
+    }
 }
 
 
 // Class to evaluate the two parameter log-normal function y = (yscale/x.sigma.sqrt(2.pi)).exp(-0.5[(log(x) - mu)/sd]^2).
 class LogNormalTwoParFunction implements RegressionFunction{
-    public boolean scaleOption = true;
-    public double scaleFactor = 1.0D;
+    private boolean scaleOption = true;
+    private double scaleFactor = 1.0D;
+    
     public double function(double[] p, double[] x){
         double yScale = scaleFactor;
         if(scaleOption)yScale = p[2];
         double y = (yScale/(x[0]*p[1]*Math.sqrt(2.0D*Math.PI)))*Math.exp(-0.5D*Fmath.square((Math.log(x[0])-p[0])/p[1]));
         return y;
     }
+        
+    public void setScaleFactor(double scaleFactor){
+        this.scaleFactor = scaleFactor;
+    } 
+    
+    public void setScaleOption(boolean scaleFlag){
+        this.scaleOption = scaleFlag;
+    }
 }
 
 // Class to evaluate the three parameter log-normal function y = (yscale/(x-alpha).beta.sqrt(2.pi)).exp(-0.5[(log((x-alpha)/gamma)/sd]^2).
 class LogNormalThreeParFunction implements RegressionFunction{
-    public boolean scaleOption = true;
-    public double scaleFactor = 1.0D;
+    private boolean scaleOption = true;
+    private double scaleFactor = 1.0D;
+    
     public double function(double[] p, double[] x){
         double yScale = scaleFactor;
         if(scaleOption)yScale = p[3];
         double y = (yScale/((x[0]-p[0])*p[1]*Math.sqrt(2.0D*Math.PI)))*Math.exp(-0.5D*Fmath.square(Math.log((x[0]-p[0])/p[2])/p[1]));
         return y;
+    }
+        
+    public void setScaleFactor(double scaleFactor){
+        this.scaleFactor = scaleFactor;
+    } 
+    
+    public void setScaleOption(boolean scaleFlag){
+        this.scaleOption = scaleFlag;
     }
 }
 
@@ -10638,8 +14019,8 @@ class LogNormalThreeParFunction implements RegressionFunction{
 // Class to evaluate the Lorentzian function
 // y = (yscale/pi).(gamma/2)/((x - mu)^2+(gamma/2)^2).
 class LorentzianFunction implements RegressionFunction{
-    public boolean scaleOption = true;
-    public double scaleFactor = 1.0D;
+    private boolean scaleOption = true;
+    private double scaleFactor = 1.0D;
 
     public double function(double[] p, double[] x){
         double yScale = scaleFactor;
@@ -10647,13 +14028,21 @@ class LorentzianFunction implements RegressionFunction{
         double y = (yScale/Math.PI)*(p[1]/2.0D)/(Fmath.square(x[0]-p[0])+Fmath.square(p[1]/2.0D));
         return y;
     }
+        
+    public void setScaleFactor(double scaleFactor){
+        this.scaleFactor = scaleFactor;
+    } 
+    
+    public void setScaleOption(boolean scaleFlag){
+        this.scaleOption = scaleFlag;
+    }
 }
 
 // Class to evaluate the Poisson function
 // y = yscale.(mu^k).exp(-mu)/k!.
 class PoissonFunction implements RegressionFunction{
-    public boolean scaleOption = true;
-    public double scaleFactor = 1.0D;
+    private boolean scaleOption = true;
+    private double scaleFactor = 1.0D;
 
     public double function(double[] p, double[] x){
         double yScale = scaleFactor;
@@ -10661,13 +14050,21 @@ class PoissonFunction implements RegressionFunction{
         double y = yScale*Math.pow(p[0],x[0])*Math.exp(-p[0])/Stat.factorial(x[0]);
         return y;
     }
+        
+    public void setScaleFactor(double scaleFactor){
+        this.scaleFactor = scaleFactor;
+    } 
+    
+    public void setScaleOption(boolean scaleFlag){
+        this.scaleOption = scaleFlag;
+    }
 }
 
 // Class to evaluate the Gumbel function
 class GumbelFunction implements RegressionFunction{
-    public boolean scaleOption = true;
-    public double scaleFactor = 1.0D;
-    public int typeFlag = 0; // set to 0 -> Minimum Mode Gumbel
+    private boolean scaleOption = true;
+    private double scaleFactor = 1.0D;
+    private int typeFlag = 0; // set to 0 -> Minimum Mode Gumbel
                             // reset to 1 -> Maximum Mode Gumbel
                             // reset to 2 -> one parameter Minimum Mode Gumbel
                             // reset to 3 -> one parameter Maximum Mode Gumbel
@@ -10717,14 +14114,26 @@ class GumbelFunction implements RegressionFunction{
         }
         return y;
     }
+        
+    public void setScaleFactor(double scaleFactor){
+        this.scaleFactor = scaleFactor;
+    } 
+    
+    public void setScaleOption(boolean scaleFlag){
+        this.scaleOption = scaleFlag;
+    }
+    
+    public void setTypeFlag(int typeFlag){
+        this.typeFlag = typeFlag;
+    }
 }
 
 // Class to evaluate the Frechet function
 // y = yscale.(gamma/sigma)*((x - mu)/sigma)^(-gamma-1)*exp(-((x-mu)/sigma)^-gamma
 class FrechetFunctionOne implements RegressionFunction{
-    public boolean scaleOption = true;
-    public double scaleFactor = 1.0D;
-    public int typeFlag = 0; // set to 0 -> Three Parameter Frechet
+    private boolean scaleOption = true;
+    private double scaleFactor = 1.0D;
+    private int typeFlag = 0; // set to 0 -> Three Parameter Frechet
                             // reset to 1 -> Two Parameter Frechet
                             // reset to 2 -> Standard Frechet
 
@@ -10755,13 +14164,25 @@ class FrechetFunctionOne implements RegressionFunction{
         }
         return y;
     }
+        
+    public void setScaleFactor(double scaleFactor){
+        this.scaleFactor = scaleFactor;
+    } 
+    
+    public void setScaleOption(boolean scaleFlag){
+        this.scaleOption = scaleFlag;
+    }
+    
+    public void setTypeFlag(int typeFlag){
+        this.typeFlag = typeFlag;
+    }
 }
 
 // Class to evaluate the semi-linearised Frechet function
 // log(log(1/(1-Cumulative y) = gamma*log((x-mu)/sigma)
 class FrechetFunctionTwo implements RegressionFunction{
 
-    public int typeFlag = 0; // set to 0 -> Three Parameter Frechet
+    private int typeFlag = 0; // set to 0 -> Three Parameter Frechet
                             // reset to 1 -> Two Parameter Frechet
                             // reset to 2 -> Standard Frechet
 
@@ -10778,14 +14199,18 @@ class FrechetFunctionTwo implements RegressionFunction{
 
         return y;
     }
+    
+    public void setTypeFlag(int typeFlag){
+        this.typeFlag = typeFlag;
+    }
 }
 
 // Class to evaluate the Weibull function
 // y = yscale.(gamma/sigma)*((x - mu)/sigma)^(gamma-1)*exp(-((x-mu)/sigma)^gamma
 class WeibullFunctionOne implements RegressionFunction{
-    public boolean scaleOption = true;
-    public double scaleFactor = 1.0D;
-    public int typeFlag = 0; // set to 0 -> Three Parameter Weibull
+    private boolean scaleOption = true;
+    private double scaleFactor = 1.0D;
+    private int typeFlag = 0; // set to 0 -> Three Parameter Weibull
                             // reset to 1 -> Two Parameter Weibull
                             // reset to 2 -> Standard Weibull
 
@@ -10816,13 +14241,25 @@ class WeibullFunctionOne implements RegressionFunction{
         }
         return y;
     }
+        
+    public void setScaleFactor(double scaleFactor){
+        this.scaleFactor = scaleFactor;
+    } 
+    
+    public void setScaleOption(boolean scaleFlag){
+        this.scaleOption = scaleFlag;
+    }
+    
+    public void setTypeFlag(int typeFlag){
+        this.typeFlag = typeFlag;
+    }
 }
 
 // Class to evaluate the semi-linearised Weibull function
 // log(log(1/(1-Cumulative y) = gamma*log((x-mu)/sigma)
 class WeibullFunctionTwo implements RegressionFunction{
 
-    public int typeFlag = 0; // set to 0 -> Three Parameter Weibull
+    private int typeFlag = 0; // set to 0 -> Three Parameter Weibull
                             // reset to 1 -> Two Parameter Weibull
                             // reset to 2 -> Standard Weibull
 
@@ -10836,16 +14273,19 @@ class WeibullFunctionTwo implements RegressionFunction{
             case 2: y = p[0]*Math.log(Math.abs(x[0]));
             break;
         }
-
         return y;
+    }
+
+    public void setTypeFlag(int typeFlag){
+        this.typeFlag = typeFlag;
     }
 }
 
 // Class to evaluate the Rayleigh function
 // y = (yscale/sigma)*(x/sigma)*exp(-0.5((x-mu)/sigma)^2
 class RayleighFunctionOne implements RegressionFunction{
-    public boolean scaleOption = true;
-    public double scaleFactor = 1.0D;
+    private boolean scaleOption = true;
+    private double scaleFactor = 1.0D;
 
     public double function(double[] p, double[] x){
         double y = 0.0D;
@@ -10857,6 +14297,14 @@ class RayleighFunctionOne implements RegressionFunction{
             y = (yScale/p[0])*arg*Math.exp(-0.5D*Math.pow(arg,2));
         }
         return y;
+    }
+        
+    public void setScaleFactor(double scaleFactor){
+        this.scaleFactor = scaleFactor;
+    } 
+    
+    public void setScaleOption(boolean scaleFlag){
+        this.scaleOption = scaleFlag;
     }
 }
 
@@ -10873,21 +14321,29 @@ class RayleighFunctionTwo implements RegressionFunction{
 
 // class to evaluate a simple exponential function
 class ExponentialSimpleFunction implements RegressionFunction{
-    public boolean scaleOption = true;
-    public double scaleFactor = 1.0D;
+    private boolean scaleOption = true;
+    private double scaleFactor = 1.0D;
 
     public double function(double[] p, double[] x){
         double yScale = scaleFactor;
         if(scaleOption)yScale = p[1];
         double y = yScale*Math.exp(p[0]*x[0]);
         return y;
-     }
+    }
+            
+    public void setScaleFactor(double scaleFactor){
+        this.scaleFactor = scaleFactor;
+    } 
+    
+    public void setScaleOption(boolean scaleFlag){
+        this.scaleOption = scaleFlag;
+    }
 }
 
 // class to evaluate multiple exponentials function
 class ExponentialMultipleFunction implements RegressionFunction{
 
-    public int nExps = 0;
+    private int nExps = 0;
 
     public double function(double[] p, double[] x){
         double y = 0;
@@ -10895,13 +14351,17 @@ class ExponentialMultipleFunction implements RegressionFunction{
             y += p[i]*Math.exp(p[i+1]*x[0]);
         }
         return y;
-     }
+    }
+    
+    public void setNexps(int nExps){
+        this.nExps = nExps;
+    }
 }
 
 // class to evaluate 1 - exponential function
 class OneMinusExponentialFunction implements RegressionFunction{
-    public boolean scaleOption = true;
-    public double scaleFactor = 1.0D;
+    private boolean scaleOption = true;
+    private double scaleFactor = 1.0D;
 
     public double function(double[] p, double[] x){
         double yScale = scaleFactor;
@@ -10909,13 +14369,21 @@ class OneMinusExponentialFunction implements RegressionFunction{
         double y = yScale*(1 - Math.exp(p[1]*x[0]));
         return y;
      }
+        
+    public void setScaleFactor(double scaleFactor){
+        this.scaleFactor = scaleFactor;
+    } 
+    
+    public void setScaleOption(boolean scaleFlag){
+        this.scaleOption = scaleFlag;
+    }
 }
 
 // class to evaluate a exponential distribution function
 class ExponentialFunction implements RegressionFunction{
-    public boolean scaleOption = true;
-    public double scaleFactor = 1.0D;
-    public int typeFlag = 0; // set to 0 -> Two Parameter Exponential
+    private boolean scaleOption = true;
+    private double scaleFactor = 1.0D;
+    private int typeFlag = 0; // set to 0 -> Two Parameter Exponential
                             // reset to 1 -> One Parameter Exponential
                             // reset to 2 -> Standard Exponential
 
@@ -10946,13 +14414,25 @@ class ExponentialFunction implements RegressionFunction{
         }
         return y;
     }
+       
+    public void setScaleFactor(double scaleFactor){
+        this.scaleFactor = scaleFactor;
+    } 
+    
+    public void setScaleOption(boolean scaleFlag){
+        this.scaleOption = scaleFlag;
+    }
+    
+    public void setTypeFlag(int typeFlag){
+        this.typeFlag = typeFlag;
+    }
 }
 
 // class to evaluate a Pareto scaled pdf
 class ParetoFunctionOne implements RegressionFunction{
-    public boolean scaleOption = true;
-    public double scaleFactor = 1.0D;
-    public int typeFlag = 0;    // set to 3 -> Shifted Pareto
+    private boolean scaleOption = true;
+    private double scaleFactor = 1.0D;
+    private int typeFlag = 0;    // set to 3 -> Shifted Pareto
                                 // set to 2 -> Two Parameter Pareto
                                 // set to 1 -> One Parameter Pareto
 
@@ -10981,12 +14461,24 @@ class ParetoFunctionOne implements RegressionFunction{
         }
         return y;
     }
+        
+    public void setScaleFactor(double scaleFactor){
+        this.scaleFactor = scaleFactor;
+    } 
+    
+    public void setScaleOption(boolean scaleFlag){
+        this.scaleOption = scaleFlag;
+    }
+    
+    public void setTypeFlag(int typeFlag){
+        this.typeFlag = typeFlag;
+    }
 }
 
 // class to evaluate a Pareto cdf
 class ParetoFunctionTwo implements RegressionFunction{
 
-    public int typeFlag = 0;    // set to 3 -> Shifted Pareto
+    private int typeFlag = 0;    // set to 3 -> Shifted Pareto
                                 // set to 2 -> Two Parameter Pareto
                                 // set to 1 -> One Parameter Pareto
 
@@ -11008,12 +14500,16 @@ class ParetoFunctionTwo implements RegressionFunction{
          }
         return y;
     }
+    
+    public void setTypeFlag(int typeFlag){
+        this.typeFlag = typeFlag;
+    }
 }
 
 // class to evaluate a Sigmoidal threshold function
 class SigmoidThresholdFunction implements RegressionFunction{
-    public boolean scaleOption = true;
-    public double scaleFactor = 1.0D;
+    private boolean scaleOption = true;
+    private double scaleFactor = 1.0D;
 
     public double function(double[] p, double[] x){
         double yScale = scaleFactor;
@@ -11021,26 +14517,155 @@ class SigmoidThresholdFunction implements RegressionFunction{
         double y = yScale/(1.0D + Math.exp(-p[0]*(x[0] - p[1])));
         return y;
      }
+    
+    public void setScaleFactor(double scaleFactor){
+        this.scaleFactor = scaleFactor;
+    } 
+    
+    public void setScaleOption(boolean scaleFlag){
+        this.scaleOption = scaleFlag;
+    }
+}
+
+// class to evaluate a Sigmoidal threshold function
+// x and y erors
+class SigmoidThresholdFunctionDual implements RegressionFunction3{
+    private boolean scaleOption = true;
+    private double scaleFactor = 1.0D;
+    private double[][] xErrors = null;
+    private double[] yErrors = null;
+    
+    public double[] function(double[] p, double[] x, int ii){
+        double yScale = scaleFactor;
+        if(scaleOption)yScale = p[2];
+        double[] y = new double[2];
+        double hold = Math.exp(-p[0]*(x[0] - p[1]));
+        y[0] = yScale/(1.0 + hold);
+        if(ii>=0){
+            y[1] = yScale*p[0]*hold/((1.0 + hold)*(1.0 + hold));
+            y[1] += this.yErrors[ii]*this.yErrors[ii] + y[1]*y[1]*this.xErrors[0][ii]*this.xErrors[0][ii];
+        }    
+        return y;
+     }
+
+    public void setScaleFactor(double scaleFactor){
+        this.scaleFactor = scaleFactor;
+    } 
+    
+    public void setScaleOption(boolean scaleFlag){
+        this.scaleOption = scaleFlag;
+    }
+    
+    public void setXerrors(double[][] xErrors){
+        this.xErrors = xErrors;
+    }
+    
+    public void setYerrors(double[] yErrors){
+        this.yErrors = yErrors;
+    }
 }
 
 // class to evaluate a Rectangular Hyberbola
 class RectangularHyperbolaFunction implements RegressionFunction{
-    public boolean scaleOption = true;
-    public double scaleFactor = 1.0D;
+    private boolean scaleOption = true;
+    private double scaleFactor = 1.0D;
 
     public double function(double[] p, double[] x){
         double yScale = scaleFactor;
-        if(scaleOption)yScale = p[2];
+        if(scaleOption)yScale = p[1];
         double y = yScale*x[0]/(p[0] + x[0]);
         return y;
      }
+    
+    public void setScaleFactor(double scaleFactor){
+        this.scaleFactor = scaleFactor;
+    } 
+    
+    public void setScaleOption(boolean scaleFlag){
+        this.scaleOption = scaleFlag;
+    }
 
 }
 
+class RectangularHyperbolaFunctionDual implements RegressionFunction3{
+    private boolean scaleOption = true;
+    private double scaleFactor = 1.0D;
+    private double[][] xErrors = null;
+    private double[] yErrors = null;
+    
+    public double[] function(double[] p, double[] x, int ii){
+        double yScale = scaleFactor;
+        if(scaleOption)yScale = p[1];
+        double[] y = new double[2];
+        double hold = p[0] + x[0];
+        y[0] = yScale*x[0]/hold;
+        
+        y[1] = p[0]*yScale/(hold*hold);   // dy/dx    
+        y[1] = this.yErrors[ii]*this.yErrors[ii] + y[1]*y[1]*this.xErrors[0][ii]*this.xErrors[0][ii]; // w*w
+        
+        return y;
+     }
+    
+    public void setScaleFactor(double scaleFactor){
+        this.scaleFactor = scaleFactor;
+    } 
+    
+    public void setScaleOption(boolean scaleFlag){
+        this.scaleOption = scaleFlag;
+    }
+    
+    public void setXerrors(double[][] xErrors){
+        this.xErrors = xErrors;
+    }
+    
+    public void setYerrors(double[] yErrors){
+        this.yErrors = yErrors;
+    }
+
+}
+
+// class to evaluate a Shifted Rectangular Hyberbola
+class ShiftedRectangularHyperbolaFunction implements RegressionFunction{
+
+    public double function(double[] p, double[] x){
+        double y = p[2]*x[0]/(p[0] + x[0]) + p[1];
+        return y;
+     }
+}
+
+class ShiftedRectangularHyperbolaFunctionDual implements RegressionFunction3{
+    
+    private double[][] xErrors = null;
+    private double[] yErrors = null;
+    
+    public double[] function(double[] p, double[] x, int ii){
+        double[] y = new double[2];
+        double hold = p[0] + x[0];
+        
+        // Calculated y value
+        y[0] = p[2]*x[0]/hold + p[1];
+        
+        // Calculated the square of the weight
+        y[1] = p[0]*p[2]/(hold*hold);   // dy/dx    
+        y[1] = this.yErrors[ii]*this.yErrors[ii] + y[1]*y[1]*this.xErrors[0][ii]*this.xErrors[0][ii]; // w*w
+        
+        return y;
+    }
+       
+    public void setXerrors(double[][] xErrors){
+        this.xErrors = xErrors;
+    }
+    
+    public void setYerrors(double[] yErrors){
+        this.yErrors = yErrors;
+    }
+}
+
+
 // class to evaluate a scaled Heaviside Step Function
 class StepFunctionFunction implements RegressionFunction{
-    public boolean scaleOption = true;
-    public double scaleFactor = 1.0D;
+    private boolean scaleOption = true;
+    private double scaleFactor = 1.0D;
 
     public double function(double[] p, double[] x){
         double yScale = scaleFactor;
@@ -11049,12 +14674,20 @@ class StepFunctionFunction implements RegressionFunction{
         if(x[0]>p[0])y = yScale;
         return y;
      }
+       
+    public void setScaleFactor(double scaleFactor){
+        this.scaleFactor = scaleFactor;
+    } 
+    
+    public void setScaleOption(boolean scaleFlag){
+        this.scaleOption = scaleFlag;
+    }
 }
 
 // class to evaluate a Hill or Sips sigmoidal function
 class SigmoidHillSipsFunction implements RegressionFunction{
-    public boolean scaleOption = true;
-    public double scaleFactor = 1.0D;
+    private boolean scaleOption = true;
+    private double scaleFactor = 1.0D;
 
     public double function(double[] p, double[] x){
         double yScale = scaleFactor;
@@ -11063,25 +14696,82 @@ class SigmoidHillSipsFunction implements RegressionFunction{
         double y = yScale*xterm/(Math.pow(p[0], p[1]) + xterm);
         return y;
      }
+    
+    public void setScaleFactor(double scaleFactor){
+        this.scaleFactor = scaleFactor;
+    } 
+    
+    public void setScaleOption(boolean scaleFlag){
+        this.scaleOption = scaleFlag;
+    }
+}
+
+class SigmoidHillSipsFunctionDual implements RegressionFunction3{
+    private boolean scaleOption = true;
+    private double scaleFactor = 1.0D;
+    private double[][] xErrors = null;
+    private double[] yErrors = null;
+
+    public double[] function(double[] p, double[] x, int ii){
+        double yScale = scaleFactor;
+        if(scaleOption)yScale = p[2];
+        double[] y = new double[2];
+        
+        double xterm = Math.pow(x[0],p[1]);
+        double thetaterm = Math.pow(p[0], p[1]);
+        y[0] = yScale*xterm/(thetaterm + xterm);
+        y[1] = 0.0;
+        if(ii>=0){
+            y[1] = yScale*thetaterm*p[1]*Math.pow(x[0],p[1]-1.0)/((thetaterm + xterm)*(thetaterm + xterm));
+            y[1] = this.yErrors[ii]*this.yErrors[ii] + y[1]*y[1]*this.xErrors[0][ii]*this.xErrors[0][ii];
+        }              
+        return y;
+     }
+    
+    public void setScaleFactor(double scaleFactor){
+        this.scaleFactor = scaleFactor;
+    } 
+    
+    public void setScaleOption(boolean scaleFlag){
+        this.scaleOption = scaleFlag;
+    }
+       
+    public void setXerrors(double[][] xErrors){
+        this.xErrors = xErrors;
+    }
+    
+    public void setYerrors(double[] yErrors){
+        this.yErrors = yErrors;
+    }
 }
 
 // Class to evaluate the Logistic probability function y = yscale*exp(-(x-mu)/beta)/(beta*(1 + exp(-(x-mu)/beta))^2.
 class LogisticFunction implements RegressionFunction{
-    public boolean scaleOption = true;
-    public double scaleFactor = 1.0D;
+    private boolean scaleOption = true;
+    private double scaleFactor = 1.0D;
+    
     public double function(double[] p, double[] x){
         double yScale = scaleFactor;
         if(scaleOption)yScale = p[2];
         double y = yScale*Fmath.square(Fmath.sech((x[0] - p[0])/(2.0D*p[1])))/(4.0D*p[1]);
         return y;
     }
+    
+    public void setScaleFactor(double scaleFactor){
+        this.scaleFactor = scaleFactor;
+    } 
+    
+    public void setScaleOption(boolean scaleFlag){
+        this.scaleOption = scaleFlag;
+    }
+    
 }
 
 // class to evaluate a Beta scaled pdf
 class BetaFunction implements RegressionFunction{
-    public boolean scaleOption = true;
-    public double scaleFactor = 1.0D;
-    public int typeFlag = 0;    // set to 0 -> Beta Distibution - [0, 1] interval
+    private boolean scaleOption = true;
+    private double scaleFactor = 1.0D;
+    private int typeFlag = 0;    // set to 0 -> Beta Distibution - [0, 1] interval
                                 // set to 1 -> Beta Distibution - [min, max] interval
 
     public double function(double[] p, double[] x){
@@ -11100,13 +14790,25 @@ class BetaFunction implements RegressionFunction{
         }
         return y;
     }
+    
+    public void setScaleFactor(double scaleFactor){
+        this.scaleFactor = scaleFactor;
+    } 
+    
+    public void setScaleOption(boolean scaleFlag){
+        this.scaleOption = scaleFlag;
+    }
+    
+    public void setTypeFlag(int typeFlag){
+        this.typeFlag = typeFlag;
+    }
 }
 
 // class to evaluate a Gamma scaled pdf
 class GammaFunction implements RegressionFunction{
-    public boolean scaleOption = true;
-    public double scaleFactor = 1.0D;
-    public int typeFlag = 0;    // set to 0 -> Three parameter Gamma Distribution
+    private boolean scaleOption = true;
+    private double scaleFactor = 1.0D;
+    private int typeFlag = 0;    // set to 0 -> Three parameter Gamma Distribution
                                 // set to 1 -> Standard Gamma Distribution
 
     public double function(double[] p, double[] x){
@@ -11125,14 +14827,26 @@ class GammaFunction implements RegressionFunction{
         }
         return y;
     }
+            
+    public void setScaleFactor(double scaleFactor){
+        this.scaleFactor = scaleFactor;
+    } 
+    
+    public void setScaleOption(boolean scaleFlag){
+        this.scaleOption = scaleFlag;
+    }
+    
+    public void setTypeFlag(int typeFlag){
+        this.typeFlag = typeFlag;
+    }
 }
 
 // class to evaluate a Erlang scaled pdf
 // rate parameter is fixed
 class ErlangFunction implements RegressionFunction{
-    public boolean scaleOption = true;
-    public double scaleFactor = 1.0D;
-    public double kay = 1.0D;   // rate parameter
+    private boolean scaleOption = true;
+    private double scaleFactor = 1.0D;
+    private double kay = 1.0D;   // rate parameter
 
     public double function(double[] p, double[] x){
         boolean test = false;
@@ -11145,24 +14859,431 @@ class ErlangFunction implements RegressionFunction{
 
         return y;
     }
+        
+    public void setScaleFactor(double scaleFactor){
+        this.scaleFactor = scaleFactor;
+    } 
+    
+    public void setScaleOption(boolean scaleFlag){
+        this.scaleOption = scaleFlag;
+    }
+    
+    public void setKay(double kay){
+        this.kay = kay;
+    }
 }
 
-// class to evaluate a EC50 function
+// class to evaluate a EC50 function (four point logistic)
 class EC50Function implements RegressionFunction{
-
+    
     public double function(double[] p, double[] x){
         double y = p[0] + (p[1] - p[0])/(1.0D + Math.pow(x[0]/p[2], p[3]));
         return y;
     }
 }
 
+class EC50FunctionDual implements RegressionFunction3{
+    private double[][] xErrors = null;
+    private double[] yErrors = null;
+    
+    public double[] function(double[] p, double[] x, int ii){
+        double[] y = new double[2];
+        y[0] = p[0] + (p[1] - p[0])/(1.0D + Math.pow(x[0]/p[2], p[3]));
+        if(ii>=0){
+            y[1] = (p[0] - p[1])*Math.pow(x[0]/p[2], p[3]-1.0)/(p[2]*Math.pow((1.0D + Math.pow(x[0]/p[2], p[3])), 2.0));
+            y[1] = this.yErrors[ii]*this.yErrors[ii] + y[1]*y[1]*this.xErrors[0][ii]*this.xErrors[0][ii];
+        }
+        return y;
+    }
+    
+    public void setXerrors(double[][] xErrors){
+        this.xErrors = xErrors;
+    }
+    
+    public void setYerrors(double[] yErrors){
+        this.yErrors = yErrors;
+    }
+}
 
-// class to evaluate a Non-Integer Polynomial function
-class NonIntegerPolyFunction implements RegressionFunction{
+// class to evaluate a EC50 function (four point logistic)
+// top and bottom fixed
+class EC50FixedFunction implements RegressionFunction{
+    private double bottom = 0.0;
+    private double top = 0.0;
 
     public double function(double[] p, double[] x){
-        double y = p[0] + p[1]*x[0] + p[2]*Math.pow(x[0], p[3]);
+        double y = top + (bottom - top)/(1.0D + Math.pow(x[0]/p[0], p[1]));
         return y;
+    }
+
+    public void setBottom(double bottom){
+        this.bottom = bottom;
+    }
+
+    public void setTop(double top){
+        this.top = top;
+    }
+
+}
+
+class EC50FixedFunctionDual implements RegressionFunction3{
+    private double bottom = 0.0;
+    private double top = 0.0;
+    private double[][] xErrors = null;
+    private double[] yErrors = null;
+    
+    public double[] function(double[] p, double[] x, int ii){
+        double[] y = new double[2];
+        y[0] = top + (bottom - top)/(1.0D + Math.pow(x[0]/p[0], p[1]));
+        if(ii>=0){
+            y[1] = (top - bottom)*Math.pow(x[0]/p[0], p[1]-1.0)/(p[0]*Math.pow((1.0D + Math.pow(x[0]/p[0], p[1])), 2.0));
+            y[1] = this.yErrors[ii]*this.yErrors[ii] + y[1]*y[1]*this.xErrors[0][ii]*this.xErrors[0][ii];
+        }
+        return y;
+    }
+    
+    public void setBottom(double bottom){
+        this.bottom = bottom;
+    }
+
+    public void setTop(double top){
+        this.top = top;
+    }
+    
+    public void setXerrors(double[][] xErrors){
+        this.xErrors = xErrors;
+    }
+    
+    public void setYerrors(double[] yErrors){
+        this.yErrors = yErrors;
+    }
+}
+
+// class to evaluate a five parameter logistic function
+class Logistic5Function implements RegressionFunction{
+
+    public double function(double[] p, double[] x){
+        double y = p[0] + (p[1] - p[0])/Math.pow((1.0D + Math.pow(x[0]/p[2], p[3])),p[4]);
+        return y;
+    }
+}
+
+class Logistic5FunctionDual implements RegressionFunction3{
+    
+    private double[][] xErrors = null;
+    private double[] yErrors = null;
+    
+    public double[] function(double[] p, double[] x, int ii){
+        double[] y = new double[2];
+        y[0] = p[0] + (p[1] - p[0])/Math.pow((1.0D + Math.pow(x[0]/p[2], p[3])),p[4]);
+        if(ii>=0.0){
+            y[1] = (p[0] - p[1])*p[4]*p[3]*Math.pow(x[0]/p[2],p[3]-1.0)/(p[2]*Math.pow((1.0D + Math.pow(x[0]/p[2], p[3])),p[4]+1.0));
+            y[1] = this.yErrors[ii]*this.yErrors[ii] + y[1]*y[1]*this.xErrors[0][ii]*this.xErrors[0][ii];
+        }
+        
+        return y;
+    }
+
+    public void setXerrors(double[][] xErrors){
+        this.xErrors = xErrors;
+    }
+    
+    public void setYerrors(double[] yErrors){
+        this.yErrors = yErrors;
+    }
+}
+
+// class to evaluate a five parameter logistic function
+// top and bottom fixed
+class Logistic5FixedFunction implements RegressionFunction{
+    private double bottom = 0.0;
+    private double top = 0.0;
+
+    public double function(double[] p, double[] x){
+        double y = top + (bottom - top)/Math.pow((1.0D + Math.pow(x[0]/p[0], p[1])),p[2]);
+        return y;
+    }
+
+    public void setBottom(double bottom){
+        this.bottom = bottom;
+    }
+
+    public void setTop(double top){
+        this.top = top;
+    }
+}
+
+class Logistic5FixedFunctionDual implements RegressionFunction3{
+    private double bottom = 0.0;
+    private double top = 0.0;
+    private double[][] xErrors = null;
+    private double[] yErrors = null;
+    
+    public double[] function(double[] p, double[] x, int ii){
+        double[] y = new double[2];
+                
+        y[0] = top + (bottom - top)/Math.pow((1.0D + Math.pow(x[0]/p[0], p[1])),p[2]);
+        if(ii>=0.0){
+            y[1] = (top - bottom)*p[2]*p[1]*Math.pow(x[0]/p[0],p[1]-1.0)/(p[0]*Math.pow((1.0D + Math.pow(x[0]/p[0], p[1])),p[2]+1.0));
+            y[1] = this.yErrors[ii]*this.yErrors[ii] + y[1]*y[1]*this.xErrors[0][ii]*this.xErrors[0][ii];
+        }    
+        return y;
+    }
+
+    public void setBottom(double bottom){
+        this.bottom = bottom;
+    }
+
+    public void setTop(double top){
+        this.top = top;
+    }
+    
+    public void setXerrors(double[][] xErrors){
+        this.xErrors = xErrors;
+    }
+    
+    public void setYerrors(double[] yErrors){
+        this.yErrors = yErrors;
+    }
+}
+
+// class to evaluate a Non-Integer Polynomial function
+// y = a[0] + a[1].x + a[2].x^a[n+1] +  a[3].x^a[n+2] + . . . + a[n].x^a[2n-1]
+// nTerms = n+1;
+// no x error version
+class NonIntegerPolyFunction implements RegressionFunction{
+
+    private int nTerms = 0;
+
+    public double function(double[] p, double[] x){
+        double y = p[0];
+        for(int i=1; i<this.nTerms; i++){
+            y += p[i]*Math.pow(x[0], p[this.nTerms+i-1]);
+        }
+        return y;
+    }
+
+    public void setNterms(int nTerms){
+        this.nTerms = nTerms;
+    }
+}
+
+// class to evaluate a Non-Integer Polynomial function
+// y = a[0] + a[1].x + a[2].x^a[n+1] +  a[3].x^a[n+2] + . . . + a[n].x^a[2n-1]
+// nTerms = n+1;
+// x and y error version
+class NonIntegerPolyFunctionDual implements RegressionFunction3{
+    private double[][] xErrors = null;
+    private double[] yErrors = null;
+    private int nTerms = 0;
+
+    public double[] function(double[] p, double[] x, int ii){
+        double[] y = new double[2]; 
+        y[0] = p[0];
+        y[1] = 0.0;
+        for(int i=1; i<this.nTerms; i++){
+            y[0] += p[i]*Math.pow(x[0], p[this.nTerms+i-1]);
+        }
+        if(ii>=0){
+            for(int i=1; i<this.nTerms; i++){
+                y[1] += p[i]*p[this.nTerms+i-1]*Math.pow(x[0], p[this.nTerms+i-2]);
+            }
+            y[1] =y[1]*y[1]*this.xErrors[0][ii]*this.xErrors[0][ii] + this.yErrors[ii]*this.yErrors[ii];
+        }
+        return y;
+    }
+
+    public void setNterms(int nTerms){
+        this.nTerms = nTerms;
+    }
+    
+    public void setXerrors(double[][] xErrors){
+        this.xErrors = xErrors;
+    }
+    
+    public void setYerrors(double[] yErrors){
+        this.yErrors = yErrors;
+    }
+}
+
+// class to evaluate a linear function with intercept
+// y = a[0] + a[1].x1 + a[2].x2 + a[3].x3
+// both x and y weighting errors 
+class LinearXYDEfunction implements RegressionFunction3{
+
+    private double[][] xErrors = null;
+    private double[] yErrors = null;
+    private int nTerms = 0;
+
+    public double[] function(double[] p, double[] x, int ii){
+        double[] y = new double[2];
+        y[0] = p[0];
+        y[1] = yErrors[ii]*yErrors[ii];
+        for(int i=1; i<this.nTerms; i++){
+            y[0] += p[i]*x[i-1];
+            y[1] += p[i]*p[i]*xErrors[i-1][ii]*xErrors[i-1][ii];
+        }           
+        return y;
+    }
+
+    public void setNterms(int nTerms){
+        this.nTerms = nTerms;
+    }
+    
+    public void setXerrors(double[][] xErrors){
+        this.xErrors = xErrors;
+    }
+    
+    public void setYerrors(double[] yErrors){
+        this.yErrors = yErrors;
+    }
+}
+
+// class to evaluate a linear function with fixed intercept
+// y = a[0] + a[1].x1 + a[2].x2 + a[3].x3
+// both x and y weighting errors 
+class LinearIXYDEfunction implements RegressionFunction3{
+
+    private double[][] xErrors = null;
+    private double[] yErrors = null;
+    private int nParam = 0;
+    private double intercept = 0.0;
+
+    public double[] function(double[] p, double[] x, int ii){
+        double[] y = new double[2];
+        y[0] = this.intercept;
+        y[1] = this.yErrors[ii]*this.yErrors[ii];
+        for(int i=0; i<this.nParam; i++){
+            y[0] += p[i]*x[i];
+            y[1] += p[i]*p[i]*this.xErrors[i][ii]*xErrors[i][ii];
+        }           
+        return y;
+    }
+
+    public void setNparam(int nParam){
+        this.nParam = nParam;
+    }
+    
+    public void setXerrors(double[][] xErrors){
+        this.xErrors = xErrors;
+    }
+    
+    public void setYerrors(double[] yErrors){
+        this.yErrors = yErrors;
+    }
+    
+    public void setIntercept(double intercept){
+        this.intercept = intercept;
+    }
+}
+
+// class to evaluate a general linear function
+// y = a[0].x0 + a[1].x1 + a[2].x2 + a[3].x3
+// both x and y weighting errors 
+class LinearGXYDEfunction implements RegressionFunction3{
+
+    private double[][] xErrors = null;
+    private double[] yErrors = null;
+    private int nTerms = 0;
+
+    public double[] function(double[] p, double[] x, int ii){
+        double[] y = new double[2];
+        y[0] = 0.0;
+        y[1] = yErrors[ii]*yErrors[ii];
+        for(int i=0; i<this.nTerms; i++){
+            y[0] += p[i]*x[i];
+            y[1] += p[i]*p[i]*xErrors[i][ii]*xErrors[i][ii];
+        }           
+        return y;
+    }
+
+    public void setNterms(int nTerms){
+        this.nTerms = nTerms;
+    }
+    
+    public void setXerrors(double[][] xErrors){
+        this.xErrors = xErrors;
+    }
+    
+    public void setYerrors(double[] yErrors){
+        this.yErrors = yErrors;
+    }
+}
+
+// class to evaluate a polynomial
+// y = a[0] + a[1].x + a[2].x^2 + a[3].x^3  . . . a[deg].x^deg
+// both x and y weighting errors 
+class PolyXYDEfunction implements RegressionFunction3{
+
+    private double[][] xErrors = null;
+    private double[] yErrors = null;
+    private int deg = 0;
+
+    public double[] function(double[] p, double[] x, int ii){
+        double[] y = new double[2];
+        y[0] = p[0];
+        y[1] = yErrors[ii]*yErrors[ii];
+        double sum = 0.0; 
+        double xe2 = xErrors[0][ii]*xErrors[0][ii];
+        for(int i=1; i<=this.deg; i++){
+            y[0] += p[i]*Math.pow(x[0], i);
+            sum += i*p[i]*Math.pow(x[0], i-1);
+        }   
+        y[1] += sum*sum*xe2;
+        return y;
+    }
+
+    public void setDeg(int deg){
+        this.deg = deg;
+    }
+    
+    public void setXerrors(double[][] xErrors){
+        this.xErrors = xErrors;
+    }
+    
+    public void setYerrors(double[] yErrors){
+        this.yErrors = yErrors;
+    }
+}
+
+// class to evaluate a polynomial
+// y = a[0] + a[1].x + a[2].x^2 + a[3].x^3  . . . a[deg].x^deg
+// both x and y weighting errors 
+class PolyIXYDEfunction implements RegressionFunction3{
+
+    private double[][] xErrors = null;
+    private double[] yErrors = null;
+    private int deg = 0;
+    private double intercept = 0;
+
+    public double[] function(double[] p, double[] x, int ii){
+        double[] y = new double[2];
+        y[0] = this.intercept;
+        y[1] = yErrors[ii]*yErrors[ii];
+        double sum = 0.0; 
+        double xe2 = xErrors[0][ii]*xErrors[0][ii];
+        for(int i=1; i<=this.deg; i++){
+            y[0] += p[i-1]*Math.pow(x[0], i);
+            sum += i*p[i-1]*Math.pow(x[0], i-1);
+        }   
+        y[1] += sum*sum*xe2;
+        return y;
+    }
+
+    public void setDeg(int deg){
+        this.deg = deg;
+    }
+    
+    public void setIntercept(double intercept){
+        this.intercept = intercept;
+    }
+    
+    public void setXerrors(double[][] xErrors){
+        this.xErrors = xErrors;
+    }
+    
+    public void setYerrors(double[] yErrors){
+        this.yErrors = yErrors;
     }
 }
 

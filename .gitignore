@@ -3,3 +3,5 @@ target/
 # IntelliJ files
 .idea/
 flanagan.iml
+# IntelliJ build directory
+out/

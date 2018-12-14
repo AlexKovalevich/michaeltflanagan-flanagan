@@ -5,7 +5,8 @@
 *
 *   WRITTEN BY: Dr Michael Thomas Flanagan
 *
-*   DATE:    29-30 September 2008, 1-5 October 2008, 13-24 October 2009, 2 November 2010, 8 December 2010
+*   DATE:   29-30 September 2008, 1-5 October 2008, 13-24 October 2009, 2 November 2010, 8 December 2010
+*           7 December 2011, 4 January 2012
 *
 *   DOCUMENTATION:
 *   See Michael Thomas Flanagan's Java library on-line web page:
@@ -85,7 +86,7 @@ public class ProbabilityPlot{
                                                                 //  14  Standard Gaussian
                                                                 //  15  F-distribution
 
-
+        private boolean supressPlot = false;                    // set to true to supress the display of the plot 
         private int gaussianNumberOfParameters = 2;             // number of Gaussian parameters
         private double[] gaussianOrderMedians = null;           // Gaussian order statistic medians
         private double[] gaussianParam = null;                  // Gaussian parameters obtained by the minimization procedure
@@ -324,7 +325,8 @@ public class ProbabilityPlot{
         }
 
         public ProbabilityPlot(ArrayMaths xx){
-             this.arrayAsStat = xx.toStat();
+             double[] aa = xx.array();
+             this.arrayAsStat = new Stat(aa);
              this.array = this.arrayAsStat.array();
              this.initialize();
         }
@@ -339,7 +341,7 @@ public class ProbabilityPlot{
         // INITIALIZATIONS
         private void initialize(){
             this.numberOfDataPoints = this.array.length;
-            Stat sorted = arrayAsStat.sort();
+            ArrayMaths sorted = arrayAsStat.sort();
             this.sortedData = sorted.array();
             this.mean = arrayAsStat.mean();
             this.standardDeviation = arrayAsStat.standardDeviation();
@@ -350,6 +352,15 @@ public class ProbabilityPlot{
             for(int i=0; i<this.numberOfDataPoints; i++)weights[i] = 1.0;
         }
 
+        // SUPRESS DISPLAY OF PLOT
+        public void supressDisplay(){
+            this.supressPlot = true;
+        }
+        
+        public void restoreDisplay(){
+            this.supressPlot = false;
+        }
+        
         // WEIGHTING OPTION
         // Set weighting option to weighted regression
         public void weightedRegression(){
@@ -732,20 +743,22 @@ public class ProbabilityPlot{
             // Get sum of squares
             this.gaussianSumOfSquares = min.getSumOfSquares();
 
-            // Create instance of PlotGraph
-            PlotGraph pg = new PlotGraph(data);
-            int[] points = {4, 0};
-            pg.setPoint(points);
-            int[] lines = {0, 3};
-            pg.setLine(lines);
-            pg.setXaxisLegend("Gaussian Order Statistic Medians");
-            pg.setYaxisLegend("Ordered Data Values");
-            pg.setGraphTitle("Gaussian probability plot:   gradient = " + Fmath.truncate(this.gaussianLine[1], 4) + ", intercept = "  +  Fmath.truncate(this.gaussianLine[0], 4) + ",  R = " + Fmath.truncate(this.gaussianCorrCoeff, 4));
-            pg.setGraphTitle2("  mu = " + Fmath.truncate(this.gaussianParam[0], 4) + ", sigma = "  +  Fmath.truncate(this.gaussianParam[1], 4));
+            if(!this.supressPlot){
+                // Create instance of PlotGraph
+                PlotGraph pg = new PlotGraph(data);
+                int[] points = {4, 0};
+                pg.setPoint(points);
+                int[] lines = {0, 3};
+                pg.setLine(lines);
+                pg.setXaxisLegend("Gaussian Order Statistic Medians");
+                pg.setYaxisLegend("Ordered Data Values");
+                pg.setGraphTitle("Gaussian probability plot:   gradient = " + Fmath.truncate(this.gaussianLine[1], 4) + ", intercept = "  +  Fmath.truncate(this.gaussianLine[0], 4) + ",  R = " + Fmath.truncate(this.gaussianCorrCoeff, 4));
+                pg.setGraphTitle2("  mu = " + Fmath.truncate(this.gaussianParam[0], 4) + ", sigma = "  +  Fmath.truncate(this.gaussianParam[1], 4));
 
-            // Plot
-            pg.plot();
-
+               // Plot
+                pg.plot();
+            }
+                
             this.gaussianDone = true;
         }
 
@@ -755,140 +768,232 @@ public class ProbabilityPlot{
 
         // Return Gaussian mu
         public double gaussianMu(){
-            if(!this.gaussianDone)throw new IllegalArgumentException("Gaussian Probability Plot method has not been called");
+            if(!this.gaussianDone){
+                this.supressDisplay();
+                this.gaussianProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gaussianParam[0];
         }
 
         // Return Gaussian mu error
         public double gaussianMuError(){
-            if(!this.gaussianDone)throw new IllegalArgumentException("Gaussian Probability Plot method has not been called");
+            if(!this.gaussianDone){
+                this.supressDisplay();
+                this.gaussianProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gaussianParamErrors[0];
         }
 
         // Return Gaussian sigma
         public double gaussianSigma(){
-            if(!this.gaussianDone)throw new IllegalArgumentException("Gaussian Probability Plot method has not been called");
+            if(!this.gaussianDone){
+                this.supressDisplay();
+                this.gaussianProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gaussianParam[1];
         }
 
         // Return Gaussian sigma error
         public double gaussianSigmaError(){
-            if(!this.gaussianDone)throw new IllegalArgumentException("Gaussian Probability Plot method has not been called");
+            if(!this.gaussianDone){
+                this.supressDisplay();
+                this.gaussianProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gaussianParamErrors[1];
         }
 
         // Return the Gaussian gradient
         public double gaussianGradient(){
-            if(!this.gaussianDone)throw new IllegalArgumentException("Gaussian Probability Plot method has not been called");
+            if(!this.gaussianDone){
+                this.supressDisplay();
+                this.gaussianProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gaussianLine[1];
         }
 
         // Return the error of the Gaussian gradient
         public double gaussianGradientError(){
-            if(!this.gaussianDone)throw new IllegalArgumentException("Gaussian Probability Plot method has not been called");
+            if(!this.gaussianDone){
+                this.supressDisplay();
+                this.gaussianProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gaussianLineErrors[1];
         }
 
         // Return the Gaussian intercept
         public double gaussianIntercept(){
-            if(!this.gaussianDone)throw new IllegalArgumentException("Gaussian Probability Plot method has not been called");
+            if(!this.gaussianDone){
+                this.supressDisplay();
+                this.gaussianProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gaussianLine[0];
         }
 
         // Return the error of the Gaussian intercept
         public double gaussianInterceptError(){
-            if(!this.gaussianDone)throw new IllegalArgumentException("Gaussian Probability Plot method has not been called");
+            if(!this.gaussianDone){
+                this.supressDisplay();
+                this.gaussianProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gaussianLineErrors[0];
         }
 
         // Return the Gaussian correlation coefficient
         public double gaussianCorrelationCoefficient(){
-            if(!this.gaussianDone)throw new IllegalArgumentException("Gaussian Probability Plot method has not been called");
+            if(!this.gaussianDone){
+                this.supressDisplay();
+                this.gaussianProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gaussianCorrCoeff;
         }
 
         // Return the sum of squares at the Gaussian minimum
         public double gaussianSumOfSquares(){
-            if(!this.gaussianDone)throw new IllegalArgumentException("Gaussian Probability Plot method has not been called");
+            if(!this.gaussianDone){
+                this.supressDisplay();
+                this.gaussianProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gaussianSumOfSquares;
         }
 
         // Return the unweighted sum of squares at the Gaussian minimum
         public double gaussianUnweightedSumOfSquares(){
-            if(!this.gaussianDone)throw new IllegalArgumentException("Gaussian Probability Plot method has not been called");
+            if(!this.gaussianDone){
+                this.supressDisplay();
+                this.gaussianProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gaussianUnweightedSumOfSquares;
         }
 
 
         // Return Gaussian order statistic medians
         public double[] gaussianOrderStatisticMedians(){
-            if(!this.gaussianDone)throw new IllegalArgumentException("Gaussian Probability Plot method has not been called");
+            if(!this.gaussianDone){
+                this.supressDisplay();
+                this.gaussianProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gaussianOrderMedians;
         }
 
 
         public double normalMu(){
-            if(!this.gaussianDone)throw new IllegalArgumentException("Gaussian Probability Plot method has not been called");
+            if(!this.gaussianDone){
+                this.supressDisplay();
+                this.gaussianProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gaussianParam[0];
         }
 
         // Return Gaussian mu error
         public double normalMuError(){
-            if(!this.gaussianDone)throw new IllegalArgumentException("Gaussian Probability Plot method has not been called");
+            if(!this.gaussianDone){
+                this.supressDisplay();
+                this.gaussianProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gaussianParamErrors[0];
         }
 
         // Return Gaussian sigma
         public double normalSigma(){
-            if(!this.gaussianDone)throw new IllegalArgumentException("Gaussian Probability Plot method has not been called");
+            if(!this.gaussianDone){
+                this.supressDisplay();
+                this.gaussianProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gaussianParam[1];
         }
 
         // Return Gaussian sigma error
         public double normalSigmaError(){
-            if(!this.gaussianDone)throw new IllegalArgumentException("Gaussian Probability Plot method has not been called");
+            if(!this.gaussianDone){
+                this.supressDisplay();
+                this.gaussianProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gaussianParamErrors[1];
         }
 
         // Return the Gaussian gradient
         public double normalGradient(){
-            if(!this.gaussianDone)throw new IllegalArgumentException("Gaussian Probability Plot method has not been called");
+            if(!this.gaussianDone){
+                this.supressDisplay();
+                this.gaussianProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gaussianLine[1];
         }
 
         // Return the error of the Gaussian gradient
         public double normalGradientError(){
-            if(!this.gaussianDone)throw new IllegalArgumentException("Gaussian Probability Plot method has not been called");
+            if(!this.gaussianDone){
+                this.supressDisplay();
+                this.gaussianProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gaussianLineErrors[1];
         }
 
         // Return the Gaussian intercept
         public double normalIntercept(){
-            if(!this.gaussianDone)throw new IllegalArgumentException("Gaussian Probability Plot method has not been called");
+            if(!this.gaussianDone){
+                this.supressDisplay();
+                this.gaussianProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gaussianLine[0];
         }
 
         // Return the error of the Gaussian intercept
         public double normalInterceptError(){
-            if(!this.gaussianDone)throw new IllegalArgumentException("Gaussian Probability Plot method has not been called");
+            if(!this.gaussianDone){
+                this.supressDisplay();
+                this.gaussianProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gaussianLineErrors[0];
         }
 
         // Return the Gaussian correlation coefficient
         public double normalCorrelationCoefficient(){
-            if(!this.gaussianDone)throw new IllegalArgumentException("Gaussian Probability Plot method has not been called");
+            if(!this.gaussianDone){
+                this.supressDisplay();
+                this.gaussianProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gaussianCorrCoeff;
         }
 
         // Return the sum of squares at the Gaussian minimum
         public double normalSumOfSquares(){
-            if(!this.gaussianDone)throw new IllegalArgumentException("Gaussian Probability Plot method has not been called");
+            if(!this.gaussianDone){
+                this.supressDisplay();
+                this.gaussianProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gaussianSumOfSquares;
         }
 
         // Return Gaussian order statistic medians
         public double[] normalOrderStatisticMedians(){
-            if(!this.gaussianDone)throw new IllegalArgumentException("Gaussian Probability Plot method has not been called");
+            if(!this.gaussianDone){
+                this.supressDisplay();
+                this.gaussianProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gaussianOrderMedians;
         }
 
@@ -952,80 +1057,132 @@ public class ProbabilityPlot{
 
         // Return the Standard Gaussian gradient
         public double gaussianStandardGradient(){
-            if(!this.gaussianStandardDone)throw new IllegalArgumentException("Standard Gaussian Probability Plot method has not been called");
+            if(!this.gaussianStandardDone){
+                this.supressDisplay();
+                this.gaussianStandardProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gaussianStandardLine[1];
         }
 
         // Return the error of the Standard Gaussian gradient
         public double gaussianStandardGradientError(){
-            if(!this.gaussianStandardDone)throw new IllegalArgumentException("Standard Gaussian Probability Plot method has not been called");
+            if(!this.gaussianStandardDone){
+                this.supressDisplay();
+                this.gaussianStandardProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gaussianStandardLineErrors[1];
         }
 
         // Return the Standard Gaussian intercept
         public double gaussianStandardIntercept(){
-            if(!this.gaussianStandardDone)throw new IllegalArgumentException("Standard Gaussian Probability Plot method has not been called");
+            if(!this.gaussianStandardDone){
+                this.supressDisplay();
+                this.gaussianStandardProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gaussianStandardLine[0];
         }
 
         // Return the error of the Standard Gaussian intercept
         public double gaussianStandardInterceptError(){
-            if(!this.gaussianStandardDone)throw new IllegalArgumentException("Standard Gaussian Probability Plot method has not been called");
+            if(!this.gaussianStandardDone){
+                this.supressDisplay();
+                this.gaussianStandardProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gaussianStandardLineErrors[0];
         }
 
         // Return the Standard Gaussian correlation coefficient
         public double gaussianStandardCorrelationCoefficient(){
-            if(!this.gaussianStandardDone)throw new IllegalArgumentException("Standard Gaussian Probability Plot method has not been called");
+            if(!this.gaussianStandardDone){
+                this.supressDisplay();
+                this.gaussianStandardProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gaussianStandardCorrCoeff;
         }
 
         // Return the sum of squares at the Standard Gaussian minimum
         public double gaussianStandardSumOfSquares(){
-            if(!this.gaussianStandardDone)throw new IllegalArgumentException("Standard Gaussian Probability Plot method has not been called");
+            if(!this.gaussianStandardDone){
+                this.supressDisplay();
+                this.gaussianStandardProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gaussianStandardSumOfSquares;
         }
 
         // Return Standard Gaussian order statistic medians
         public double[] gaussianStandardOrderStatisticMedians(){
-            if(!this.gaussianStandardDone)throw new IllegalArgumentException("Standard Gaussian Probability Plot method has not been called");
+            if(!this.gaussianStandardDone){
+                this.supressDisplay();
+                this.gaussianStandardProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gaussianStandardOrderMedians;
         }
 
 
         // Return the Standard Gaussian gradient
         public double normalStandardGradient(){
-            if(!this.gaussianStandardDone)throw new IllegalArgumentException("Standard Gaussian Probability Plot method has not been called");
+            if(!this.gaussianStandardDone){
+                this.supressDisplay();
+                this.gaussianStandardProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gaussianStandardLine[1];
         }
 
         // Return the error of the Standard Gaussian gradient
         public double normalstandardGradientError(){
-            if(!this.gaussianStandardDone)throw new IllegalArgumentException("Standard Gaussian Probability Plot method has not been called");
+            if(!this.gaussianStandardDone){
+                this.supressDisplay();
+                this.gaussianStandardProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gaussianStandardLineErrors[1];
         }
 
         // Return the Standard Gaussian intercept
         public double normalStandardInterceptError(){
-            if(!this.gaussianStandardDone)throw new IllegalArgumentException("Standard Gaussian Probability Plot method has not been called");
+            if(!this.gaussianStandardDone){
+                this.supressDisplay();
+                this.gaussianStandardProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gaussianStandardLineErrors[0];
         }
 
         // Return the Standard Gaussian correlation coefficient
         public double normalStandardCorrelationCoefficient(){
-            if(!this.gaussianStandardDone)throw new IllegalArgumentException("Standard Gaussian Probability Plot method has not been called");
+            if(!this.gaussianStandardDone){
+                this.supressDisplay();
+                this.gaussianStandardProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gaussianStandardCorrCoeff;
         }
 
         // Return the sum of squares at the Standard Gaussian minimum
         public double normalStandardSumOfSquares(){
-            if(!this.gaussianStandardDone)throw new IllegalArgumentException("Standard Gaussian Probability Plot method has not been called");
+            if(!this.gaussianStandardDone){
+                this.supressDisplay();
+                this.gaussianStandardProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gaussianStandardSumOfSquares;
         }
 
         // Return Standard Gaussian order statistic medians
         public double[] normalStandardOrderStatisticMedians(){
-            if(!this.gaussianStandardDone)throw new IllegalArgumentException("Standard Gaussian Probability Plot method has not been called");
+            if(!this.gaussianDone){
+                this.supressDisplay();
+                this.gaussianStandardProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gaussianStandardOrderMedians;
         }
 
@@ -1115,67 +1272,111 @@ public class ProbabilityPlot{
 
         // Return Logistic mu
         public double logisticMu(){
-            if(!this.logisticDone)throw new IllegalArgumentException("Logistic Probability Plot method has not been called");
+            if(!this.logisticDone){
+                this.supressDisplay();
+                this.logisticProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.logisticParam[0];
         }
 
         // Return Logistic mu error
         public double logisticMuError(){
-            if(!this.logisticDone)throw new IllegalArgumentException("Logistic Probability Plot method has not been called");
+            if(!this.logisticDone){
+                this.supressDisplay();
+                this.logisticProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.logisticParamErrors[0];
         }
 
         // Return Logistic beta
         public double logisticBeta(){
-            if(!this.logisticDone)throw new IllegalArgumentException("Logistic Probability Plot method has not been called");
+            if(!this.logisticDone){
+                this.supressDisplay();
+                this.logisticProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.logisticParam[1];
         }
 
         // Return Logistic beta error
         public double logisticBetaError(){
-            if(!this.logisticDone)throw new IllegalArgumentException("Logistic Probability Plot method has not been called");
+            if(!this.logisticDone){
+                this.supressDisplay();
+                this.logisticProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.logisticParamErrors[1];
         }
 
         // Return Logistic order statistic medians
         public double[] logisticOrderStatisticMedians(){
-            if(!this.logisticDone)throw new IllegalArgumentException("Logistic Probability Plot method has not been called");
+            if(!this.logisticDone){
+                this.supressDisplay();
+                this.logisticProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.logisticOrderMedians;
         }
 
         // Return the Logistic gradient
         public double logisticGradient(){
-            if(!this.logisticDone)throw new IllegalArgumentException("Logistic Probability Plot method has not been called");
+            if(!this.logisticDone){
+                this.supressDisplay();
+                this.logisticProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.logisticLine[1];
         }
 
         // Return the error of the Logistic gradient
         public double logisticGradientError(){
-            if(!this.logisticDone)throw new IllegalArgumentException("Logistic Probability Plot method has not been called");
+            if(!this.logisticDone){
+                this.supressDisplay();
+                this.logisticProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.logisticLineErrors[1];
         }
 
         // Return the Logistic intercept
         public double logisticIntercept(){
-            if(!this.logisticDone)throw new IllegalArgumentException("Logistic Probability Plot method has not been called");
+            if(!this.logisticDone){
+                this.supressDisplay();
+                this.logisticProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.logisticLine[0];
         }
 
         // Return the error of the Logistic intercept
         public double logisticInterceptError(){
-            if(!this.logisticDone)throw new IllegalArgumentException("Logistic Probability Plot method has not been called");
+            if(!this.logisticDone){
+                this.supressDisplay();
+                this.logisticProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.logisticLineErrors[0];
         }
 
         // Return the Logistic correlation coefficient
         public double logisticCorrelationCoefficient(){
-            if(!this.logisticDone)throw new IllegalArgumentException("Logistic Probability Plot method has not been called");
+            if(!this.logisticDone){
+                this.supressDisplay();
+                this.logisticProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.logisticCorrCoeff;
         }
 
         // Return the sum of squares at the Logistic minimum
         public double logisticSumOfSquares(){
-            if(!this.logisticDone)throw new IllegalArgumentException("Logistic Probability Plot method has not been called");
+            if(!this.logisticDone){
+                this.supressDisplay();
+                this.logisticProbabilityPlot();
+                this.restoreDisplay();
+            };
             return this.logisticSumOfSquares;
         }
 
@@ -1313,79 +1514,131 @@ public class ProbabilityPlot{
 
         // Return Weibull mu
         public double weibullMu(){
-            if(!this.weibullDone)throw new IllegalArgumentException("Weibull Probability Plot method has not been called");
+            if(!this.weibullDone){
+                this.supressDisplay();
+                this.weibullProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.weibullParam[0];
         }
 
         // Return Weibull mu error
         public double weibullMuError(){
-            if(!this.weibullDone)throw new IllegalArgumentException("Weibull Probability Plot method has not been called");
+            if(!this.weibullDone){
+                this.supressDisplay();
+                this.weibullProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.weibullParamErrors[0];
         }
 
         // Return Weibull sigma
         public double weibullSigma(){
-            if(!this.weibullDone)throw new IllegalArgumentException("Weibull Probability Plot method has not been called");
+            if(!this.weibullDone){
+                this.supressDisplay();
+                this.weibullProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.weibullParam[1];
         }
 
         // Return Weibull sigma error
         public double weibullSigmaError(){
-            if(!this.weibullDone)throw new IllegalArgumentException("Weibull Probability Plot method has not been called");
+            if(!this.weibullDone){
+                this.supressDisplay();
+                this.weibullProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.weibullParamErrors[1];
         }
 
         // Return Weibull gamma
         public double weibullGamma(){
-            if(!this.weibullDone)throw new IllegalArgumentException("Weibull Probability Plot method has not been called");
+            if(!this.weibullDone){
+                this.supressDisplay();
+                this.weibullProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.weibullParam[2];
         }
 
         // Return Weibull gamma error
         public double weibullGammaError(){
-            if(!this.weibullDone)throw new IllegalArgumentException("Weibull Probability Plot method has not been called");
+            if(!this.weibullDone){
+                this.supressDisplay();
+                this.weibullProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.weibullParamErrors[2];
         }
 
         // Return Weibull order statistic medians
         public double[] weibullOrderStatisticMedians(){
-            if(!this.weibullDone)throw new IllegalArgumentException("Weibull Probability Plot method has not been called");
+            if(!this.weibullDone){
+                this.supressDisplay();
+                this.weibullProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.weibullOrderMedians;
         }
 
         // Return the Weibull gradient
         public double weibullGradient(){
-            if(!this.weibullDone)throw new IllegalArgumentException("Weibull Probability Plot method has not been called");
+            if(!this.weibullDone){
+                this.supressDisplay();
+                this.weibullProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.weibullLine[1];
         }
 
         // Return the error of the Weibull gradient
         public double weibullGradientError(){
-            if(!this.weibullDone)throw new IllegalArgumentException("Weibull Probability Plot method has not been called");
+            if(!this.weibullDone){
+                this.supressDisplay();
+                this.weibullProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.weibullLineErrors[1];
         }
 
         // Return the Weibull intercept
         public double weibullIntercept(){
-            if(!this.weibullDone)throw new IllegalArgumentException("Weibull Probability Plot method has not been called");
+            if(!this.weibullDone){
+                this.supressDisplay();
+                this.weibullProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.weibullLine[0];
         }
 
         // Return the error of the Weibull intercept
         public double weibullInterceptError(){
-            if(!this.weibullDone)throw new IllegalArgumentException("Weibull Probability Plot method has not been called");
+            if(!this.weibullDone){
+                this.supressDisplay();
+                this.weibullProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.weibullLineErrors[0];
         }
 
         // Return the Weibull correlation coefficient
         public double weibullCorrelationCoefficient(){
-            if(!this.weibullDone)throw new IllegalArgumentException("Weibull Probability Plot method has not been called");
+            if(!this.weibullDone){
+                this.supressDisplay();
+                this.weibullProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.weibullCorrCoeff;
         }
 
         // Return the sum of squares at the Weibull minimum
         public double weibullSumOfSquares(){
-            if(!this.weibullDone)throw new IllegalArgumentException("Weibull Probability Plot method has not been called");
+            if(!this.gaussianDone){
+                this.supressDisplay();
+                this.weibullProbabilityPlot();
+                this.restoreDisplay();
+            };
             return this.weibullSumOfSquares;
         }
 
@@ -1512,67 +1765,111 @@ public class ProbabilityPlot{
 
         // Return Two Parameter Weibull sigma
         public double weibullTwoParSigma(){
-            if(!this.weibullTwoParDone)throw new IllegalArgumentException("Two Parameter Weibull Probability Plot method has not been called");
+            if(!this.weibullTwoParDone){
+                this.supressDisplay();
+                this.weibullTwoParProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.weibullTwoParParam[0];
         }
 
         // Return Two Parameter Weibull sigma error
         public double weibullTwoParSigmaError(){
-            if(!this.weibullTwoParDone)throw new IllegalArgumentException("Two Parameter Weibull Probability Plot method has not been called");
+            if(!this.weibullTwoParDone){
+                this.supressDisplay();
+                this.weibullTwoParProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.weibullTwoParParamErrors[0];
         }
 
         // Return Two Parameter Weibull gamma
         public double weibullTwoParGamma(){
-            if(!this.weibullTwoParDone)throw new IllegalArgumentException("Two Parameter Weibull Probability Plot method has not been called");
+            if(!this.weibullTwoParDone){
+                this.supressDisplay();
+                this.weibullTwoParProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.weibullTwoParParam[1];
         }
 
         // Return Two Parameter Weibull gamma error
         public double weibullTwoParGammaError(){
-            if(!this.weibullTwoParDone)throw new IllegalArgumentException("Two Parameter Weibull Probability Plot method has not been called");
+            if(!this.weibullTwoParDone){
+                this.supressDisplay();
+                this.weibullTwoParProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.weibullTwoParParamErrors[1];
         }
 
         // Return Two Parameter Weibull order statistic medians
         public double[] weibullTwoParOrderStatisticMedians(){
-            if(!this.weibullTwoParDone)throw new IllegalArgumentException("Two Parameter Weibull Probability Plot method has not been called");
+            if(!this.weibullTwoParDone){
+                this.supressDisplay();
+                this.weibullTwoParProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.weibullTwoParOrderMedians;
         }
 
         // Return the Two Parameter Weibull gradient
         public double weibullTwoParGradient(){
-            if(!this.weibullTwoParDone)throw new IllegalArgumentException("Two Parameter Weibull Probability Plot method has not been called");
+            if(!this.weibullTwoParDone){
+                this.supressDisplay();
+                this.weibullTwoParProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.weibullTwoParLine[1];
         }
 
         // Return the error of the Two Parameter Weibull gradient
         public double weibullTwoParGradientError(){
-            if(!this.weibullTwoParDone)throw new IllegalArgumentException("Two Parameter Weibull Probability Plot method has not been called");
+            if(!this.weibullTwoParDone){
+                this.supressDisplay();
+                this.weibullTwoParProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.weibullTwoParLineErrors[1];
         }
 
         // Return the Two Parameter Weibull intercept
         public double weibullTwoParIntercept(){
-            if(!this.weibullTwoParDone)throw new IllegalArgumentException("Two Parameter Weibull Probability Plot method has not been called");
+            if(!this.weibullTwoParDone){
+                this.supressDisplay();
+                this.weibullTwoParProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.weibullTwoParLine[0];
         }
 
         // Return the error of the Two Parameter Weibull intercept
         public double weibullTwoParInterceptError(){
-            if(!this.weibullTwoParDone)throw new IllegalArgumentException("Two Parameter Weibull Probability Plot method has not been called");
+            if(!this.weibullTwoParDone){
+                this.supressDisplay();
+                this.weibullTwoParProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.weibullTwoParLineErrors[0];
         }
 
         // Return the Two Parameter Weibull correlation coefficient
         public double weibullTwoParCorrelationCoefficient(){
-            if(!this.weibullTwoParDone)throw new IllegalArgumentException("Two Parameter Weibull Probability Plot method has not been called");
+            if(!this.weibullTwoParDone){
+                this.supressDisplay();
+                this.weibullTwoParProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.weibullTwoParCorrCoeff;
         }
 
         // Return the sum of squares at the Two Parameter Weibull minimum
         public double weibullTwoParSumOfSquares(){
-            if(!this.weibullTwoParDone)throw new IllegalArgumentException("Two Parameter Weibull Probability Plot method has not been called");
+            if(!this.weibullTwoParDone){
+                this.supressDisplay();
+                this.weibullTwoParProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.weibullTwoParSumOfSquares;
         }
 
@@ -1693,55 +1990,91 @@ public class ProbabilityPlot{
 
         // Return Standard Weibull gamma
         public double weibullStandardGamma(){
-            if(!this.weibullStandardDone)throw new IllegalArgumentException("Standard Weibull Probability Plot method has not been called");
+            if(!this.weibullStandardDone){
+                this.supressDisplay();
+                this.weibullStandardProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.weibullStandardParam[0];
         }
 
         // Return Standard Weibull gamma error
         public double weibullStandardGammaError(){
-            if(!this.weibullStandardDone)throw new IllegalArgumentException("Standard Weibull Probability Plot method has not been called");
+            if(!this.weibullStandardDone){
+                this.supressDisplay();
+                this.weibullStandardProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.weibullStandardParamErrors[0];
         }
 
         // Return Standard Weibull order statistic medians
         public double[] weibullStandardOrderStatisticMedians(){
-            if(!this.weibullStandardDone)throw new IllegalArgumentException("Standard Weibull Probability Plot method has not been called");
+            if(!this.weibullStandardDone){
+                this.supressDisplay();
+                this.weibullStandardProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.weibullStandardOrderMedians;
         }
 
         // Return the Standard Weibull gradient
         public double weibullStandardGradient(){
-            if(!this.weibullStandardDone)throw new IllegalArgumentException("Standard Weibull Probability Plot method has not been called");
+            if(!this.weibullStandardDone){
+                this.supressDisplay();
+                this.weibullStandardProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.weibullStandardLine[1];
         }
 
         // Return the error of the Standard Weibull gradient
         public double weibullStandardGradientError(){
-            if(!this.weibullStandardDone)throw new IllegalArgumentException("Standard Weibull Probability Plot method has not been called");
+            if(!this.weibullStandardDone){
+                this.supressDisplay();
+                this.weibullStandardProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.weibullStandardLineErrors[1];
         }
 
         // Return the Standard Weibull intercept
         public double weibullStandardIntercept(){
-            if(!this.weibullStandardDone)throw new IllegalArgumentException("Standard Weibull Probability Plot method has not been called");
+            if(!this.weibullStandardDone){
+                this.supressDisplay();
+                this.weibullStandardProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.weibullStandardLine[0];
         }
 
         // Return the error of the Standard Weibull intercept
         public double weibullStandardInterceptError(){
-            if(!this.weibullStandardDone)throw new IllegalArgumentException("Standard Weibull Probability Plot method has not been called");
+            if(!this.weibullStandardDone){
+                this.supressDisplay();
+                this.weibullStandardProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.weibullStandardLineErrors[0];
         }
 
         // Return the Standard Weibull correlation coefficient
         public double weibullStandardCorrelationCoefficient(){
-            if(!this.weibullStandardDone)throw new IllegalArgumentException("Standard Weibull Probability Plot method has not been called");
+            if(!this.weibullStandardDone){
+                this.supressDisplay();
+                this.weibullStandardProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.weibullStandardCorrCoeff;
         }
 
         // Return the sum of squares at the Standard Weibull minimum
         public double weibullStandardSumOfSquares(){
-            if(!this.weibullStandardDone)throw new IllegalArgumentException("Standard Weibull Probability Plot method has not been called");
+            if(!this.weibullStandardDone){
+                this.supressDisplay();
+                this.weibullStandardProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.weibullStandardSumOfSquares;
         }
 
@@ -1832,68 +2165,112 @@ public class ProbabilityPlot{
 
         // Return Exponential mu
         public double exponentialMu(){
-            if(!this.exponentialDone)throw new IllegalArgumentException("Exponential Probability Plot method has not been called");
+            if(!this.exponentialDone){
+                this.supressDisplay();
+                this.exponentialProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.exponentialParam[0];
         }
 
         // Return Exponential mu error
         public double exponentialMuError(){
-            if(!this.exponentialDone)throw new IllegalArgumentException("Exponential Probability Plot method has not been called");
+            if(!this.exponentialDone){
+                this.supressDisplay();
+                this.exponentialProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.exponentialParamErrors[0];
         }
 
         // Return Exponential sigma
         public double exponentialSigma(){
-            if(!this.exponentialDone)throw new IllegalArgumentException("Exponential Probability Plot method has not been called");
+            if(!this.exponentialDone){
+                this.supressDisplay();
+                this.exponentialProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.exponentialParam[1];
         }
 
         // Return Exponential sigma error
         public double exponentialSigmaError(){
-            if(!this.exponentialDone)throw new IllegalArgumentException("Exponential Probability Plot method has not been called");
+            if(!this.exponentialDone){
+                this.supressDisplay();
+                this.exponentialProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.exponentialParamErrors[1];
         }
 
 
         // Return Exponential order statistic medians
         public double[] exponentialOrderStatisticMedians(){
-            if(!this.exponentialDone)throw new IllegalArgumentException("Exponential Probability Plot method has not been called");
+            if(!this.exponentialDone){
+                this.supressDisplay();
+                this.exponentialProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.exponentialOrderMedians;
         }
 
         // Return the Exponential gradient
         public double exponentialGradient(){
-            if(!this.exponentialDone)throw new IllegalArgumentException("Exponential Probability Plot method has not been called");
+            if(!this.exponentialDone){
+                this.supressDisplay();
+                this.exponentialProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.exponentialLine[1];
         }
 
         // Return the error of the Exponential gradient
         public double exponentialGradientError(){
-            if(!this.exponentialDone)throw new IllegalArgumentException("Exponential Probability Plot method has not been called");
+            if(!this.exponentialDone){
+                this.supressDisplay();
+                this.exponentialProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.exponentialLineErrors[1];
         }
 
         // Return the Exponential intercept
         public double exponentialIntercept(){
-            if(!this.exponentialDone)throw new IllegalArgumentException("Exponential Probability Plot method has not been called");
+            if(!this.exponentialDone){
+                this.supressDisplay();
+                this.exponentialProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.exponentialLine[0];
         }
 
         // Return the error of the Exponential intercept
         public double exponentialInterceptError(){
-            if(!this.exponentialDone)throw new IllegalArgumentException("Exponential Probability Plot method has not been called");
+            if(!this.exponentialDone){
+                this.supressDisplay();
+                this.exponentialProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.exponentialLineErrors[0];
         }
 
         // Return the Exponential correlation coefficient
         public double exponentialCorrelationCoefficient(){
-            if(!this.exponentialDone)throw new IllegalArgumentException("Exponential Probability Plot method has not been called");
+            if(!this.exponentialDone){
+                this.supressDisplay();
+                this.exponentialProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.exponentialCorrCoeff;
         }
 
         // Return the sum of squares at the Exponential minimum
         public double exponentialSumOfSquares(){
-            if(!this.exponentialDone)throw new IllegalArgumentException("Exponential Probability Plot method has not been called");
+            if(!this.exponentialDone){
+                this.supressDisplay();
+                this.exponentialProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.exponentialSumOfSquares;
         }
 
@@ -2006,79 +2383,131 @@ public class ProbabilityPlot{
 
         // Return Frechet mu
         public double frechetMu(){
-            if(!this.frechetDone)throw new IllegalArgumentException("Frechet Probability Plot method has not been called");
+            if(!this.frechetDone){
+                this.supressDisplay();
+                this.frechetProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.frechetParam[0];
         }
 
         // Return Frechet mu error
         public double frechetMuError(){
-            if(!this.frechetDone)throw new IllegalArgumentException("Frechet Probability Plot method has not been called");
+            if(!this.frechetDone){
+                this.supressDisplay();
+                this.frechetProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.frechetParamErrors[0];
         }
 
         // Return Frechet sigma
         public double frechetSigma(){
-            if(!this.frechetDone)throw new IllegalArgumentException("Frechet Probability Plot method has not been called");
+            if(!this.frechetDone){
+                this.supressDisplay();
+                this.frechetProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.frechetParam[1];
         }
 
         // Return Frechet sigma error
         public double frechetSigmaError(){
-            if(!this.frechetDone)throw new IllegalArgumentException("Frechet Probability Plot method has not been called");
+            if(!this.frechetDone){
+                this.supressDisplay();
+                this.frechetProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.frechetParamErrors[1];
         }
 
         // Return Frechet gamma
         public double frechetGamma(){
-            if(!this.frechetDone)throw new IllegalArgumentException("Frechet Probability Plot method has not been called");
+            if(!this.frechetDone){
+                this.supressDisplay();
+                this.frechetProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.frechetParam[2];
         }
 
         // Return Frechet gamma error
         public double frechetGammaError(){
-            if(!this.frechetDone)throw new IllegalArgumentException("Frechet Probability Plot method has not been called");
+            if(!this.frechetDone){
+                this.supressDisplay();
+                this.frechetProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.frechetParamErrors[2];
         }
 
         // Return Frechet order statistic medians
         public double[] frechetOrderStatisticMedians(){
-            if(!this.frechetDone)throw new IllegalArgumentException("Frechet Probability Plot method has not been called");
+            if(!this.frechetDone){
+                this.supressDisplay();
+                this.frechetProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.frechetOrderMedians;
         }
 
         // Return the Frechet gradient
         public double frechetGradient(){
-            if(!this.frechetDone)throw new IllegalArgumentException("Frechet Probability Plot method has not been called");
+            if(!this.frechetDone){
+                this.supressDisplay();
+                this.frechetProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.frechetLine[1];
         }
 
         // Return the error of the Frechet gradient
         public double frechetGradientError(){
-            if(!this.frechetDone)throw new IllegalArgumentException("Frechet Probability Plot method has not been called");
+            if(!this.frechetDone){
+                this.supressDisplay();
+                this.frechetProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.frechetLineErrors[1];
         }
 
         // Return the Frechet intercept
         public double frechetIntercept(){
-            if(!this.frechetDone)throw new IllegalArgumentException("Frechet Probability Plot method has not been called");
+            if(!this.frechetDone){
+                this.supressDisplay();
+                this.frechetProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.frechetLine[0];
         }
 
         // Return the error of the Frechet intercept
         public double frechetInterceptError(){
-            if(!this.frechetDone)throw new IllegalArgumentException("Frechet Probability Plot method has not been called");
+            if(!this.frechetDone){
+                this.supressDisplay();
+                this.frechetProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.frechetLineErrors[0];
         }
 
         // Return the Frechet correlation coefficient
         public double frechetCorrelationCoefficient(){
-            if(!this.frechetDone)throw new IllegalArgumentException("Frechet Probability Plot method has not been called");
+            if(!this.frechetDone){
+                this.supressDisplay();
+                this.frechetProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.frechetCorrCoeff;
         }
 
         // Return the sum of squares at the Frechet minimum
         public double frechetSumOfSquares(){
-            if(!this.frechetDone)throw new IllegalArgumentException("Frechet Probability Plot method has not been called");
+            if(!this.frechetDone){
+                this.supressDisplay();
+                this.frechetProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.frechetSumOfSquares;
         }
 
@@ -2170,67 +2599,111 @@ public class ProbabilityPlot{
 
         // Return Gumbel (minimum order statistic) mu
         public double gumbelMinMu(){
-            if(!this.gumbelMinDone)throw new IllegalArgumentException("Gumbel (minimum order statistic) Probability Plot method has not been called");
+            if(!this.gumbelMinDone){
+                this.supressDisplay();
+                this.gumbelMinProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gumbelMinParam[0];
         }
 
         // Return Gumbel (minimum order statistic) mu error
         public double gumbelMinMuError(){
-            if(!this.gumbelMinDone)throw new IllegalArgumentException("Gumbel (minimum order statistic) Probability Plot method has not been called");
+            if(!this.gumbelMinDone){
+                this.supressDisplay();
+                this.gumbelMinProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gumbelMinParamErrors[0];
         }
 
         // Return Gumbel (minimum order statistic) sigma
         public double gumbelMinSigma(){
-            if(!this.gumbelMinDone)throw new IllegalArgumentException("Gumbel (minimum order statistic) Probability Plot method has not been called");
+            if(!this.gumbelMinDone){
+                this.supressDisplay();
+                this.gumbelMinProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gumbelMinParam[1];
         }
 
         // Return Gumbel (minimum order statistic) sigma error
         public double gumbelMinSigmaError(){
-            if(!this.gumbelMinDone)throw new IllegalArgumentException("Gumbel (minimum order statistic) Probability Plot method has not been called");
+            if(!this.gumbelMinDone){
+                this.supressDisplay();
+                this.gumbelMinProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gumbelMinParamErrors[1];
         }
 
         // Return Gumbel (minimum order statistic) order statistic medians
         public double[] gumbelMinOrderStatisticMedians(){
-            if(!this.gumbelMinDone)throw new IllegalArgumentException("Gumbel (minimum order statistic) Probability Plot method has not been called");
+            if(!this.gumbelMinDone){
+                this.supressDisplay();
+                this.gumbelMinProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gumbelMinOrderMedians;
         }
 
         // Return the Gumbel (minimum order statistic) gradient
         public double gumbelMinGradient(){
-            if(!this.gumbelMinDone)throw new IllegalArgumentException("Gumbel (minimum order statistic) Probability Plot method has not been called");
+            if(!this.gumbelMinDone){
+                this.supressDisplay();
+                this.gumbelMinProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gumbelMinLine[1];
         }
 
         // Return the error of the Gumbel (minimum order statistic) gradient
         public double gumbelMinGradientError(){
-            if(!this.gumbelMinDone)throw new IllegalArgumentException("Gumbel (minimum order statistic) Probability Plot method has not been called");
+            if(!this.gumbelMinDone){
+                this.supressDisplay();
+                this.gumbelMinProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gumbelMinLineErrors[1];
         }
 
         // Return the Gumbel (minimum order statistic) intercept
         public double gumbelMinIntercept(){
-            if(!this.gumbelMinDone)throw new IllegalArgumentException("Gumbel (minimum order statistic) Probability Plot method has not been called");
+            if(!this.gumbelMinDone){
+                this.supressDisplay();
+                this.gumbelMinProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gumbelMinLine[0];
         }
 
         // Return the error of the Gumbel (minimum order statistic) intercept
         public double gumbelMinInterceptError(){
-            if(!this.gumbelMinDone)throw new IllegalArgumentException("Gumbel (minimum order statistic) Probability Plot method has not been called");
+            if(!this.gumbelMinDone){
+                this.supressDisplay();
+                this.gumbelMinProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gumbelMinLineErrors[0];
         }
 
         // Return the Gumbel (minimum order statistic) correlation coefficient
         public double gumbelMinCorrelationCoefficient(){
-            if(!this.gumbelMinDone)throw new IllegalArgumentException("Gumbel (minimum order statistic) Probability Plot method has not been called");
+            if(!this.gumbelMinDone){
+                this.supressDisplay();
+                this.gumbelMinProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gumbelMinCorrCoeff;
         }
 
         // Return the sum of squares at the Gumbel (minimum order statistic) minimum
         public double gumbelMinSumOfSquares(){
-            if(!this.gumbelMinDone)throw new IllegalArgumentException("Gumbel (minimum order statistic) Probability Plot method has not been called");
+            if(!this.gumbelMinDone){
+                this.supressDisplay();
+                this.gumbelMinProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gumbelMinSumOfSquares;
         }
 
@@ -2318,67 +2791,111 @@ public class ProbabilityPlot{
 
         // Return Gumbel (maximum order statistic) mu
         public double gumbelMaxMu(){
-            if(!this.gumbelMaxDone)throw new IllegalArgumentException("Gumbel (maximum order statistic) Probability Plot method has not been called");
+            if(!this.gumbelMaxDone){
+                this.supressDisplay();
+                this.gumbelMaxProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gumbelMaxParam[0];
         }
 
         // Return Gumbel (maximum order statistic) mu error
         public double gumbelMaxMuError(){
-            if(!this.gumbelMaxDone)throw new IllegalArgumentException("Gumbel (maximum order statistic) Probability Plot method has not been called");
+            if(!this.gumbelMaxDone){
+                this.supressDisplay();
+                this.gumbelMaxProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gumbelMaxParamErrors[0];
         }
 
         // Return Gumbel (maximum order statistic) sigma
         public double gumbelMaxSigma(){
-            if(!this.gumbelMaxDone)throw new IllegalArgumentException("Gumbel (maximum order statistic) Probability Plot method has not been called");
+            if(!this.gumbelMaxDone){
+                this.supressDisplay();
+                this.gumbelMaxProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gumbelMaxParam[1];
         }
 
         // Return Gumbel (maximum order statistic) sigma error
         public double gumbelMaxSigmaError(){
-            if(!this.gumbelMaxDone)throw new IllegalArgumentException("Gumbel (maximum order statistic) Probability Plot method has not been called");
+            if(!this.gumbelMaxDone){
+                this.supressDisplay();
+                this.gumbelMaxProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gumbelMaxParamErrors[1];
         }
 
         // Return Gumbel (maximum order statistic) order statistic medians
         public double[] gumbelMaxOrderStatisticMedians(){
-            if(!this.gumbelMaxDone)throw new IllegalArgumentException("Gumbel (maximum order statistic) Probability Plot method has not been called");
+            if(!this.gumbelMaxDone){
+                this.supressDisplay();
+                this.gumbelMaxProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gumbelMaxOrderMedians;
         }
 
         // Return the Gumbel (maximum order statistic) gradient
         public double gumbelMaxGradient(){
-            if(!this.gumbelMaxDone)throw new IllegalArgumentException("Gumbel (maximum order statistic) Probability Plot method has not been called");
+            if(!this.gumbelMaxDone){
+                this.supressDisplay();
+                this.gumbelMaxProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gumbelMaxLine[1];
         }
 
         // Return the error of the Gumbel (maximum order statistic) gradient
         public double gumbelMaxGradientError(){
-            if(!this.gumbelMaxDone)throw new IllegalArgumentException("Gumbel (maximum order statistic) Probability Plot method has not been called");
+            if(!this.gumbelMaxDone){
+                this.supressDisplay();
+                this.gumbelMaxProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gumbelMaxLineErrors[1];
         }
 
         // Return the Gumbel (maximum order statistic) intercept
         public double gumbelMaxIntercept(){
-            if(!this.gumbelMaxDone)throw new IllegalArgumentException("Gumbel (maximum order statistic) Probability Plot method has not been called");
+            if(!this.gumbelMaxDone){
+                this.supressDisplay();
+                this.gumbelMaxProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gumbelMaxLine[0];
         }
 
         // Return the error of the Gumbel (maximum order statistic) intercept
         public double gumbelMaxInterceptError(){
-            if(!this.gumbelMaxDone)throw new IllegalArgumentException("Gumbel (maximum order statistic) Probability Plot method has not been called");
+            if(!this.gumbelMaxDone){
+                this.supressDisplay();
+                this.gumbelMaxProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gumbelMaxLineErrors[0];
         }
 
         // Return the Gumbel (maximum order statistic) correlation coefficient
         public double gumbelMaxCorrelationCoefficient(){
-            if(!this.gumbelMaxDone)throw new IllegalArgumentException("Gumbel (maximum order statistic) Probability Plot method has not been called");
+            if(!this.gumbelMaxDone){
+                this.supressDisplay();
+                this.gumbelMaxProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gumbelMaxCorrCoeff;
         }
 
         // Return the sum of squares at the Gumbel (maximum order statistic) minimum
         public double gumbelMaxSumOfSquares(){
-            if(!this.gumbelMaxDone)throw new IllegalArgumentException("Gumbel (maximum order statistic) Probability Plot method has not been called");
+            if(!this.gumbelMaxDone){
+                this.supressDisplay();
+                this.gumbelMaxProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.gumbelMaxSumOfSquares;
         }
 
@@ -2467,55 +2984,91 @@ public class ProbabilityPlot{
 
         // Return Rayleigh beta
         public double rayleighBeta(){
-            if(!this.rayleighDone)throw new IllegalArgumentException("Rayleigh Probability Plot method has not been called");
+            if(!this.rayleighDone){
+                this.supressDisplay();
+                this.rayleighProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.rayleighParam[0];
         }
 
         // Return Rayleigh beta error
         public double rayleighBetaError(){
-            if(!this.rayleighDone)throw new IllegalArgumentException("Rayleigh Probability Plot method has not been called");
+            if(!this.rayleighDone){
+                this.supressDisplay();
+                this.rayleighProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.rayleighParamErrors[0];
         }
 
         // Return Rayleigh order statistic medians
         public double[] rayleighOrderStatisticMedians(){
-            if(!this.rayleighDone)throw new IllegalArgumentException("Rayleigh Probability Plot method has not been called");
+            if(!this.rayleighDone){
+                this.supressDisplay();
+                this.rayleighProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.rayleighOrderMedians;
         }
 
         // Return the Rayleigh gradient
         public double rayleighGradient(){
-            if(!this.rayleighDone)throw new IllegalArgumentException("Rayleigh Probability Plot method has not been called");
+            if(!this.rayleighDone){
+                this.supressDisplay();
+                this.rayleighProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.rayleighLine[1];
         }
 
         // Return the error of the Rayleigh gradient
         public double rayleighGradientError(){
-            if(!this.rayleighDone)throw new IllegalArgumentException("Rayleigh Probability Plot method has not been called");
+            if(!this.rayleighDone){
+                this.supressDisplay();
+                this.rayleighProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.rayleighLineErrors[1];
         }
 
         // Return the Rayleigh intercept
         public double rayleighIntercept(){
-            if(!this.rayleighDone)throw new IllegalArgumentException("Rayleigh Probability Plot method has not been called");
+            if(!this.rayleighDone){
+                this.supressDisplay();
+                this.rayleighProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.rayleighLine[0];
         }
 
         // Return the error of the Rayleigh intercept
         public double rayleighInterceptError(){
-            if(!this.rayleighDone)throw new IllegalArgumentException("Rayleigh Probability Plot method has not been called");
+            if(!this.rayleighDone){
+                this.supressDisplay();
+                this.rayleighProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.rayleighLineErrors[0];
         }
 
         // Return the Rayleigh correlation coefficient
         public double rayleighCorrelationCoefficient(){
-            if(!this.rayleighDone)throw new IllegalArgumentException("Rayleigh Probability Plot method has not been called");
+            if(!this.rayleighDone){
+                this.supressDisplay();
+                this.rayleighProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.rayleighCorrCoeff;
         }
 
         // Return the sum of squares at the Rayleigh minimum
         public double rayleighSumOfSquares(){
-            if(!this.rayleighDone)throw new IllegalArgumentException("Rayleigh Probability Plot method has not been called");
+            if(!this.rayleighDone){
+                this.supressDisplay();
+                this.rayleighProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.rayleighSumOfSquares;
         }
 
@@ -2601,67 +3154,111 @@ public class ProbabilityPlot{
 
         // Return Pareto alpha
         public double paretoAlpha(){
-            if(!this.paretoDone)throw new IllegalArgumentException("Pareto Probability Plot method has not been called");
+            if(!this.paretoDone){
+                this.supressDisplay();
+                this.paretoProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.paretoParam[0];
         }
 
         // Return Pareto alpha error
         public double paretoAlphaError(){
-            if(!this.paretoDone)throw new IllegalArgumentException("Pareto Probability Plot method has not been called");
+            if(!this.paretoDone){
+                this.supressDisplay();
+                this.paretoProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.paretoParamErrors[0];
         }
 
         // Return Pareto beta
         public double paretoBeta(){
-            if(!this.paretoDone)throw new IllegalArgumentException("Pareto Probability Plot method has not been called");
+            if(!this.paretoDone){
+                this.supressDisplay();
+                this.paretoProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.paretoParam[1];
         }
 
         // Return Pareto beta error
         public double paretoBetaError(){
-            if(!this.paretoDone)throw new IllegalArgumentException("Pareto Probability Plot method has not been called");
+            if(!this.paretoDone){
+                this.supressDisplay();
+                this.paretoProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.paretoParamErrors[1];
         }
 
         // Return Pareto order statistic medians
         public double[] paretoOrderStatisticMedians(){
-            if(!this.paretoDone)throw new IllegalArgumentException("Pareto Probability Plot method has not been called");
+            if(!this.paretoDone){
+                this.supressDisplay();
+                this.paretoProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.paretoOrderMedians;
         }
 
         // Return the Pareto gradient
         public double paretoGradient(){
-            if(!this.paretoDone)throw new IllegalArgumentException("Pareto Probability Plot method has not been called");
+            if(!this.paretoDone){
+                this.supressDisplay();
+                this.paretoProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.paretoLine[1];
         }
 
         // Return the error of the Pareto gradient
         public double paretoGradientError(){
-            if(!this.paretoDone)throw new IllegalArgumentException("Pareto Probability Plot method has not been called");
+            if(!this.paretoDone){
+                this.supressDisplay();
+                this.paretoProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.paretoLineErrors[1];
         }
 
         // Return the Pareto intercept
         public double paretoIntercept(){
-            if(!this.paretoDone)throw new IllegalArgumentException("Pareto Probability Plot method has not been called");
+            if(!this.paretoDone){
+                this.supressDisplay();
+                this.paretoProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.paretoLine[0];
         }
 
         // Return the error of the Pareto intercept
         public double paretoInterceptError(){
-            if(!this.paretoDone)throw new IllegalArgumentException("Pareto Probability Plot method has not been called");
+            if(!this.paretoDone){
+                this.supressDisplay();
+                this.paretoProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.paretoLineErrors[0];
         }
 
         // Return the Pareto correlation coefficient
         public double paretoCorrelationCoefficient(){
-            if(!this.paretoDone)throw new IllegalArgumentException("Pareto Probability Plot method has not been called");
+            if(!this.paretoDone){
+                this.supressDisplay();
+                this.paretoProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.paretoCorrCoeff;
         }
 
         // Return the sum of squares at the Pareto minimum
         public double paretoSumOfSquares(){
-            if(!this.paretoDone)throw new IllegalArgumentException("Pareto Probability Plot method has not been called");
+            if(!this.paretoDone){
+                this.supressDisplay();
+                this.paretoProbabilityPlot();
+                this.restoreDisplay();
+            }
             return this.paretoSumOfSquares;
         }
 
