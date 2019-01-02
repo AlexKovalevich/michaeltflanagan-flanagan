@@ -1,7 +1,9 @@
+# Emacs turds
+**/*.*~
+# Finder turds
+**/.DS_Store
 # Maven build directory
 target/
 # IntelliJ files
 .idea/
 flanagan.iml
-# IntelliJ build directory
-out/
